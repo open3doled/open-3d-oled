@@ -1,0 +1,9 @@
+Open3DOLED is a set of software and hardware designs that allow one to turn any display into a 3D display using compatible shutter glasses.
+It works best for displays that incorporate Black Frame Insertion (BFI) technologies and have framerates that exceed 120hz.
+This includes OLED TV's by the likes of LG and Sony which incorporate technologies like LG "Motion Pro" and Sony "Clearness" settings.
+But it should also works with LCD displays that include strobed backlight like those mentioned at https://www.rtings.com/monitor/tests/motion/black-frame-insertion
+In the future support will be added to do manual black frame insertion on displays with a framerate of 200hz or greater.
+Also custom firmware images that are optimized for software pageflipping for popular brands of glasses by Sony and Panasonic may be released.
+More updates, guides and demo videos to come...
+
+<p xmlns:cc="http://creativecommons.org/ns#" xmlns:dct="http://purl.org/dc/terms/"><a property="dct:title" rel="cc:attributionURL" href="https://github.com/open3doled/Open3DOLED">Open3DOLED</a> is licensed under <a href="http://creativecommons.org/licenses/by-nc-sa/4.0/?ref=chooser-v1" target="_blank" rel="license noopener noreferrer" style="display:inline-block;">CC BY-NC-SA 4.0<img style="height:22px!important;margin-left:3px;vertical-align:text-bottom;" src="https://mirrors.creativecommons.org/presskit/icons/cc.svg?ref=chooser-v1"><img style="height:22px!important;margin-left:3px;vertical-align:text-bottom;" src="https://mirrors.creativecommons.org/presskit/icons/by.svg?ref=chooser-v1"><img style="height:22px!important;margin-left:3px;vertical-align:text-bottom;" src="https://mirrors.creativecommons.org/presskit/icons/nc.svg?ref=chooser-v1"><img style="height:22px!important;margin-left:3px;vertical-align:text-bottom;" src="https://mirrors.creativecommons.org/presskit/icons/sa.svg?ref=chooser-v1"></a></p> 

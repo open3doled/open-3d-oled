@@ -1,0 +1,7 @@
+(sym_lib_table
+  (lib (name "Sparkfun.Boards")(type "KiCad")(uri "./footprints/SparkFun-Boards.kicad_sym")(options "")(descr ""))
+  (lib (name "OPT101")(type "KiCad")(uri "./footprints/OPT101P/OPT101P.kicad_sym")(options "")(descr ""))
+  (lib (name "2SK4017")(type "KiCad")(uri "./footprints/2SK4017_Q_/2SK4017_Q_.kicad_sym")(options "")(descr ""))
+  (lib (name "TactileSwitch")(type "KiCad")(uri "./footprints/TL3342F160QG/TL3342F160QG.kicad_sym")(options "")(descr ""))
+  (lib (name "AO3400A")(type "KiCad")(uri "./footprints/MOSFET2/AO3400A.kicad_sym")(options "")(descr ""))
+)

@@ -1,0 +1,13 @@
+pillow
+cairosvg
+pyusb
+pysdl2
+pysrt
+pyserial
+psutil
+pygame
+pygobject
+line-profiler
+pyopengl
+pyopengl-accelerate
+numpy
