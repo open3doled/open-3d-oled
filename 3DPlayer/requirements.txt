@@ -2,6 +2,7 @@ pillow
 cairosvg
 pyusb
 pysdl2
+pysdl2-dll
 pysrt
 pyserial
 psutil

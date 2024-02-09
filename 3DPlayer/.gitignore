@@ -5,7 +5,6 @@ debug/*
 installation/*
 old/*
 python/__pycache__
-*.mp4
 *.srt
 *.spec
 video_history.json
