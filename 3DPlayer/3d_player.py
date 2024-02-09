@@ -10,7 +10,8 @@ import time
 import traceback
 import functools
 import idlelib.tooltip
-import sdl2.video  # @UnusedImport
+
+# import sdl2.video  # @UnusedImport
 import pysrt
 import serial  # @UnusedImport
 import serial.threaded
@@ -40,6 +41,11 @@ IR_FRAME_DELAY = 500
 IR_FRAME_DURATION = 7100
 OPT101_BLOCK_SIGNAL_DETECTION_DELAY = 5000
 
+# set base path
+base_path = os.path.dirname(os.path.abspath(__file__))
+if os.path.exists("_internal"):
+    base_path = os.path.join(base_path, "_internal")
+
 
 # The following class is extracted from tkinter.
 class _setit:
@@ -58,7 +64,9 @@ class _setit:
 
 # from https://stackoverflow.com/questions/67449774/how-to-display-svg-on-tkinter
 def svg_to_imagetk_photoimage(image):
-    png_data = cairosvg.svg2png(url=image, output_width=30, output_height=30)
+    png_data = cairosvg.svg2png(
+        url=os.path.join(base_path, image), output_width=30, output_height=30
+    )
     bytes_png = BytesIO(png_data)
     img = PIL.Image.open(bytes_png)
     return ImageTk.PhotoImage(img)
@@ -741,9 +749,7 @@ class EmitterSettingsDialog:
     def click_save_visible_settings_to_disk(self):
         file_name = tkinter.filedialog.asksaveasfilename(
             title="Save Emitter Settings to Disk",
-            initialdir=os.path.join(
-                os.path.dirname(os.path.abspath(__file__)), "settings"
-            ),
+            initialdir=os.path.join(base_path, "settings"),
             filetypes=[("Emitter Settings FIle", "*.emitter_settings.json")],
             defaultextension=".emitter_settings.json",
         )
