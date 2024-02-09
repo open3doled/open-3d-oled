@@ -41,11 +41,6 @@ IR_FRAME_DELAY = 500
 IR_FRAME_DURATION = 7100
 OPT101_BLOCK_SIGNAL_DETECTION_DELAY = 5000
 
-# set base path
-base_path = os.path.dirname(os.path.abspath(__file__))
-if os.path.exists("_internal"):
-    base_path = os.path.join(base_path, "_internal")
-
 
 # The following class is extracted from tkinter.
 class _setit:
@@ -1760,6 +1755,9 @@ class TopWindow:
         self.pageflipglsink = Gst.ElementFactory.make(
             "gstpageflipglsink", "PageflipGLSink"
         )
+        if self.pageflipglsink is None:
+            print("Unable to find/initialize GStreamer plugin GSTPageflipGLSink.")
+            return
         if self.emitter_serial is not None:
             self.emitter_serial.pageflipglsink = self.pageflipglsink
 
@@ -1891,7 +1889,13 @@ if __name__ == "__main__":
 
     if os.name == "nt":
         os.system("chcp.com 65001")
-    os.environ["GST_PLUGIN_PATH"] = os.getcwd()
+
+    # set base path
+    base_path = os.path.dirname(os.path.abspath(__file__))
+    if os.path.exists("_internal"):
+        base_path = os.path.join(base_path, "_internal")
+
+    os.environ["GST_PLUGIN_PATH"] = base_path
 
     import gi
 
