@@ -1448,7 +1448,7 @@ class TopWindow:
         flip_right_and_left_button.tk_img = flip_right_and_left_button_image
         flip_right_and_left_button_tooltip = (  # @UnusedVariable
             idlelib.tooltip.Hovertip(
-                fullscreen_button, "Flip Right and Left (F).", hover_delay=100
+                flip_right_and_left_button, "Flip Right and Left (F).", hover_delay=100
             )
         )
         flip_right_and_left_button.pack(padx=5, side=tkinter.LEFT)
