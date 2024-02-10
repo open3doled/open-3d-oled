@@ -185,7 +185,7 @@ class EmitterSettingsDialog:
         self.main_app = main_app
         top = self.top = tkinter.Toplevel(parent)
         row_count = 0
-        pro_micro_ports = [port for port, desc, hwid in serial.tools.list_ports.comports() if desc == "SparkFun Pro Micro"]
+        pro_micro_ports = [port for port, desc, hwid in serial.tools.list_ports.comports() if desc == "SparkFun Pro Micro" or desc.startswith("USB Serial Device")]
 
         self.serial_port_identifier_frame = tkinter.Frame(top)
         self.serial_port_identifier_variable = tkinter.StringVar(top)
