@@ -46,6 +46,12 @@ Unzip and run 3d_player.exe
 
 ## Getting Started
 
+### Configuring TV and Computer
+* Set your TV to 1080p 120hz (this system should work with 4K 120hz but hasn't been tested yet)
+* If you are using an AMD graphics card and your TV switches to ALLM (adaptive low latency mode) you will need to disable ALLM as detailed in the FAQ below.
+* On LG TV's you need to set OLED Motion Pro to the maximum value.
+* On Sony TV's you need to set Motion Flow Clearness setting to MAX
+
 ### Calibration
 
 * Put the sensor bar on the top right corner of your TV and connect it to the PC you will be using to play your 3D videos.
@@ -67,6 +73,16 @@ Unzip and run 3d_player.exe
 * Your now done and should be able to watch 3D videos on your OLED!
     
 ## FAQ, Useful Commands and Tips
+* Supported TVs
+```
+Working (Tested)
+LG C1 OLED
+Sony OLED XBR 48a9s
+Should Work (Untested)
+LG C2 OLED
+Other OLEDs with BFI technology.
+LCD Monitors with strobed backlight for BFI and with front polarization that is compatible with 3D glasses (https://www.rtings.com/monitor/tests/motion/black-frame-insertion)
+```
 * Performance is best on Linux (tested on Ubuntu 20.04 an 22.04) followed by Windows 10. Windows 11 has problems with excessively dropping frames, it needs to be looked into. I haven't tested on Windows 7.
 * if during development you get the error "Unable to find/initialize GStreamer plugin GSTPageflipGLSink." it can sometimes be solved by removing the gstreamer registry cache (and/or rebooting).
 ```
