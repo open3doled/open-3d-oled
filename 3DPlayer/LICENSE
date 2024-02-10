@@ -1,1 +1,22 @@
 Open3DOLED is licensed under CC BY-NC-SA 4.0. To view a copy of this license, visit http://creativecommons.org/licenses/by-nc-sa/4.0/
+
+Links to licenses are provided below for the software packages and libraries used by Open3DOLED.
+A copy of each license is also included in the licenses folder.
+
+0. Python: [Python License](https://github.com/python/cpython/blob/main/LICENSE) [Python Incorporated Licenses](https://docs.python.org/3/license.html)
+1. GStreamer: [GStreamer License](https://gitlab.freedesktop.org/gstreamer/gstreamer/-/blob/master/COPYING)
+2. Pillow: [Pillow License](https://github.com/python-pillow/Pillow/blob/main/LICENSE)
+3. CairoSVG: [CairoSVG License](https://github.com/Kozea/CairoSVG/blob/master/LICENSE)
+4. PyUSB: [PyUSB License](https://github.com/pyusb/pyusb/blob/master/LICENSE)
+5. PySDL2: [PySDL2 License](https://github.com/py-sdl/py-sdl2/blob/master/doc/copying.rst)
+6. PySDL2-dll: [PySDL2-dll License](https://github.com/a-hurst/pysdl2-dll/blob/master/LICENSE)
+7. PySRT: [PySRT License](https://github.com/byroot/pysrt/blob/master/LICENCE.txt)
+8. PySerial: [PySerial License](https://github.com/pyserial/pyserial/blob/master/LICENSE.txt)
+9. Psutil: [Psutil License](https://github.com/giampaolo/psutil/blob/master/LICENSE)
+10. Pygame: [Pygame License](https://github.com/pygame/pygame/blob/main/LICENSE)
+11. PyGObject: [PyGObject License](https://gitlab.gnome.org/GNOME/pygobject/-/blob/master/COPYING)
+12. Line-profiler: [Line-profiler License](https://github.com/rkern/line_profiler/blob/master/LICENSE.txt)
+13. PyOpenGL: [PyOpenGL License](https://github.com/mcfletch/pyopengl/blob/master/license.txt)
+14. PyOpenGL-accelerate: [PyOpenGL-accelerate License](https://github.com/mcfletch/pyopengl/blob/master/LICENSE-accelerate.txt)
+15. NumPy: [NumPy License](https://github.com/numpy/numpy/blob/main/LICENSE.txt)
+
