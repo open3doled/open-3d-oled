@@ -1892,19 +1892,20 @@ if __name__ == "__main__":
 
     # set base path
     base_path = os.path.dirname(os.path.abspath(__file__))
-    if os.path.exists("_internal"):
-        base_path = os.path.join(base_path, "_internal")
+    #if os.path.exists(os.path.join(base_path, "_internal")):
+    #    base_path = os.path.join(base_path, "_internal")
 
     os.environ["GST_PLUGIN_PATH"] = base_path
 
     import gi
 
     gi.require_version("Gst", "1.0")
+    gi.require_version("GstBase", "1.0")
     gi.require_version("GstVideo", "1.0")
     # gi.require_version('GdkX11', '3.0') # windows
     # from gi.repository import Gst, GObject, GdkX11, GstVideo, GstBase # windows
-    # from gi.repository import Gst, GObject, GstVideo, GstBase  # windows
     from gi.repository import Gst  # windows
+    from gi.repository import GObject, GstVideo, GstBase # we need to import these here or pyinstaller won't pickup GstBase-1.0.typelib and GstVideo-1.0.typelib
 
     # GObject.threads_init()
     Gst.init(None)

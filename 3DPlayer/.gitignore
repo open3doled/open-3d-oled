@@ -4,6 +4,7 @@ dist/*
 debug/*
 installation/*
 old/*
+releases/
 python/__pycache__
 *.srt
 *.spec
