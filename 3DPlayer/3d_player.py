@@ -15,6 +15,7 @@ import idlelib.tooltip
 import pysrt
 import serial  # @UnusedImport
 import serial.threaded
+import serial.tools.list_ports
 import threading
 import queue
 import json
@@ -184,10 +185,11 @@ class EmitterSettingsDialog:
         self.main_app = main_app
         top = self.top = tkinter.Toplevel(parent)
         row_count = 0
+        pro_micro_ports = [port for port, desc, hwid in serial.tools.list_ports.comports() if desc == "SparkFun Pro Micro"]
 
         self.serial_port_identifier_frame = tkinter.Frame(top)
         self.serial_port_identifier_variable = tkinter.StringVar(top)
-        self.serial_port_identifier_variable.set("/dev/ttyACM0")
+        self.serial_port_identifier_variable.set(pro_micro_ports[0] if pro_micro_ports else "/dev/ttyACM0")
         self.serial_port_identifier_label = tkinter.Label(
             self.serial_port_identifier_frame, text="Serial Port Identifier: "
         )
