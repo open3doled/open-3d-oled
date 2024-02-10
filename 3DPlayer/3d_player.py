@@ -1956,9 +1956,9 @@ if __name__ == "__main__":
                         ):
                             increment_by = 0
                             if "decrease_" in r:
-                                increment_by = -5
+                                increment_by = -20
                             elif "increase_" in r:
-                                increment_by = 5
+                                increment_by = 20
                             target = None
                             if "frame_delay" in r:
                                 target = (
