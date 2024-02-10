@@ -13,6 +13,7 @@ In the future custom firmware images that are optimized for software pageflippin
 ## Installation Instructions:
 
 ### Ubuntu Install:
+* First time installation
 ```
 apt update
 apt upgrade
@@ -26,10 +27,17 @@ echo "export WORKON_HOME=$HOME/.virtualenvs" >> ~/.bashrc
 echo "VIRTUALENVWRAPPER_PYTHON=/usr/bin/python3" >> ~/.bashrc
 echo "source /usr/share/virtualenvwrapper/virtualenvwrapper.sh" >> ~/.bashrc
 mkvirtualenv --system-site-packages open3doled
-xargs -L 1 pip install < requirements.txt
+pip install -r requirements.txt
 python3 3d_player.py
+```
+* Running subsequently
+```
+workon open3doled
+python3 3d_player.py
+
+OR
+
 ~/.virtualenvs/open3doled/bin/python3 3d_player.py
-source ~/.virtualenvs/open3doled/bin/activate
 ```
 
 ### Windows Release Install:
@@ -134,3 +142,8 @@ Unzip and run 3d_player.exe
     
   - 3d_player.zip will be the equivalent of the release files available on the releases page.
 ```
+
+# Licenses
+Please refer to LICENSE files and license folders for references to open source licenses. If you find any missing licenses please open a support ticket.
+<p xmlns:cc="http://creativecommons.org/ns#" xmlns:dct="http://purl.org/dc/terms/"><a property="dct:title" rel="cc:attributionURL" href="https://github.com/open3doled/Open3DOLED">Open3DOLED</a> is licensed under <a href="http://creativecommons.org/licenses/by-nc-sa/4.0/?ref=chooser-v1" target="_blank" rel="license noopener noreferrer" style="display:inline-block;">CC BY-NC-SA 4.0<img style="height:22px!important;margin-left:3px;vertical-align:text-bottom;" src="https://mirrors.creativecommons.org/presskit/icons/cc.svg?ref=chooser-v1"><img style="height:22px!important;margin-left:3px;vertical-align:text-bottom;" src="https://mirrors.creativecommons.org/presskit/icons/by.svg?ref=chooser-v1"><img style="height:22px!important;margin-left:3px;vertical-align:text-bottom;" src="https://mirrors.creativecommons.org/presskit/icons/nc.svg?ref=chooser-v1"><img style="height:22px!important;margin-left:3px;vertical-align:text-bottom;" src="https://mirrors.creativecommons.org/presskit/icons/sa.svg?ref=chooser-v1"></a></p> 
+
