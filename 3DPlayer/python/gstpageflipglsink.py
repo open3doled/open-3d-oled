@@ -93,12 +93,14 @@ resolution = "1920x1080"
 # defaults for 55inch LG OLED 1920x1080 120hz all in mm to be adjusted by pixel pitch factor for different display sizes
 default_black_box_gradient_width = 6.3371
 default_white_box_gradient_width = 3.1686
+# default_black_box_width = 44.3599
+# default_black_box_height = 25.3485
 default_black_box_width = 44.3599
-default_black_box_height = 25.3485
+default_black_box_height = 20.3485
 default_white_box_width = 12.6743
 default_white_box_height = 12.6743
-default_white_box_offset_1 = 0
-default_white_box_offset_2 = (
+default_white_box_horizontal_offset_1 = 0
+default_white_box_horizontal_offset_2 = (
     22.86  # 22.86 mm sensor spacing x 1.578 pixels / mm = 36 pixels
 )
 
@@ -173,6 +175,8 @@ class PageflipGLWindow(threading.Thread):
         self.__black_box_width = int(default_black_box_width * self.__pixel_pitch_x)
         self.__black_box_height = int(default_black_box_height * self.__pixel_pitch_y)
         self.__whitebox_brightness = 255
+        self.__whitebox_vertical_position = 0
+        self.__whitebox_horizontal_spacing = 23
         self.__last_mouse = True
         self.__last_mouse_moved_at = None
         self.__set_menu_on_top_true = True
@@ -325,21 +329,45 @@ class PageflipGLWindow(threading.Thread):
         white_box_gradient_width = int(
             default_white_box_gradient_width * self.__pixel_pitch_x
         )
-        original_black_box_width = int(default_black_box_width * self.__pixel_pitch_x)
-        original_black_box_height = int(default_black_box_height * self.__pixel_pitch_y)
+        # original_black_box_width = int(default_black_box_width * self.__pixel_pitch_x)
+        original_black_box_width = int(
+            (
+                default_black_box_width
+                - default_white_box_horizontal_offset_2
+                + self.__whitebox_horizontal_spacing
+            )
+            * self.__pixel_pitch_x
+        )
+        original_black_box_height = int(
+            (default_black_box_height + self.__whitebox_vertical_position)
+            * self.__pixel_pitch_y
+        )
         if self.__calibration_mode:
-            black_box_width = self.__black_box_width = int(original_black_box_width * 2)
+            black_box_width = self.__black_box_width = int(
+                original_black_box_width
+                + default_black_box_width * self.__pixel_pitch_x
+            )
             black_box_height = self.__black_box_height = int(
-                original_black_box_height * 2
+                original_black_box_height
+                + default_black_box_height * self.__pixel_pitch_y
             )
         else:
             black_box_width = self.__black_box_width = original_black_box_width
             black_box_height = self.__black_box_height = original_black_box_height
         white_box_width = int(default_white_box_width * self.__pixel_pitch_x)
         white_box_height = int(default_white_box_height * self.__pixel_pitch_y)
-        white_box_offset_1 = int(default_white_box_offset_1 * self.__pixel_pitch_x)
-        white_box_offset_2 = int(default_white_box_offset_2 * self.__pixel_pitch_x)
-        white_box_offsets = (white_box_offset_1, white_box_offset_2)
+        white_box_horizontal_offset_1 = int(
+            default_white_box_horizontal_offset_1 * self.__pixel_pitch_x
+        )
+        white_box_horizontal_offset_2 = int(
+            # default_white_box_horizontal_offset_2 * self.__pixel_pitch_x
+            (default_white_box_horizontal_offset_1 + self.__whitebox_horizontal_spacing)
+            * self.__pixel_pitch_x
+        )
+        white_box_horizontal_offsets = (
+            white_box_horizontal_offset_1,
+            white_box_horizontal_offset_2,
+        )
         self.__overlay_boxes = []
         for n in range(2):  # 0 left, 1 right
             box = np.ndarray(
@@ -360,10 +388,12 @@ class PageflipGLWindow(threading.Thread):
                     True,
                     False,
                 ),
-                # (white_box_offsets[n], black_box_height-white_box_height, white_box_width, white_box_height, white_box_gradient_width, 0, False, True, True if n == 1 else False, True, True)
+                # (white_box_horizontal_offsets[n], black_box_height-white_box_height, white_box_width, white_box_height, white_box_gradient_width, 0, False, True, True if n == 1 else False, True, True)
                 (
-                    white_box_offsets[n],
-                    black_box_height - white_box_height,
+                    white_box_horizontal_offsets[n],
+                    black_box_height
+                    - white_box_height
+                    - int(self.__whitebox_vertical_position * self.__pixel_pitch_y),
                     white_box_width,
                     white_box_height,
                     white_box_gradient_width,
@@ -377,13 +407,19 @@ class PageflipGLWindow(threading.Thread):
             ]
             if self.__calibration_mode:
                 x_halfway_point = (
-                    white_box_offset_1 + white_box_width + white_box_offset_2
+                    white_box_horizontal_offset_1
+                    + white_box_width
+                    + white_box_horizontal_offset_2
                 ) // 2
                 boxes_to_make.extend(
                     [
                         (
                             original_black_box_width,
-                            black_box_height - white_box_height // 2,
+                            black_box_height
+                            - white_box_height // 2
+                            - int(
+                                self.__whitebox_vertical_position * self.__pixel_pitch_y
+                            ),
                             black_box_width - original_black_box_width,
                             1,
                             0,
@@ -502,12 +538,28 @@ class PageflipGLWindow(threading.Thread):
                             white_box_shade = int(
                                 tone * self.__whitebox_brightness / 255
                             )
-                            box[py + y][px + x][0] = white_box_shade
-                            box[py + y][px + x][1] = white_box_shade
-                            box[py + y][px + x][2] = white_box_shade
-                            box[py + y][px + x][3] = box[py + y][px + x][3]
+                            box[max(min(py + y, black_box_height - 1), 0)][px + x][
+                                0
+                            ] = white_box_shade
+                            box[max(min(py + y, black_box_height - 1), 0)][px + x][
+                                1
+                            ] = white_box_shade
+                            box[max(min(py + y, black_box_height - 1), 0)][px + x][
+                                2
+                            ] = white_box_shade
+                            box[max(min(py + y, black_box_height - 1), 0)][px + x][
+                                3
+                            ] = box[max(min(py + y, black_box_height - 1), 0)][px + x][
+                                3
+                            ]
                         else:
-                            box[py + y][px + x] = [shade, shade, shade, tone]
+                            box[max(min(py + y, black_box_height - 1), 0)][px + x] = [
+                                shade,
+                                shade,
+                                shade,
+                                tone,
+                            ]
+
             self.__overlay_boxes.append(box)
             # np.set_printoptions(threshold=sys.maxsize)
             # print(box)
@@ -698,19 +750,37 @@ class PageflipGLWindow(threading.Thread):
                         elif self.__right_eye == "bottom":
                             self.__right_eye = "top"
                     elif self.__calibration_mode:
-                        if event.key == pg.K_h:
+                        if event.key == pg.K_g:
                             self.__show_calibration_instruction_image = (
                                 not self.__show_calibration_instruction_image
                             )
-                        elif event.key == pg.K_i:
+                        elif event.key == pg.K_y:
+                            self.__whitebox_vertical_position -= 2
+                            self.__update_overlay_boxes()
                             self.__requests = ",".join(
                                 self.__requests.split(",")
-                                + ["calibration_decrease_frame_delay"]
+                                + ["calibration_decrease_whitebox_vertical_position"]
                             )
-                        elif event.key == pg.K_k:
+                        elif event.key == pg.K_h:
+                            self.__whitebox_vertical_position += 2
+                            self.__update_overlay_boxes()
                             self.__requests = ",".join(
                                 self.__requests.split(",")
-                                + ["calibration_increase_frame_delay"]
+                                + ["calibration_increase_whitebox_vertical_position"]
+                            )
+                        elif event.key == pg.K_u:
+                            self.__whitebox_horizontal_spacing -= 2
+                            self.__update_overlay_boxes()
+                            self.__requests = ",".join(
+                                self.__requests.split(",")
+                                + ["calibration_decrease_whitebox_horizontal_spacing"]
+                            )
+                        elif event.key == pg.K_j:
+                            self.__whitebox_horizontal_spacing += 2
+                            self.__update_overlay_boxes()
+                            self.__requests = ",".join(
+                                self.__requests.split(",")
+                                + ["calibration_increase_whitebox_horizontal_spacing"]
                             )
                         elif event.key == pg.K_o:
                             self.__requests = ",".join(
@@ -853,21 +923,21 @@ class PageflipGLWindow(threading.Thread):
             # add black and white boxes then subtitles
             if self.__right_eye in ("right", "top"):
                 if self.__left_or_bottom_page:
-                    # white_box_offset = white_box_offset_1
+                    # white_box_offset = white_box_horizontal_offset_1
                     overlay_box = self.__overlay_boxes[0]
                     subtitle_depth_shift = self.__subtitle_depth
                 else:
-                    # white_box_offset = white_box_offset_2
+                    # white_box_offset = white_box_horizontal_offset_2
                     overlay_box = self.__overlay_boxes[1]
                     subtitle_depth_shift = -self.__subtitle_depth
             else:
                 assert self.__right_eye in ("left", "bottom")
                 if self.__left_or_bottom_page:
-                    # white_box_offset = white_box_offset_2
+                    # white_box_offset = white_box_horizontal_offset_2
                     overlay_box = self.__overlay_boxes[1]
                     subtitle_depth_shift = -self.__subtitle_depth
                 else:
-                    # white_box_offset = white_box_offset_1
+                    # white_box_offset = white_box_horizontal_offset_1
                     overlay_box = self.__overlay_boxes[0]
                     subtitle_depth_shift = self.__subtitle_depth
 
@@ -1140,6 +1210,24 @@ class PageflipGLWindow(threading.Thread):
             self.__whitebox_brightness = int(value)
 
     @property
+    def whitebox_vertical_position(self):
+        return f"{self.__whitebox_vertical_position}"
+
+    @whitebox_vertical_position.setter
+    def whitebox_vertical_position(self, value):
+        if value != self.__whitebox_vertical_position:
+            self.__whitebox_vertical_position = int(value)
+
+    @property
+    def whitebox_horizontal_spacing(self):
+        return f"{self.__whitebox_horizontal_spacing}"
+
+    @whitebox_horizontal_spacing.setter
+    def whitebox_horizontal_spacing(self, value):
+        if value != self.__whitebox_horizontal_spacing:
+            self.__whitebox_horizontal_spacing = int(value)
+
+    @property
     def requests(self):
         return self.__requests
 
@@ -1285,6 +1373,14 @@ class PageflipGLWindowProcess(multiprocessing.Process):
             ctypes.c_wchar, 64
         )  # , lock=self.__lock)
         self.__whitebox_brightness.value = "255"
+        self.__whitebox_vertical_position = multiprocessing.sharedctypes.RawArray(
+            ctypes.c_wchar, 64
+        )  # , lock=self.__lock)
+        self.__whitebox_vertical_position.value = "0"
+        self.__whitebox_horizontal_spacing = multiprocessing.sharedctypes.RawArray(
+            ctypes.c_wchar, 64
+        )  # , lock=self.__lock)
+        self.__whitebox_horizontal_spacing.value = "23"
         self.__requests = multiprocessing.sharedctypes.RawArray(
             ctypes.c_wchar, 65536
         )  # , lock=self.__lock)
@@ -1368,6 +1464,20 @@ class PageflipGLWindowProcess(multiprocessing.Process):
             ):
                 pageflip_gl_window.whitebox_brightness = (
                     self.__whitebox_brightness.value
+                )
+            if (
+                pageflip_gl_window.whitebox_vertical_position
+                != self.__whitebox_vertical_position.value
+            ):
+                pageflip_gl_window.whitebox_vertical_position = (
+                    self.__whitebox_vertical_position.value
+                )
+            if (
+                pageflip_gl_window.whitebox_horizontal_spacing
+                != self.__whitebox_horizontal_spacing.value
+            ):
+                pageflip_gl_window.whitebox_horizontal_spacing = (
+                    self.__whitebox_horizontal_spacing.value
                 )
             if pageflip_gl_window.requests != last_requests:
                 last_requests = pageflip_gl_window.requests
@@ -1496,6 +1606,22 @@ class PageflipGLWindowProcess(multiprocessing.Process):
     @whitebox_brightness.setter
     def whitebox_brightness(self, value):
         self.__whitebox_brightness.value = value
+
+    @property
+    def whitebox_vertical_position(self):
+        return self.__whitebox_vertical_position.value
+
+    @whitebox_vertical_position.setter
+    def whitebox_vertical_position(self, value):
+        self.__whitebox_vertical_position.value = value
+
+    @property
+    def whitebox_horizontal_spacing(self):
+        return self.__whitebox_horizontal_spacing.value
+
+    @whitebox_horizontal_spacing.setter
+    def whitebox_horizontal_spacing(self, value):
+        self.__whitebox_horizontal_spacing.value = value
 
     @property
     def requests(self):
@@ -1639,8 +1765,22 @@ class GstPageflipGLSink(GstBase.BaseSink):
         "whitebox_brightness": (
             GObject.TYPE_STRING,
             "Whitebox Brightness",
-            "The relatie brightness of the whitebox used for sensor triggering from 0 to 255 (255 being the brightest)",
+            "The relative brightness of the whitebox used for sensor triggering from 0 to 255 (255 being the brightest)",
             "255",  # default
+            GObject.ParamFlags.READWRITE,
+        ),
+        "whitebox_vertical_position": (
+            GObject.TYPE_STRING,
+            "Whitebox Vertical Position",
+            "The whitebox vertical position lets the user move the screen based whitebox down to better align with the 3d emitter tv mount they have. It is an arbitrary measurement and has only relative meaning.",
+            "0",  # default
+            GObject.ParamFlags.READWRITE,
+        ),
+        "whitebox_horizontal_spacing": (
+            GObject.TYPE_STRING,
+            "Whitebox Horizontal Spacing",
+            "The whitebox horizontal spacing lets the user increase/decrease the separation between white boxes to better align with the 3d emitter and tv pixel pitch they have. It is an arbitrary measurement and has only relative meaning.",
+            "0",  # default
             GObject.ParamFlags.READWRITE,
         ),
         "start": (
@@ -1727,6 +1867,9 @@ class GstPageflipGLSink(GstBase.BaseSink):
             "display-resolution": "1920x1080",
             "display-size": "55",
             "whitebox-brightness": "255",
+            "whitebox-vertical-position": "0",
+            "whitebox-horizontal-spacing": "23",
+            "whitebox-brightness": "255",
             "requests": "",
             "latest-subtitle-data": "",
             "subtitle_font": "arial",
@@ -1762,6 +1905,10 @@ class GstPageflipGLSink(GstBase.BaseSink):
                 return self.__pageflip_gl_window.display_size
             elif prop.name == "whitebox-brightness":
                 return self.__pageflip_gl_window.whitebox_brightness
+            elif prop.name == "whitebox-vertical-position":
+                return self.__pageflip_gl_window.whitebox_vertical_position
+            elif prop.name == "whitebox-horizontal-spacing":
+                return self.__pageflip_gl_window.whitebox_horizontal_spacing
             elif prop.name == "requests":
                 return self.__pageflip_gl_window.requests
             elif prop.name == "latest-subtitle-data":
@@ -1792,6 +1939,9 @@ class GstPageflipGLSink(GstBase.BaseSink):
                 "target-framerate",
                 "display-resolution",
                 "display-size",
+                "whitebox-brightness",
+                "whitebox-vertical-position",
+                "whitebox-horizontal-spacing",
                 "whitebox-brightness",
                 "requests",
                 "latest-subtitle-data",
@@ -1841,6 +1991,10 @@ class GstPageflipGLSink(GstBase.BaseSink):
                 self.__pageflip_gl_window.display_size = value
             elif prop.name == "whitebox-brightness":
                 self.__pageflip_gl_window.whitebox_brightness = value
+            elif prop.name == "whitebox-vertical-position":
+                self.__pageflip_gl_window.whitebox_vertical_position = value
+            elif prop.name == "whitebox-horizontal-spacing":
+                self.__pageflip_gl_window.whitebox_horizontal_spacing = value
             elif prop.name == "close" and value:
                 self.__pageflip_gl_window.stop()
                 if self.__use_separate_process:

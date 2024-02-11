@@ -20,9 +20,26 @@
 *
 */
 
+include <Round-Anything/polyround.scad>
+
 ovr = 0.01;
 
-tv_top_wz = 18.5; // measured 12 to top of screen, but for 1080p it is smaller so we more realistically need 18.5
+// Screen bezel to pixel height dimension
+// LG C1 OLED and Sony XBR-48A9S Bezel Only 11 mm
+// LG G3 OLED Bezel Only 7 mm
+// MMK 55MBL-EL　Screen protector 14 mm
+tv_top_bezel_to_pixel_wz = 7;
+
+// Screen bezel thickness dimensions 
+// LG C1 OLED and Sony XBR-48A9S Bezel Only 5.5 mm
+// LG C1 OLED and Sony XBR-48A9S Bezel with felt (back and front) 7.5 mm
+// LG G3 OLED Bezel Only 13.5 mm
+// LG G3 OLED Bezel Only with felt (back and front) 15.5 mm
+// MMK 55MBL-EL　Screen protector 29
+// MMK 55MBL-EL　Screen protector with felt 30
+mm_r_wy = 15.5; 
+
+tv_top_wz = tv_top_bezel_to_pixel_wz+4.5; // we add 4.5 mm for optional faded board to help prevent potential burn-in
 
 pcb_wx = 38; // measured 37.63
 pcb_wz = 60; // measured 59.03
@@ -70,17 +87,12 @@ os_irf_rpx = (os_c_wx-os_irf_wx)/2;
 os_irf_rpz = (os_c_wz-os_irf_wz)/2;
 
 // mount top (ridge) (ridge ledge)
+
 mm_wx = pcb_wx + 2*pcb_wb;
 mm_wy = pcb_wy_pkt + os_c_wy + (use_irf ? os_irf_s_wy + os_irf_wy : 0);
 mm_wz = tv_top_wz - os_c_pz_2 - os_c_pz_3 + pcb_wz + pcb_wb;
 mm_r_px = 8;
 mm_r_wx = mm_wx + 2*mm_r_px;
-// Applies for LG C1 OLED and Sony XBR-48A9S 
-// Bezel 5.5
-// Bezel with felt (back and front) 7.5
-// Screen protector 29
-// Screen protector with felt 30
-mm_r_wy = 29.0; 
 mm_r_wz = 2;
 mm_rl_wy = 2;
 mm_rl_wz = 10;
@@ -88,7 +100,7 @@ mm_rl_wz = 10;
 // alignment markings
 pcb_am = true;
 pcb_am_wy = 3;
-pcb_am_wxz = 1;
+pcb_am_wxz = 2;
 pcb_am3_px_off = os_c_px_1-os_c_px_2; // offset of center alignment marker to match center of opt sensors.
 
 module 3d_player_tv_mount_main () {

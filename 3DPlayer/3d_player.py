@@ -185,11 +185,17 @@ class EmitterSettingsDialog:
         self.main_app = main_app
         top = self.top = tkinter.Toplevel(parent)
         row_count = 0
-        pro_micro_ports = [port for port, desc, hwid in serial.tools.list_ports.comports() if desc == "SparkFun Pro Micro" or desc.startswith("USB Serial Device")]
+        pro_micro_ports = [
+            port
+            for port, desc, hwid in serial.tools.list_ports.comports()
+            if desc == "SparkFun Pro Micro" or desc.startswith("USB Serial Device")
+        ]
 
         self.serial_port_identifier_frame = tkinter.Frame(top)
         self.serial_port_identifier_variable = tkinter.StringVar(top)
-        self.serial_port_identifier_variable.set(pro_micro_ports[0] if pro_micro_ports else "/dev/ttyACM0")
+        self.serial_port_identifier_variable.set(
+            pro_micro_ports[0] if pro_micro_ports else "/dev/ttyACM0"
+        )
         self.serial_port_identifier_label = tkinter.Label(
             self.serial_port_identifier_frame, text="Serial Port Identifier: "
         )
@@ -829,6 +835,286 @@ class EmitterSettingsDialog:
         self.top.destroy()
 
 
+class DisplaySettingsDialog:
+    def __init__(self, parent, main_app):
+        self.parent = parent
+        self.main_app = main_app
+
+        self.target_framerate_variable = tkinter.StringVar(parent)
+        self.target_framerate_variable.set(DEFAULT_TARGET_FRAMERATE)
+        self.display_resolution_variable = tkinter.StringVar(parent)
+        self.display_resolution_variable.set(DEFAULT_DISPLAY_RESOLUTION)
+        self.display_size_variable = tkinter.StringVar(parent)
+        self.display_size_variable.set(DEFAULT_DISPLAY_SIZE)
+        self.whitebox_brightness_variable = tkinter.StringVar(parent)
+        self.whitebox_brightness_variable.set("255")
+        self.whitebox_vertical_position_variable = tkinter.StringVar(parent)
+        self.whitebox_vertical_position_variable.set("0")
+        self.whitebox_horizontal_spacing_variable = tkinter.StringVar(parent)
+        self.whitebox_horizontal_spacing_variable.set("23")
+        self.use_separate_process_variable = tkinter.BooleanVar(parent)
+        self.use_separate_process_variable.set(False)
+        self.calibration_mode_variable = tkinter.BooleanVar(parent)
+        self.calibration_mode_variable.set(False)
+
+        file_name = os.path.join(base_path, "settings", "last_display_settings.json")
+        if os.path.exists(file_name):
+            self.load_settings_from_file(file_name)
+
+    def show(self):
+        top = self.top = tkinter.Toplevel(self.parent)
+        top.protocol("WM_DELETE_WINDOW", self.click_close)
+
+        row_count = 0
+
+        self.target_framerate_frame = tkinter.Frame(top)
+        self.target_framerate_label = tkinter.Label(
+            self.target_framerate_frame, text="Target Framerate: "
+        )
+        self.target_framerate_label.pack(padx=5, side=tkinter.LEFT)
+        self.target_framerate_option_menu = tkinter.OptionMenu(
+            self.target_framerate_frame,
+            self.target_framerate_variable,
+            "0",
+            "50",
+            "59.98",
+            "60",
+            "74.99",
+            "75",
+            "90",
+            "120",
+        )
+        self.target_framerate_option_menu.pack(padx=5, side=tkinter.LEFT)
+        # self.target_framerate_frame.pack()
+        self.target_framerate_frame.grid(row=row_count, column=0, sticky="w")
+        row_count += 1
+
+        self.display_resolution_frame = tkinter.Frame(top)
+        self.display_resolution_label = tkinter.Label(
+            self.display_resolution_frame, text="Display Resolution: "
+        )
+        self.display_resolution_label.pack(padx=5, side=tkinter.LEFT)
+        self.display_resolution_option_menu = tkinter.OptionMenu(
+            self.display_resolution_frame,
+            self.display_resolution_variable,
+            "2560x1080",
+            "1920x1080",
+            "1280x720",
+        )
+        self.display_resolution_option_menu.pack(padx=5, side=tkinter.LEFT)
+        # self.display_resolution_frame.pack()
+        self.display_resolution_frame.grid(row=row_count, column=0, sticky="w")
+        row_count += 1
+
+        self.display_size_frame = tkinter.Frame(top)
+        self.display_size_label = tkinter.Label(
+            self.display_size_frame, text="Display Size (in inches): "
+        )
+        self.display_size_label.pack(padx=5, side=tkinter.LEFT)
+        self.display_size_entry = tkinter.Entry(
+            self.display_size_frame, textvariable=self.display_size_variable
+        )
+        self.display_size_entry.pack(padx=5, side=tkinter.LEFT)
+        self.display_size_tooltip = idlelib.tooltip.Hovertip(
+            self.display_size_frame,
+            "Specifying the correct display size (provided in inches), allows the appropriate sizing of the trigger boxes to match the sensors unit.",
+            hover_delay=100,
+        )
+        # self.display_size_frame.pack()
+        self.display_size_frame.grid(row=row_count, column=0, sticky="w")
+        row_count += 1
+
+        self.whitebox_brightness_frame = tkinter.Frame(top)
+        self.whitebox_brightness_label = tkinter.Label(
+            self.whitebox_brightness_frame, text="Whitebox Brightness: "
+        )
+        self.whitebox_brightness_label.pack(padx=5, side=tkinter.LEFT)
+        self.whitebox_brightness_entry = tkinter.Entry(
+            self.whitebox_brightness_frame,
+            textvariable=self.whitebox_brightness_variable,
+        )
+        self.whitebox_brightness_entry.pack(padx=5, side=tkinter.LEFT)
+        self.whitebox_brightness_tooltip = idlelib.tooltip.Hovertip(
+            self.whitebox_brightness_frame,
+            "The whitebox brightness setting (0 black to 255 white) lets users lower the brightness of the white boxes to help aleviate concerns of OLED burn in.",
+            hover_delay=100,
+        )
+        # self.whitebox_brightness_frame.pack()
+        self.whitebox_brightness_frame.grid(row=row_count, column=0, sticky="w")
+        row_count += 1
+
+        self.whitebox_vertical_position_frame = tkinter.Frame(top)
+        self.whitebox_vertical_position_label = tkinter.Label(
+            self.whitebox_vertical_position_frame, text="Whitebox Vertical Position: "
+        )
+        self.whitebox_vertical_position_label.pack(padx=5, side=tkinter.LEFT)
+        self.whitebox_vertical_position_entry = tkinter.Entry(
+            self.whitebox_vertical_position_frame,
+            textvariable=self.whitebox_vertical_position_variable,
+        )
+        self.whitebox_vertical_position_entry.pack(padx=5, side=tkinter.LEFT)
+        self.whitebox_vertical_position_tooltip = idlelib.tooltip.Hovertip(
+            self.whitebox_vertical_position_frame,
+            "The whitebox vertical position lets the user move the screen based whitebox down to better align with the 3d emitter tv mount they have. It is an arbitrary measurement and has only relative meaning. (default 0)",
+            hover_delay=100,
+        )
+        # self.whitebox_vertical_position_frame.pack()
+        self.whitebox_vertical_position_frame.grid(row=row_count, column=0, sticky="w")
+        row_count += 1
+
+        self.whitebox_horizontal_spacing_frame = tkinter.Frame(top)
+        self.whitebox_horizontal_spacing_label = tkinter.Label(
+            self.whitebox_horizontal_spacing_frame, text="Whitebox Horozontal Spacing: "
+        )
+        self.whitebox_horizontal_spacing_label.pack(padx=5, side=tkinter.LEFT)
+        self.whitebox_horizontal_spacing_entry = tkinter.Entry(
+            self.whitebox_horizontal_spacing_frame,
+            textvariable=self.whitebox_horizontal_spacing_variable,
+        )
+        self.whitebox_horizontal_spacing_entry.pack(padx=5, side=tkinter.LEFT)
+        self.whitebox_horizontal_spacing_tooltip = idlelib.tooltip.Hovertip(
+            self.whitebox_horizontal_spacing_frame,
+            "The whitebox horizontal spacing lets the user increase/decrease the separation between white boxes to better align with the 3d emitter and tv pixel pitch they have. It is an arbitrary measurement and has only relative meaning. (default 23)",
+            hover_delay=100,
+        )
+        # self.whitebox_horizontal_spacing_frame.pack()
+        self.whitebox_horizontal_spacing_frame.grid(row=row_count, column=0, sticky="w")
+        row_count += 1
+
+        self.use_separate_process_frame = tkinter.Frame(top)
+        self.use_separate_process_label = tkinter.Label(
+            self.use_separate_process_frame, text="Use Separate Process: "
+        )
+        self.use_separate_process_label.pack(padx=5, side=tkinter.LEFT)
+        self.use_separate_process_option_menu = tkinter.Checkbutton(
+            self.use_separate_process_frame, variable=self.use_separate_process_variable
+        )
+        self.use_separate_process_option_menu.pack(padx=5, side=tkinter.LEFT)
+        self.use_separate_process_tooltip = idlelib.tooltip.Hovertip(
+            self.use_separate_process_frame,
+            "Use a separate process to perform page flipping, this requires additional CPU and memory copies but may help reduce the number of duplicate/dropped frames.",
+            hover_delay=100,
+        )
+        # self.use_separate_process_frame.pack()
+        self.use_separate_process_frame.grid(row=row_count, column=0, sticky="w")
+        row_count += 1
+
+        self.calibration_mode_frame = tkinter.Frame(top)
+        self.calibration_mode_label = tkinter.Label(
+            self.calibration_mode_frame, text="Calibration Mode: "
+        )
+        self.calibration_mode_label.pack(padx=5, side=tkinter.LEFT)
+        self.calibration_mode_option_menu = tkinter.Checkbutton(
+            self.calibration_mode_frame, variable=self.calibration_mode_variable
+        )
+        self.calibration_mode_option_menu.pack(padx=5, side=tkinter.LEFT)
+        self.calibration_mode_tooltip = idlelib.tooltip.Hovertip(
+            self.calibration_mode_frame,
+            "Calibration mode shows a reticule to help with alignment of the sensor bar \nand also allows for adjustment of emitter frame_delay and frame_duration using hotkeys as instructed on the OSD. \nTo adjust emitter timing parameters you will need to ensure the emitter settings dialog is also open and connected to the emitter. \nTo optimize emitter settings adjustment it is recommended to use the red/blue or black/white test videos.",
+            hover_delay=100,
+        )
+        # self.calibration_mode_frame.pack()
+        self.calibration_mode_frame.grid(row=row_count, column=0, sticky="w")
+        row_count += 1
+
+        self.action_button_frame_2 = tkinter.Frame(top)
+        self.save_settings_to_disk_button = tkinter.Button(
+            self.action_button_frame_2,
+            text="Save Settings to Disk",
+            command=self.click_save_visible_settings_to_disk,
+        )
+        self.save_settings_to_disk_button.pack(padx=5, side=tkinter.LEFT)
+        self.save_settings_to_disk_button_tooltip = idlelib.tooltip.Hovertip(
+            self.save_settings_to_disk_button,
+            "Saves the display settings shown currently in the UI to the JSON file specified.",
+            hover_delay=100,
+        )
+        self.load_settings_from_disk_button = tkinter.Button(
+            self.action_button_frame_2,
+            text="Load Settings from Disk",
+            command=self.click_load_visisble_settings_from_disk,
+        )
+        self.load_settings_from_disk_button.pack(padx=5, side=tkinter.LEFT)
+        self.load_settings_from_disk_button_tooltip = idlelib.tooltip.Hovertip(
+            self.load_settings_from_disk_button,
+            "Loads the display settings from the JSON file specified to the UI.",
+            hover_delay=100,
+        )
+        self.close_button = tkinter.Button(
+            self.action_button_frame_2, text="Close", command=self.click_close
+        )
+        self.close_button.pack(padx=5, side=tkinter.LEFT)
+        self.close_button_tooltip = idlelib.tooltip.Hovertip(
+            self.close_button,
+            "Closes this window.",
+            hover_delay=100,
+        )
+        self.action_button_frame_2.grid(row=row_count, column=0, sticky="w")
+        row_count += 1
+
+    def save_settings_to_file(self, file_name):
+        f = open(file_name, "w")
+        json.dump(
+            {
+                "target_framerate": self.target_framerate_variable.get(),
+                "display_resolution": self.display_resolution_variable.get(),
+                "display_size": self.display_size_variable.get(),
+                "whitebox_brightness": self.whitebox_brightness_variable.get(),
+                "whitebox_vertical_position": self.whitebox_vertical_position_variable.get(),
+                "whitebox_horizontal_spacing": self.whitebox_horizontal_spacing_variable.get(),
+                "use_separate_process": self.use_separate_process_variable.get(),
+                "calibration_mode": self.calibration_mode_variable.get(),
+            },
+            f,
+            indent=2,
+        )
+        f.close()
+
+    def click_save_visible_settings_to_disk(self):
+        file_name = tkinter.filedialog.asksaveasfilename(
+            title="Save Display Settings to Disk",
+            initialdir=os.path.join(base_path, "settings"),
+            filetypes=[("Display Settings FIle", "*.display_settings.json")],
+            defaultextension=".display_settings.json",
+        )
+        if file_name:
+            self.save_settings_to_file(file_name)
+
+    def load_settings_from_file(self, file_name):
+        f = open(file_name, "r")
+        settings = json.load(f)
+        f.close()
+        self.target_framerate_variable.set(settings["target_framerate"])
+        self.display_resolution_variable.set(settings["display_resolution"])
+        self.display_size_variable.set(settings["display_size"])
+        self.whitebox_brightness_variable.set(settings["whitebox_brightness"])
+        self.whitebox_vertical_position_variable.set(
+            settings["whitebox_vertical_position"]
+        )
+        self.whitebox_horizontal_spacing_variable.set(
+            settings["whitebox_horizontal_spacing"]
+        )
+        self.use_separate_process_variable.set(settings["use_separate_process"])
+        self.calibration_mode_variable.set(settings.get("calibration_mode", False))
+
+    def click_load_visisble_settings_from_disk(self):
+        file_name = tkinter.filedialog.askopenfilename(
+            title="Load Display Settings from Disk",
+            initialdir=os.path.join(
+                os.path.dirname(os.path.abspath(__file__)), "settings"
+            ),
+            filetypes=[("Display Settings FIle", "*.display_settings.json")],
+        )
+        if file_name:
+            self.load_settings_from_file(file_name)
+
+    def click_close(self):
+        self.save_settings_to_file(
+            os.path.join(base_path, "settings", "last_display_settings.json")
+        )
+        self.top.destroy()
+
+
 class OpenFileDialog:
 
     LOAD_VIDEO_PROFILE_FROM_HISTORY_OPTION = "Load Video Profile From History"
@@ -1069,30 +1355,6 @@ class OpenFileDialog:
         self.right_eye_frame.grid(row=row_count, column=0, sticky="w")
         row_count += 1
 
-        self.target_framerate_frame = tkinter.Frame(top)
-        self.target_framerate_variable = tkinter.StringVar(top)
-        self.target_framerate_variable.set(DEFAULT_TARGET_FRAMERATE)
-        self.target_framerate_label = tkinter.Label(
-            self.target_framerate_frame, text="Target Framerate: "
-        )
-        self.target_framerate_label.pack(padx=5, side=tkinter.LEFT)
-        self.target_framerate_option_menu = tkinter.OptionMenu(
-            self.target_framerate_frame,
-            self.target_framerate_variable,
-            "0",
-            "50",
-            "59.98",
-            "60",
-            "74.99",
-            "75",
-            "90",
-            "120",
-        )
-        self.target_framerate_option_menu.pack(padx=5, side=tkinter.LEFT)
-        # self.target_framerate_frame.pack()
-        self.target_framerate_frame.grid(row=row_count, column=0, sticky="w")
-        row_count += 1
-
         self.video_resolution_frame = tkinter.Frame(top)
         self.video_resolution_variable = tkinter.StringVar(top)
         self.video_resolution_variable.set("1920x1080")
@@ -1109,106 +1371,6 @@ class OpenFileDialog:
         self.video_resolution_option_menu.pack(padx=5, side=tkinter.LEFT)
         # self.video_resolution_frame.pack()
         self.video_resolution_frame.grid(row=row_count, column=0, sticky="w")
-        row_count += 1
-
-        self.display_resolution_frame = tkinter.Frame(top)
-        self.display_resolution_variable = tkinter.StringVar(top)
-        self.display_resolution_variable.set(DEFAULT_DISPLAY_RESOLUTION)
-        self.display_resolution_label = tkinter.Label(
-            self.display_resolution_frame, text="Display Resolution: "
-        )
-        self.display_resolution_label.pack(padx=5, side=tkinter.LEFT)
-        self.display_resolution_option_menu = tkinter.OptionMenu(
-            self.display_resolution_frame,
-            self.display_resolution_variable,
-            "2560x1080",
-            "1920x1080",
-            "1280x720",
-        )
-        self.display_resolution_option_menu.pack(padx=5, side=tkinter.LEFT)
-        # self.display_resolution_frame.pack()
-        self.display_resolution_frame.grid(row=row_count, column=0, sticky="w")
-        row_count += 1
-
-        self.display_size_frame = tkinter.Frame(top)
-        self.display_size_variable = tkinter.StringVar(top)
-        self.display_size_variable.set(DEFAULT_DISPLAY_SIZE)
-        self.display_size_label = tkinter.Label(
-            self.display_size_frame, text="Display Size (in inches): "
-        )
-        self.display_size_label.pack(padx=5, side=tkinter.LEFT)
-        self.display_size_entry = tkinter.Entry(
-            self.display_size_frame, textvariable=self.display_size_variable
-        )
-        self.display_size_entry.pack(padx=5, side=tkinter.LEFT)
-        self.display_size_tooltip = idlelib.tooltip.Hovertip(
-            self.display_size_frame,
-            "Specifying the correct display size (provided in inches), allows the appropriate sizing of the trigger boxes to match the sensors unit.",
-            hover_delay=100,
-        )
-        # self.display_size_frame.pack()
-        self.display_size_frame.grid(row=row_count, column=0, sticky="w")
-        row_count += 1
-
-        self.whitebox_brightness_frame = tkinter.Frame(top)
-        self.whitebox_brightness_variable = tkinter.StringVar(top)
-        self.whitebox_brightness_variable.set("255")
-        self.whitebox_brightness_label = tkinter.Label(
-            self.whitebox_brightness_frame, text="Whitebox Brightness: "
-        )
-        self.whitebox_brightness_label.pack(padx=5, side=tkinter.LEFT)
-        self.whitebox_brightness_entry = tkinter.Entry(
-            self.whitebox_brightness_frame,
-            textvariable=self.whitebox_brightness_variable,
-        )
-        self.whitebox_brightness_entry.pack(padx=5, side=tkinter.LEFT)
-        self.whitebox_brightness_tooltip = idlelib.tooltip.Hovertip(
-            self.whitebox_brightness_frame,
-            "The whitebox brightness setting (0 black to 255 white) lets users lower the brightness of the white boxes to help aleviate concerns of OLED burn in.",
-            hover_delay=100,
-        )
-        # self.whitebox_brightness_frame.pack()
-        self.whitebox_brightness_frame.grid(row=row_count, column=0, sticky="w")
-        row_count += 1
-
-        self.use_separate_process_frame = tkinter.Frame(top)
-        self.use_separate_process_variable = tkinter.BooleanVar(top)
-        self.use_separate_process_variable.set(False)
-        self.use_separate_process_label = tkinter.Label(
-            self.use_separate_process_frame, text="Use Separate Process: "
-        )
-        self.use_separate_process_label.pack(padx=5, side=tkinter.LEFT)
-        self.use_separate_process_option_menu = tkinter.Checkbutton(
-            self.use_separate_process_frame, variable=self.use_separate_process_variable
-        )
-        self.use_separate_process_option_menu.pack(padx=5, side=tkinter.LEFT)
-        self.use_separate_process_tooltip = idlelib.tooltip.Hovertip(
-            self.use_separate_process_frame,
-            "Use a separate process to perform page flipping, this requires additional CPU and memory copies but may help reduce the number of duplicate/dropped frames.",
-            hover_delay=100,
-        )
-        # self.use_separate_process_frame.pack()
-        self.use_separate_process_frame.grid(row=row_count, column=0, sticky="w")
-        row_count += 1
-
-        self.calibration_mode_frame = tkinter.Frame(top)
-        self.calibration_mode_variable = tkinter.BooleanVar(top)
-        self.calibration_mode_variable.set(False)
-        self.calibration_mode_label = tkinter.Label(
-            self.calibration_mode_frame, text="Calibration Mode: "
-        )
-        self.calibration_mode_label.pack(padx=5, side=tkinter.LEFT)
-        self.calibration_mode_option_menu = tkinter.Checkbutton(
-            self.calibration_mode_frame, variable=self.calibration_mode_variable
-        )
-        self.calibration_mode_option_menu.pack(padx=5, side=tkinter.LEFT)
-        self.calibration_mode_tooltip = idlelib.tooltip.Hovertip(
-            self.calibration_mode_frame,
-            "Calibration mode shows a reticule to help with alignment of the sensor bar \nand also allows for adjustment of emitter frame_delay and frame_duration using hotkeys as instructed on the OSD. \nTo adjust emitter timing parameters you will need to ensure the emitter settings dialog is also open and connected to the emitter. \nTo optimize emitter settings adjustment it is recommended to use the red/blue or black/white test videos.",
-            hover_delay=100,
-        )
-        # self.calibration_mode_frame.pack()
-        self.calibration_mode_frame.grid(row=row_count, column=0, sticky="w")
         row_count += 1
 
         self.open_button = tkinter.Button(top, text="Open", command=self.send)
@@ -1236,21 +1398,7 @@ class OpenFileDialog:
         self.subtitle_offset_variable.set(selected_video_history["subtitle_offset"])
         self.frame_packing_variable.set(selected_video_history["frame_packing"])
         self.right_eye_variable.set(selected_video_history["right_eye"])
-        self.target_framerate_variable.set(selected_video_history["target_framerate"])
         self.video_resolution_variable.set(selected_video_history["video_resolution"])
-        self.display_resolution_variable.set(
-            selected_video_history["display_resolution"]
-        )
-        self.display_size_variable.set(selected_video_history["display_size"])
-        self.whitebox_brightness_variable.set(
-            selected_video_history["whitebox_brightness"]
-        )
-        self.use_separate_process_variable.set(
-            selected_video_history["use_separate_process"]
-        )
-        self.calibration_mode_variable.set(
-            selected_video_history.get("calibration_mode", False)
-        )
 
     def remove_video_profile_from_history(self):
         if (
@@ -1304,13 +1452,7 @@ class OpenFileDialog:
             "subtitle_offset": self.subtitle_offset_variable.get(),
             "frame_packing": self.frame_packing_variable.get(),
             "right_eye": self.right_eye_variable.get(),
-            "target_framerate": self.target_framerate_variable.get(),
             "video_resolution": self.video_resolution_variable.get(),
-            "display_resolution": self.display_resolution_variable.get(),
-            "display_size": self.display_size_variable.get(),
-            "whitebox_brightness": self.whitebox_brightness_variable.get(),
-            "use_separate_process": self.use_separate_process_variable.get(),
-            "calibration_mode": self.calibration_mode_variable.get(),
         }
         save_history = True
         if (
@@ -1368,7 +1510,7 @@ class TopWindow:
         top_frame = tkinter.Frame(window)
         top_frame.pack(fill="x", expand=1, pady=5, padx=25, anchor="n")
         open_emitter_settings_button_image = svg_to_imagetk_photoimage(
-            "./images/sliders2.svg"
+            "./images/sliders2-ir.svg"
         )
         open_emitter_settings_button = tkinter.Button(
             top_frame,
@@ -1388,6 +1530,28 @@ class TopWindow:
         open_emitter_settings_button.pack(padx=5, side=tkinter.LEFT)
         open_emitter_settings_button.bind(
             "<Button-1>", self.click_open_emitter_settings_button
+        )
+        open_display_settings_button_image = svg_to_imagetk_photoimage(
+            "./images/sliders2-tv.svg"
+        )
+        open_display_settings_button = tkinter.Button(
+            top_frame,
+            text="Open Display Settings",
+            image=open_display_settings_button_image,
+            highlightthickness=0,
+            bd=0,
+        )
+        open_display_settings_button.tk_img = open_display_settings_button_image
+        open_display_settings_button_tooltip = (  # @UnusedVariable
+            idlelib.tooltip.Hovertip(  # @UnusedVariable
+                open_display_settings_button,
+                "Open display settings to tweak display parameters.",
+                hover_delay=100,
+            )
+        )
+        open_display_settings_button.pack(padx=5, side=tkinter.LEFT)
+        open_display_settings_button.bind(
+            "<Button-1>", self.click_open_display_settings_button
         )
         open_video_file_button_image = svg_to_imagetk_photoimage(
             "./images/folder2-open.svg"
@@ -1579,6 +1743,9 @@ class TopWindow:
         window.bind("<space>", self.toggle_paused)
         # add seek with left and right arrow keys (use shift to seek farther)
 
+        # create display settings dialog object to store display settings
+        self.display_settings_dialog = DisplaySettingsDialog(self.window, self)
+
     def move_mouse(self, event=None):
         if ".!frame.!button" in str(event.widget):
             return "break"
@@ -1690,6 +1857,9 @@ class TopWindow:
         self.emitter_settings_dialog = EmitterSettingsDialog(self.window, self)
         # self.window.wait_window(self.emitter_settings_dialog.top)
 
+    def click_open_display_settings_button(self, event=None):  # @UnusedVariable
+        self.display_settings_dialog.show()
+
     def click_open_video_file_button(self, event=None):  # @UnusedVariable
         open_file_dialog = OpenFileDialog(self.window)
         self.window.wait_window(open_file_dialog.top)
@@ -1708,13 +1878,26 @@ class TopWindow:
         subtitle_offset = float(open_file_dialog.subtitle_offset_variable.get())
         frame_packing = open_file_dialog.frame_packing_variable.get()
         right_eye = open_file_dialog.right_eye_variable.get()
-        target_framerate = open_file_dialog.target_framerate_variable.get()
         video_resolution = open_file_dialog.video_resolution_variable.get()
-        display_resolution = open_file_dialog.display_resolution_variable.get()
-        display_size = open_file_dialog.display_size_variable.get()
-        whitebox_brightness = open_file_dialog.whitebox_brightness_variable.get()
-        use_separate_process = open_file_dialog.use_separate_process_variable.get()
-        calibration_mode = open_file_dialog.calibration_mode_variable.get()
+
+        target_framerate = self.display_settings_dialog.target_framerate_variable.get()
+        display_resolution = (
+            self.display_settings_dialog.display_resolution_variable.get()
+        )
+        display_size = self.display_settings_dialog.display_size_variable.get()
+        whitebox_brightness = (
+            self.display_settings_dialog.whitebox_brightness_variable.get()
+        )
+        whitebox_vertical_position = (
+            self.display_settings_dialog.whitebox_vertical_position_variable.get()
+        )
+        whitebox_horizontal_spacing = (
+            self.display_settings_dialog.whitebox_horizontal_spacing_variable.get()
+        )
+        use_separate_process = (
+            self.display_settings_dialog.use_separate_process_variable.get()
+        )
+        calibration_mode = self.display_settings_dialog.calibration_mode_variable.get()
         # print(frame_packing)
         # print(right_eye)
         # print(video_resolution)
@@ -1867,6 +2050,12 @@ class TopWindow:
         self.pageflipglsink.set_property("display-resolution", display_resolution)
         self.pageflipglsink.set_property("display-size", display_size)
         self.pageflipglsink.set_property("whitebox-brightness", whitebox_brightness)
+        self.pageflipglsink.set_property(
+            "whitebox-vertical-position", whitebox_vertical_position
+        )
+        self.pageflipglsink.set_property(
+            "whitebox-horizontal-spacing", whitebox_horizontal_spacing
+        )
         self.pageflipglsink.set_property("subtitle-font", subtitle_font)
         self.pageflipglsink.set_property("subtitle-size", subtitle_size)
         self.pageflipglsink.set_property("subtitle-depth", subtitle_depth)
@@ -1894,7 +2083,7 @@ if __name__ == "__main__":
 
     # set base path
     base_path = os.path.dirname(os.path.abspath(__file__))
-    #if os.path.exists(os.path.join(base_path, "_internal")):
+    # if os.path.exists(os.path.join(base_path, "_internal")):
     #    base_path = os.path.join(base_path, "_internal")
 
     os.environ["GST_PLUGIN_PATH"] = base_path
@@ -1907,7 +2096,11 @@ if __name__ == "__main__":
     # gi.require_version('GdkX11', '3.0') # windows
     # from gi.repository import Gst, GObject, GdkX11, GstVideo, GstBase # windows
     from gi.repository import Gst  # windows
-    from gi.repository import GObject, GstVideo, GstBase # we need to import these here or pyinstaller won't pickup GstBase-1.0.typelib and GstVideo-1.0.typelib
+    from gi.repository import (
+        GObject,
+        GstVideo,
+        GstBase,
+    )  # we need to import these here or pyinstaller won't pickup GstBase-1.0.typelib and GstVideo-1.0.typelib
 
     # GObject.threads_init()
     Gst.init(None)
@@ -1947,30 +2140,53 @@ if __name__ == "__main__":
                             top_window.set_menu_on_top(
                                 True if r == "set_menu_on_top_true" else False
                             )
-                        if (
-                            r.startswith("calibration_")
-                            and top_window.pageflipglsink.get_property(
-                                "calibration-mode"
-                            )
-                            and top_window.emitter_serial is not None
+                        if r.startswith(
+                            "calibration_"
+                        ) and top_window.pageflipglsink.get_property(
+                            "calibration-mode"
                         ):
                             increment_by = 0
-                            if "decrease_" in r:
-                                increment_by = -20
-                            elif "increase_" in r:
-                                increment_by = 20
                             target = None
-                            if "frame_delay" in r:
-                                target = (
-                                    top_window.emitter_settings_dialog.setting_ir_frame_delay_variable
-                                )
-                            elif "frame_duration" in r:
-                                target = (
-                                    top_window.emitter_settings_dialog.setting_ir_frame_duration_variable
-                                )
-                            if increment_by != 0 and target is not None:
-                                target.set(str(int(target.get()) + increment_by))
-                                top_window.emitter_settings_dialog.click_update_settings_on_emitter()
+                            if top_window.emitter_serial is not None:
+                                if "frame_delay" in r:
+                                    target = (
+                                        top_window.emitter_settings_dialog.setting_ir_frame_delay_variable
+                                    )
+                                elif "frame_duration" in r:
+                                    target = (
+                                        top_window.emitter_settings_dialog.setting_ir_frame_duration_variable
+                                    )
+                                if target is not None:
+                                    if "decrease_" in r:
+                                        increment_by = -20
+                                    elif "increase_" in r:
+                                        increment_by = 20
+                                    if increment_by != 0:
+                                        target.set(
+                                            str(int(target.get()) + increment_by)
+                                        )
+                                        top_window.emitter_settings_dialog.click_update_settings_on_emitter()
+                            if (
+                                "whitebox_vertical_position" in r
+                                or "whitebox_horizontal_spacing" in r
+                            ):
+                                if "whitebox_vertical_position" in r:
+                                    target = (
+                                        top_window.display_settings_dialog.whitebox_vertical_position_variable
+                                    )
+                                elif "whitebox_horizontal_spacing" in r:
+                                    target = (
+                                        top_window.display_settings_dialog.whitebox_horizontal_spacing_variable
+                                    )
+                                if target is not None:
+                                    if "decrease_" in r:
+                                        increment_by = -2
+                                    elif "increase_" in r:
+                                        increment_by = 2
+                                    if increment_by != 0:
+                                        target.set(
+                                            str(int(target.get()) + increment_by)
+                                        )
 
                 if top_window.subtitle3dsink is not None:
                     latest_subtitle_data = top_window.subtitle3dsink.get_property(
