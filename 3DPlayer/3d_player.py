@@ -61,7 +61,7 @@ class _setit:
 # from https://stackoverflow.com/questions/67449774/how-to-display-svg-on-tkinter
 def svg_to_imagetk_photoimage(image):
     png_data = cairosvg.svg2png(
-        url=os.path.join(base_path, image), output_width=30, output_height=30
+        url=os.path.join(internal_base_path, image), output_width=30, output_height=30
     )
     bytes_png = BytesIO(png_data)
     img = PIL.Image.open(bytes_png)
@@ -2086,12 +2086,14 @@ if __name__ == "__main__":
         os.system("chcp.com 65001")
 
     # set base path
-    base_path = os.path.dirname(os.path.abspath(__file__))
-    os.environ["GST_PLUGIN_PATH"] = base_path
+    internal_base_path = os.path.dirname(os.path.abspath(__file__))
+    os.environ["GST_PLUGIN_PATH"] = internal_base_path
 
-    split_base_path = os.path.split(base_path)
+    split_base_path = os.path.split(internal_base_path)
     if "_internal" == split_base_path[1]:
         base_path = split_base_path[0]
+    else:
+        base_path = internal_base_path
 
     import gi
 
