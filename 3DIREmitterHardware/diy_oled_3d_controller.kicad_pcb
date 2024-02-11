@@ -1317,6 +1317,12 @@
     (stroke (width 0.1) (type solid)) (layer "Edge.Cuts") (tstamp e3b2c177-0f1d-46ee-8e0d-ea92b480b9ef))
   (gr_line (start 91.44 48.895) (end 128.905 48.895)
     (stroke (width 0.1) (type solid)) (layer "Edge.Cuts") (tstamp f2928b67-66d1-4200-828b-18703c8741c0))
+  (gr_text "This PCB and its design by Open3DOLED \nis licensed under CC BY-NC-SA 4.0." (at 122.428 61.468) (layer "B.SilkS") (tstamp f997a281-9ffe-4247-8b2c-3dee36bf4538)
+    (effects (font (size 0.8 0.8) (thickness 0.2) bold) (justify left bottom mirror))
+  )
+  (gr_text "This PCB and its design by Open3DOLED \nis licensed under CC BY-NC-SA 4.0." (at 97.3328 61.5188) (layer "F.SilkS") (tstamp 0082aa9a-2dbf-4114-9632-b9305f62776c)
+    (effects (font (size 0.8 0.8) (thickness 0.2) bold) (justify left bottom))
+  )
 
   (segment (start 122.85 70.2075) (end 122.8875 70.17) (width 0.5) (layer "F.Cu") (net 6) (tstamp 49c51fc3-8647-4caf-a3fd-ed7223c5cf00))
   (segment (start 109.22 67.31) (end 111.125 69.215) (width 0.5) (layer "F.Cu") (net 6) (tstamp 5d7b96e1-92af-4bc2-8229-b940ba6a48db))
