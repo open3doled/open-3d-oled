@@ -755,28 +755,28 @@ class PageflipGLWindow(threading.Thread):
                                 not self.__show_calibration_instruction_image
                             )
                         elif event.key == pg.K_y:
-                            self.__whitebox_vertical_position -= 2
+                            self.__whitebox_vertical_position -= 1
                             self.__update_overlay_boxes()
                             self.__requests = ",".join(
                                 self.__requests.split(",")
                                 + ["calibration_decrease_whitebox_vertical_position"]
                             )
                         elif event.key == pg.K_h:
-                            self.__whitebox_vertical_position += 2
+                            self.__whitebox_vertical_position += 1
                             self.__update_overlay_boxes()
                             self.__requests = ",".join(
                                 self.__requests.split(",")
                                 + ["calibration_increase_whitebox_vertical_position"]
                             )
                         elif event.key == pg.K_u:
-                            self.__whitebox_horizontal_spacing -= 2
+                            self.__whitebox_horizontal_spacing -= 1
                             self.__update_overlay_boxes()
                             self.__requests = ",".join(
                                 self.__requests.split(",")
                                 + ["calibration_decrease_whitebox_horizontal_spacing"]
                             )
                         elif event.key == pg.K_j:
-                            self.__whitebox_horizontal_spacing += 2
+                            self.__whitebox_horizontal_spacing += 1
                             self.__update_overlay_boxes()
                             self.__requests = ",".join(
                                 self.__requests.split(",")

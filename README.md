@@ -60,16 +60,20 @@ Unzip and run 3d_player.exe
 * Click on "Load Settings From Disk" and select a profile for your TV and glasses from the "settings" directory. Some settings files are optimized to reduce vignetting (black at top and bottom of screen) and others are optimized to reduce ghosting (cross talk between left and right eye at top and bottom of screen), choose the settings file matching your preference.
 * If necessary change the "IR Protocol" to match your glasses, most settings templates should have this set correctly already. (Optional)
 * Click "Update Settings" to send these settings to the emitter (Leave this window open but you can let it go into the background)
-* Click the "Open a video file for playback" icon button on the main toolbar, then click the "Select" button next to "Video File" and from the videos directory choose the file "test_video_red_left_blue_right.mp4"
-* At the bottom of the "Open a video" window check the checkbox for "Calibration Mode" then click "Open"
+* Click the "Open disply settings" icon button on the main toolbar, and then the checkbox that says "Calibration Mode" at the bottom you can close this window.
+* Click the "Open a video file for playback" icon button on the main toolbar, then click the "Select" button next to "Video File" and from the videos directory choose the file "test_video_red_left_blue_right.mp4" then click "Open"
 * Use F11 or the "Toggle fullscreen" icon button on the main toolbar to make the video fullscreen.
-* Physically re-align the 3d emitter bar with the alignment reticule on the screen to ensure it is centered.
+* Physically align horizontally the 3d emitter alignment marker with the vertical alignment line on the screen to ensure it is centered.
+* Use the y and h keys to move the horizontal alignment line up and down until it matches the 3d emitter alignment marker. 
 * Put on your 3D glasses and turn them on after they synchronize ensure the right eye looks red and the left eye looks blue, you may see red and blue lines at the top and bottom of the screen on opposing eyes.
 * Based on your decision earlier about ghosting vs vignetting at the top and bottom of the screen, follow the onscreen instructions using the i and k keys to adjust the start frame timing and the o and l keys to adjust the end frame timing. (You may want to repeat this with the black and white calibration videos as well if you are try to reduce cross talk, remember you can use the "F" hotkey to flip left and right eyes)
 * When you are happy with the timings you can press the escape key to close the video or F11 to minimize the playback window.
 * Next navigate back to the emitter settings window, you should see that "Frame Delay" and "Frame Duration" have no been updated to the optimized values obtained during calibration.
 * Click "Save Settings to EEPROM" to make these settings persist next time your power up the 3d emitter.
-* Click "Save Settings to Disk" to make a copy of your optimized settings locally incase for whatever reason you decide to experiment with a different type of 3d glasses.
+* Click "Save Settings to Disk" to make a copy of your optimized 3d emitter settings locally incase for whatever reason you decide to experiment with a different type of 3d glasses.
+* Click the "Open disply settings" icon button on the main toolbar, and disable the checkbox that says "Calibration Mode", you should see that the "Whitebox Vertical Position" has changed from "0" to whatever value you aligned it with.
+* Click "Save Settings to Disk" to make a copy of your optimized display settings locally incase for whatever reason you decide to experiment with a different display.
+* Click "Close" on the display settings window.
 * Your now done and should be able to watch 3D videos on your OLED!
     
 ## FAQ, Useful Commands and Tips

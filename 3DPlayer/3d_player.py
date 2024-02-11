@@ -1108,10 +1108,13 @@ class DisplaySettingsDialog:
         if file_name:
             self.load_settings_from_file(file_name)
 
-    def click_close(self):
+    def autosave_active_settings(self):
         self.save_settings_to_file(
             os.path.join(base_path, "settings", "last_display_settings.json")
         )
+
+    def click_close(self):
+        self.autosave_active_settings()
         self.top.destroy()
 
 
@@ -1808,6 +1811,7 @@ class TopWindow:
         self.set_menu_on_top(True)
         if self.emitter_serial:
             self.emitter_serial.close()
+        self.display_settings_dialog.autosave_active_settings()
         return "break"
 
     def stop_or_close_player(self, event=None):  # @UnusedVariable
@@ -2180,9 +2184,9 @@ if __name__ == "__main__":
                                     )
                                 if target is not None:
                                     if "decrease_" in r:
-                                        increment_by = -2
+                                        increment_by = -1
                                     elif "increase_" in r:
-                                        increment_by = 2
+                                        increment_by = 1
                                     if increment_by != 0:
                                         target.set(
                                             str(int(target.get()) + increment_by)
