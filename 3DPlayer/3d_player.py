@@ -2089,7 +2089,7 @@ if __name__ == "__main__":
     base_path = os.path.dirname(os.path.abspath(__file__))
     os.environ["GST_PLUGIN_PATH"] = base_path
 
-    split_base_path = os.path.split(base_path)[1]
+    split_base_path = os.path.split(base_path)
     if "_internal" == split_base_path[1]:
         base_path = split_base_path[0]
 
