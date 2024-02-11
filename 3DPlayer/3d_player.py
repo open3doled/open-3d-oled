@@ -2087,10 +2087,11 @@ if __name__ == "__main__":
 
     # set base path
     base_path = os.path.dirname(os.path.abspath(__file__))
-    # if os.path.exists(os.path.join(base_path, "_internal")):
-    #    base_path = os.path.join(base_path, "_internal")
-
     os.environ["GST_PLUGIN_PATH"] = base_path
+
+    split_base_path = os.path.split(base_path)[1]
+    if "_internal" == split_base_path[1]:
+        base_path = split_base_path[0]
 
     import gi
 
