@@ -20,15 +20,13 @@
 *
 */
 
-include <Round-Anything/polyround.scad>
-
 ovr = 0.01;
 
 // Screen bezel to pixel height dimension
 // LG C1 OLED and Sony XBR-48A9S Bezel Only 11 mm
 // LG G3 OLED Bezel Only 7 mm
 // MMK 55MBL-EL　Screen protector 14 mm
-tv_top_bezel_to_pixel_wz = 7;
+tv_top_bezel_to_pixel_wz = 14;
 
 // Screen bezel thickness dimensions 
 // LG C1 OLED and Sony XBR-48A9S Bezel Only 5.5 mm
@@ -37,7 +35,7 @@ tv_top_bezel_to_pixel_wz = 7;
 // LG G3 OLED Bezel Only with felt (back and front) 15.5 mm
 // MMK 55MBL-EL　Screen protector 29
 // MMK 55MBL-EL　Screen protector with felt 30
-mm_r_wy = 15.5; 
+mm_r_wy = 30; 
 
 tv_top_wz = tv_top_bezel_to_pixel_wz+4.5; // we add 4.5 mm for optional faded board to help prevent potential burn-in
 
