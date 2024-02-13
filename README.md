@@ -80,12 +80,15 @@ Unzip and run 3d_player.exe
 * Supported TVs
 ```
 Working (Tested)
-LG C1 OLED
-Sony OLED XBR 48a9s
-Should Work (Untested)
-LG C2 OLED
-Other OLEDs with BFI technology.
-LCD Monitors with strobed backlight for BFI and with front polarization that is compatible with 3D glasses (https://www.rtings.com/monitor/tests/motion/black-frame-insertion)
+ - LG C1 OLED (Fully working with Motion Pro high setting with no crosstalk due to 41% BFI duty cycle)
+ - Sony OLED XBR 48a9s (Working with clearness high setting but the bottom and top 10% of the screen has crosstalk due to 61% BFI duty cycle)
+Untested
+ - LG CX OLED (This should work but is as of yet untested)
+ - Other OLEDs with 120hz BFI technology.
+ - LCD Monitors with strobed backlight for BFI and with front polarization that is compatible with 3D glasses (https://www.rtings.com/monitor/tests/motion/black-frame-insertion)
+Not Working (Untested)
+ - LG C2/G2 OLED (Missing 120hz BFI)
+ - LG C3/G3 OLED (Missing 120hz BFI)
 ```
 * Performance is best on Linux (tested on Ubuntu 20.04 an 22.04) followed by Windows 10. Windows 11 has problems with excessively dropping frames, it needs to be looked into. I haven't tested on Windows 7.
 * if during development you get the error "Unable to find/initialize GStreamer plugin GSTPageflipGLSink." it can sometimes be solved by removing the gstreamer registry cache (and/or rebooting).
