@@ -4,6 +4,7 @@ dist/*
 debug/*
 installation/*
 old/*
+videos/Big.Buck.Bunny
 settings/last_display_settings.json
 releases/
 python/__pycache__
