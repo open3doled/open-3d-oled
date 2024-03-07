@@ -104,6 +104,10 @@ Not Working (Untested)
    Goto GPU Registry Location: HKLM\System\CurrentControlSet\Control\Class{4d36e968-e325-11ce-bfc1-08002be10318}\0000 (or 0001/0002/..., check inside 0000 to verify that it is indeed your GPU)
    Add or Update the DalHdmiEnableALLM Entry as follows (Dword: DalHdmiEnableALLM, Value:0 for Disabled, 1 for Enabled)
 ```
+* For test videos beyond the calibration videos below are some recommendations
+```
+   http://bbb3d.renderfarming.net/download.html
+```
 
 ## Development Installation Instructions
 
