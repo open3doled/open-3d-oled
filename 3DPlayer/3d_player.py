@@ -1358,24 +1358,6 @@ class OpenFileDialog:
         self.right_eye_frame.grid(row=row_count, column=0, sticky="w")
         row_count += 1
 
-        self.video_resolution_frame = tkinter.Frame(top)
-        self.video_resolution_variable = tkinter.StringVar(top)
-        self.video_resolution_variable.set("1920x1080")
-        self.video_resolution_label = tkinter.Label(
-            self.video_resolution_frame, text="Video Resolution: "
-        )
-        self.video_resolution_label.pack(padx=5, side=tkinter.LEFT)
-        self.video_resolution_option_menu = tkinter.OptionMenu(
-            self.video_resolution_frame,
-            self.video_resolution_variable,
-            "1920x1080",
-            "1280x720",
-        )
-        self.video_resolution_option_menu.pack(padx=5, side=tkinter.LEFT)
-        # self.video_resolution_frame.pack()
-        self.video_resolution_frame.grid(row=row_count, column=0, sticky="w")
-        row_count += 1
-
         self.open_button = tkinter.Button(top, text="Open", command=self.send)
         # self.open_button.pack(side=tkinter.BOTTOM)
         self.open_button.grid(row=row_count, column=0)
@@ -1401,7 +1383,6 @@ class OpenFileDialog:
         self.subtitle_offset_variable.set(selected_video_history["subtitle_offset"])
         self.frame_packing_variable.set(selected_video_history["frame_packing"])
         self.right_eye_variable.set(selected_video_history["right_eye"])
-        self.video_resolution_variable.set(selected_video_history["video_resolution"])
 
     def remove_video_profile_from_history(self):
         if (
@@ -1455,7 +1436,6 @@ class OpenFileDialog:
             "subtitle_offset": self.subtitle_offset_variable.get(),
             "frame_packing": self.frame_packing_variable.get(),
             "right_eye": self.right_eye_variable.get(),
-            "video_resolution": self.video_resolution_variable.get(),
         }
         save_history = True
         if (
@@ -1882,7 +1862,6 @@ class TopWindow:
         subtitle_offset = float(open_file_dialog.subtitle_offset_variable.get())
         frame_packing = open_file_dialog.frame_packing_variable.get()
         right_eye = open_file_dialog.right_eye_variable.get()
-        video_resolution = open_file_dialog.video_resolution_variable.get()
 
         target_framerate = self.display_settings_dialog.target_framerate_variable.get()
         display_resolution = (
@@ -1904,7 +1883,6 @@ class TopWindow:
         calibration_mode = self.display_settings_dialog.calibration_mode_variable.get()
         # print(frame_packing)
         # print(right_eye)
-        # print(video_resolution)
         # print(display_resolution)
         if video_file_name == "":
             return
@@ -1928,9 +1906,6 @@ class TopWindow:
             show_subtitles = False
             subtitle_file_path = None
 
-        video_resolution_width, video_resolution_height = tuple(  # @UnusedVariable
-            map(int, video_resolution.split("x"))
-        )
         display_resolution_width, display_resolution_height = tuple(  # @UnusedVariable
             map(int, display_resolution.split("x"))
         )
