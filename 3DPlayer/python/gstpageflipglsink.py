@@ -792,6 +792,13 @@ class PageflipGLWindow(threading.Thread):
                                 self.__requests.split(",")
                                 + ["calibration_increase_frame_duration"]
                             )
+                        # The following are used for testing and visualizing glasses resync speed after a dropped frame
+                        elif event.key == pg.K_z: 
+                            self.__skip_n_page_flips = 1
+                        elif event.key == pg.K_x:
+                            self.__skip_n_page_flips = 2
+                        elif event.key == pg.K_c:
+                            self.__skip_n_page_flips = 3
 
             # this hack is necessary because for some reason if we don't do this in this loop the fullscreen from the menu button doesn't actually change the video size only the window size
             if self.__do_fullscreen is not None:
