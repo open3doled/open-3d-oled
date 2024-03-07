@@ -108,6 +108,10 @@ Not Working (Untested)
 ```
    http://bbb3d.renderfarming.net/download.html
 ```
+* Emitter not working
+```
+   Sometimes when changing the glasses IR Protocol the emitter will enter an unresponsive state. If this happens save your settings to EEPROM and disconnect and reconnect it's power.
+```
 
 ## Development Installation Instructions
 
