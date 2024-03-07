@@ -4,7 +4,7 @@
   "ir_frame_duration": "7000",
   "ir_signal_spacing": "30",
   "opt101_block_signal_detection_delay": "6500",
-  "opt101_min_high_value_to_activate": "10",
+  "opt101_min_threshold_value_to_activate": "10",
   "opt101_detection_threshold": "128",
   "opt101_detection_threshold_repeated_high": "224",
   "opt101_detection_threshold_repeated_low": "32",
