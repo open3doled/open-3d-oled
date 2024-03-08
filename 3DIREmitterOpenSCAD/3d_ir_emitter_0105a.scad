@@ -23,19 +23,26 @@
 ovr = 0.01;
 
 // Screen bezel to pixel height dimension
-// LG C1 OLED and Sony XBR-48A9S Bezel Only 11 mm
-// LG G3 OLED Bezel Only 7 mm
-// MMK 55MBL-EL　Screen protector 14 mm
-tv_top_bezel_to_pixel_wz = 14;
+// 11 mm - LG C1 OLED and Sony XBR-48A9S Bezel Only
+// 7 mm - LG G3 OLED Bezel Only
+// 14 mm - MMK 55MBL-EL Screen protector
+// 9 mm - Sony X95K MiniLED
+tv_top_bezel_to_pixel_wz = 11;
 
 // Screen bezel thickness dimensions 
-// LG C1 OLED and Sony XBR-48A9S Bezel Only 5.5 mm
-// LG C1 OLED and Sony XBR-48A9S Bezel with felt (back and front) 7.5 mm
-// LG G3 OLED Bezel Only 13.5 mm
-// LG G3 OLED Bezel Only with felt (back and front) 15.5 mm
-// MMK 55MBL-EL　Screen protector 29
-// MMK 55MBL-EL　Screen protector with felt 30
-mm_r_wy = 30; 
+// 5.5 mm - LG C1 OLED and Sony XBR-48A9S Bezel Only
+// 7.5 mm - LG C1 OLED and Sony XBR-48A9S Bezel with felt (back and front)
+// 13.5 mm - LG G3 OLED Bezel Only
+// 15.5 mm - LG G3 OLED Bezel Only with felt (back and front)
+// 29 mm - MMK 55MBL-EL Screen protector
+// 30 mm - MMK 55MBL-EL Screen protector with felt
+// 32 mm - Sony X95K MiniLED (it has a rounded back so I've made it a little larger than what looks like 30mm any extra can be filled with spacers)
+mm_r_wy = 7.5;
+
+// Mount Ridge Ledge Height
+// 10 mm - Most sets with a flat back that goes down > 10 mm from the top
+// 20 mm - Sony X95K MiniLED (has a curved back for the first 10 mm)
+mm_rl_wz = 10;
 
 tv_top_wz = tv_top_bezel_to_pixel_wz+4.5; // we add 4.5 mm for optional faded board to help prevent potential burn-in
 
@@ -93,7 +100,6 @@ mm_r_px = 8;
 mm_r_wx = mm_wx + 2*mm_r_px;
 mm_r_wz = 2;
 mm_rl_wy = 2;
-mm_rl_wz = 10;
 
 // alignment markings
 pcb_am = true;
@@ -182,7 +188,9 @@ module 3d_player_tv_mount_bracket () {
 }
 
 
-translate([0, 0, 0])
+translate([0, mm_r_wy+20, mm_r_wz])
+rotate([180,0,0])
 3d_player_tv_mount_main();
-translate([0, -5, 0])
+translate([0, 0, mb_wz-mm_wz+pcb_wb])
+rotate([180,0,0])
 3d_player_tv_mount_bracket();
