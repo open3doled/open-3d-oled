@@ -848,12 +848,16 @@ class DisplaySettingsDialog:
         self.display_size_variable.set(DEFAULT_DISPLAY_SIZE)
         self.whitebox_brightness_variable = tkinter.StringVar(parent)
         self.whitebox_brightness_variable.set("255")
+        self.whitebox_corner_position_variable = tkinter.StringVar(parent)
+        self.whitebox_corner_position_variable.set("top_left")
         self.whitebox_vertical_position_variable = tkinter.StringVar(parent)
         self.whitebox_vertical_position_variable.set("0")
+        self.whitebox_horizontal_position_variable = tkinter.StringVar(parent)
+        self.whitebox_horizontal_position_variable.set("0")
+        self.whitebox_size_variable = tkinter.StringVar(parent)
+        self.whitebox_size_variable.set("13")
         self.whitebox_horizontal_spacing_variable = tkinter.StringVar(parent)
         self.whitebox_horizontal_spacing_variable.set("23")
-        self.use_separate_process_variable = tkinter.BooleanVar(parent)
-        self.use_separate_process_variable.set(False)
         self.calibration_mode_variable = tkinter.BooleanVar(parent)
         self.calibration_mode_variable.set(False)
 
@@ -886,6 +890,11 @@ class DisplaySettingsDialog:
         )
         self.target_framerate_option_menu.pack(padx=5, side=tkinter.LEFT)
         # self.target_framerate_frame.pack()
+        self.target_framerate_option_menu_tooltip = idlelib.tooltip.Hovertip(
+            self.target_framerate_option_menu,
+            "If set to a value other than 0 this will force pygame to use a frame delay with tick_busy_loop instead of relying on vsync, this should not normally need to be set and is for experimental purposes only.",
+            hover_delay=100,
+        )
         self.target_framerate_frame.grid(row=row_count, column=0, sticky="w")
         row_count += 1
 
@@ -897,6 +906,7 @@ class DisplaySettingsDialog:
         self.display_resolution_option_menu = tkinter.OptionMenu(
             self.display_resolution_frame,
             self.display_resolution_variable,
+            "3840x2160",
             "2560x1080",
             "1920x1080",
             "1280x720",
@@ -917,7 +927,7 @@ class DisplaySettingsDialog:
         self.display_size_entry.pack(padx=5, side=tkinter.LEFT)
         self.display_size_tooltip = idlelib.tooltip.Hovertip(
             self.display_size_frame,
-            "Specifying the correct display size (provided in inches), allows the appropriate sizing of the trigger boxes to match the sensors unit.",
+            "Specifying the correct display size (provided in inches), allows the screen specific scaling of the on screen trigger boxes to match the sensors unit.",
             hover_delay=100,
         )
         # self.display_size_frame.pack()
@@ -943,6 +953,29 @@ class DisplaySettingsDialog:
         self.whitebox_brightness_frame.grid(row=row_count, column=0, sticky="w")
         row_count += 1
 
+        self.whitebox_corner_position_frame = tkinter.Frame(top)
+        self.whitebox_corner_position_label = tkinter.Label(
+            self.whitebox_corner_position_frame, text="Whitebox Corner Position: "
+        )
+        self.whitebox_corner_position_label.pack(padx=5, side=tkinter.LEFT)
+        self.whitebox_corner_position_option_menu = tkinter.OptionMenu(
+            self.whitebox_corner_position_frame,
+            self.whitebox_corner_position_variable,
+            "top_left",
+            "top_right",
+            "bottom_left",
+            "bottom_right",
+        )
+        self.whitebox_corner_position_option_menu.pack(padx=5, side=tkinter.LEFT)
+        self.whitebox_corner_position_tooltip = idlelib.tooltip.Hovertip(
+            self.whitebox_corner_position_frame,
+            "The whitebox corner position lets the user specify where the whitebox should be positioned, for best performance and duplicate frame (dropped frame) handling on OLED displays (or other displays which update from the top of the screen first) top_left or top_right are recommended. (default top_left)",
+            hover_delay=100,
+        )
+        # self.whitebox_corner_position_frame.pack()
+        self.whitebox_corner_position_frame.grid(row=row_count, column=0, sticky="w")
+        row_count += 1
+
         self.whitebox_vertical_position_frame = tkinter.Frame(top)
         self.whitebox_vertical_position_label = tkinter.Label(
             self.whitebox_vertical_position_frame, text="Whitebox Vertical Position: "
@@ -955,11 +988,53 @@ class DisplaySettingsDialog:
         self.whitebox_vertical_position_entry.pack(padx=5, side=tkinter.LEFT)
         self.whitebox_vertical_position_tooltip = idlelib.tooltip.Hovertip(
             self.whitebox_vertical_position_frame,
-            "The whitebox vertical position lets the user move the screen based whitebox down to better align with the 3d emitter tv mount they have. It is an arbitrary measurement and has only relative meaning. (default 0)",
+            "The whitebox vertical position lets the user move the screen based whitebox down to better align with the 3d emitter tv mount they have. It is roughly equivalent to mm when display size is correctly configured. (default 0)",
             hover_delay=100,
         )
         # self.whitebox_vertical_position_frame.pack()
         self.whitebox_vertical_position_frame.grid(row=row_count, column=0, sticky="w")
+        row_count += 1
+
+        self.whitebox_horizontal_position_frame = tkinter.Frame(top)
+        self.whitebox_horizontal_position_label = tkinter.Label(
+            self.whitebox_horizontal_position_frame,
+            text="Whitebox Horizontal Position: ",
+        )
+        self.whitebox_horizontal_position_label.pack(padx=5, side=tkinter.LEFT)
+        self.whitebox_horizontal_position_entry = tkinter.Entry(
+            self.whitebox_horizontal_position_frame,
+            textvariable=self.whitebox_horizontal_position_variable,
+        )
+        self.whitebox_horizontal_position_entry.pack(padx=5, side=tkinter.LEFT)
+        self.whitebox_horizontal_position_tooltip = idlelib.tooltip.Hovertip(
+            self.whitebox_horizontal_position_frame,
+            "The whitebox horizontal position lets the user move the screen based whitebox sideways towards the center of the screen. It is roughly equivalent to mm when display size is correctly configured. (default 0)",
+            hover_delay=100,
+        )
+        # self.whitebox_horizontal_position_frame.pack()
+        self.whitebox_horizontal_position_frame.grid(
+            row=row_count, column=0, sticky="w"
+        )
+        row_count += 1
+
+        self.whitebox_size_frame = tkinter.Frame(top)
+        self.whitebox_size_label = tkinter.Label(
+            self.whitebox_size_frame,
+            text="Whitebox Size: ",
+        )
+        self.whitebox_size_label.pack(padx=5, side=tkinter.LEFT)
+        self.whitebox_size_entry = tkinter.Entry(
+            self.whitebox_size_frame,
+            textvariable=self.whitebox_size_variable,
+        )
+        self.whitebox_size_entry.pack(padx=5, side=tkinter.LEFT)
+        self.whitebox_size_tooltip = idlelib.tooltip.Hovertip(
+            self.whitebox_size_frame,
+            "The whitebox size lets the user increase or decrease the size of the whitebox. Setting the value too high will lead to cross talk and miss triggering, setting it too low will cause a low signal to noise and also miss triggering. (default 13)",
+            hover_delay=100,
+        )
+        # self.whitebox_size_frame.pack()
+        self.whitebox_size_frame.grid(row=row_count, column=0, sticky="w")
         row_count += 1
 
         self.whitebox_horizontal_spacing_frame = tkinter.Frame(top)
@@ -974,29 +1049,11 @@ class DisplaySettingsDialog:
         self.whitebox_horizontal_spacing_entry.pack(padx=5, side=tkinter.LEFT)
         self.whitebox_horizontal_spacing_tooltip = idlelib.tooltip.Hovertip(
             self.whitebox_horizontal_spacing_frame,
-            "The whitebox horizontal spacing lets the user increase/decrease the separation between white boxes to better align with the 3d emitter and tv pixel pitch they have. It is an arbitrary measurement and has only relative meaning. (default 23)",
+            "The whitebox horizontal spacing lets the user increase/decrease the separation between white boxes to better align with the 3d emitter and tv pixel pitch they have. It is roughly equivalent to mm when display size is correctly configured. (default 23)",
             hover_delay=100,
         )
         # self.whitebox_horizontal_spacing_frame.pack()
         self.whitebox_horizontal_spacing_frame.grid(row=row_count, column=0, sticky="w")
-        row_count += 1
-
-        self.use_separate_process_frame = tkinter.Frame(top)
-        self.use_separate_process_label = tkinter.Label(
-            self.use_separate_process_frame, text="Use Separate Process: "
-        )
-        self.use_separate_process_label.pack(padx=5, side=tkinter.LEFT)
-        self.use_separate_process_option_menu = tkinter.Checkbutton(
-            self.use_separate_process_frame, variable=self.use_separate_process_variable
-        )
-        self.use_separate_process_option_menu.pack(padx=5, side=tkinter.LEFT)
-        self.use_separate_process_tooltip = idlelib.tooltip.Hovertip(
-            self.use_separate_process_frame,
-            "Use a separate process to perform page flipping, this requires additional CPU and memory copies but may help reduce the number of duplicate/dropped frames.",
-            hover_delay=100,
-        )
-        # self.use_separate_process_frame.pack()
-        self.use_separate_process_frame.grid(row=row_count, column=0, sticky="w")
         row_count += 1
 
         self.calibration_mode_frame = tkinter.Frame(top)
@@ -1060,9 +1117,11 @@ class DisplaySettingsDialog:
                 "display_resolution": self.display_resolution_variable.get(),
                 "display_size": self.display_size_variable.get(),
                 "whitebox_brightness": self.whitebox_brightness_variable.get(),
+                "whitebox_corner_position": self.whitebox_corner_position_variable.get(),
                 "whitebox_vertical_position": self.whitebox_vertical_position_variable.get(),
+                "whitebox_horizontal_position": self.whitebox_horizontal_position_variable.get(),
+                "whitebox_size": self.whitebox_size_variable.get(),
                 "whitebox_horizontal_spacing": self.whitebox_horizontal_spacing_variable.get(),
-                "use_separate_process": self.use_separate_process_variable.get(),
                 "calibration_mode": self.calibration_mode_variable.get(),
             },
             f,
@@ -1088,13 +1147,19 @@ class DisplaySettingsDialog:
         self.display_resolution_variable.set(settings["display_resolution"])
         self.display_size_variable.set(settings["display_size"])
         self.whitebox_brightness_variable.set(settings["whitebox_brightness"])
+        self.whitebox_corner_position_variable.set(
+            settings.get("whitebox_corner_position", "top_left")
+        )
         self.whitebox_vertical_position_variable.set(
             settings["whitebox_vertical_position"]
         )
+        self.whitebox_horizontal_position_variable.set(
+            settings.get("whitebox_horizontal_position", "0")
+        )
+        self.whitebox_size_variable.set(settings.get("whitebox_size", "13"))
         self.whitebox_horizontal_spacing_variable.set(
             settings["whitebox_horizontal_spacing"]
         )
-        self.use_separate_process_variable.set(settings["use_separate_process"])
         self.calibration_mode_variable.set(settings.get("calibration_mode", False))
 
     def click_load_visisble_settings_from_disk(self):
@@ -1871,14 +1936,18 @@ class TopWindow:
         whitebox_brightness = (
             self.display_settings_dialog.whitebox_brightness_variable.get()
         )
+        whitebox_corner_position = (
+            self.display_settings_dialog.whitebox_corner_position_variable.get()
+        )
         whitebox_vertical_position = (
             self.display_settings_dialog.whitebox_vertical_position_variable.get()
         )
+        whitebox_horizontal_position = (
+            self.display_settings_dialog.whitebox_horizontal_position_variable.get()
+        )
+        whitebox_size = self.display_settings_dialog.whitebox_size_variable.get()
         whitebox_horizontal_spacing = (
             self.display_settings_dialog.whitebox_horizontal_spacing_variable.get()
-        )
-        use_separate_process = (
-            self.display_settings_dialog.use_separate_process_variable.get()
         )
         calibration_mode = self.display_settings_dialog.calibration_mode_variable.get()
         # print(frame_packing)
@@ -2020,7 +2089,6 @@ class TopWindow:
             video_filters.add_pad(ghostpad_source)
             self.player.set_property("video-filter", video_filters)
 
-        self.pageflipglsink.set_property("use-separate-process", use_separate_process)
         self.pageflipglsink.set_property("calibration-mode", calibration_mode)
         self.pageflipglsink.set_property("fullscreen", False)
         self.pageflipglsink.set_property("frame-packing", frame_packing)
@@ -2030,8 +2098,15 @@ class TopWindow:
         self.pageflipglsink.set_property("display-size", display_size)
         self.pageflipglsink.set_property("whitebox-brightness", whitebox_brightness)
         self.pageflipglsink.set_property(
+            "whitebox-corner-position", whitebox_corner_position
+        )
+        self.pageflipglsink.set_property(
             "whitebox-vertical-position", whitebox_vertical_position
         )
+        self.pageflipglsink.set_property(
+            "whitebox-horizontal-position", whitebox_horizontal_position
+        )
+        self.pageflipglsink.set_property("whitebox-size", whitebox_size)
         self.pageflipglsink.set_property(
             "whitebox-horizontal-spacing", whitebox_horizontal_spacing
         )

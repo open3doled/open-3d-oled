@@ -91,17 +91,15 @@ else:
 resolution = "1920x1080"
 
 # defaults for 55inch LG OLED 1920x1080 120hz all in mm to be adjusted by pixel pitch factor for different display sizes
-default_black_box_gradient_width = 6.3371
-default_white_box_gradient_width = 3.1686
-# default_black_box_width = 44.3599
-# default_black_box_height = 25.3485
-default_black_box_width = 44.3599
-default_black_box_height = 20.3485
-default_white_box_width = 12.6743
-default_white_box_height = 12.6743
+default_black_box_gradient_width = 7
+default_white_box_gradient_width = 4
+default_black_box_width = 44
+default_black_box_height = 20
+default_white_box_width = 13
+default_white_box_height = 13
 default_white_box_horizontal_offset_1 = 0
 default_white_box_horizontal_offset_2 = (
-    22.86  # 22.86 mm sensor spacing x 1.578 pixels / mm = 36 pixels
+    23  # 23 mm sensor spacing x 1.578 pixels / mm = 36 pixels
 )
 
 # formats taken from existing videoconvert plugins
@@ -155,7 +153,6 @@ class PageflipGLWindow(threading.Thread):
         self.__window_height = None
         self.__window_width = None
         self.__do_fullscreen = None
-        self.__use_separate_process = True
         self.__fullscreen = False
         self.__frame_packing = "side-by-side-half"
         self.__right_eye = "right"
@@ -175,7 +172,10 @@ class PageflipGLWindow(threading.Thread):
         self.__black_box_width = int(default_black_box_width * self.__pixel_pitch_x)
         self.__black_box_height = int(default_black_box_height * self.__pixel_pitch_y)
         self.__whitebox_brightness = 255
+        self.__whitebox_corner_position = "top_left"
         self.__whitebox_vertical_position = 0
+        self.__whitebox_horizontal_position = 0
+        self.__whitebox_size = 13
         self.__whitebox_horizontal_spacing = 23
         self.__last_mouse = True
         self.__last_mouse_moved_at = None
@@ -803,12 +803,14 @@ class PageflipGLWindow(threading.Thread):
                                 + ["calibration_increase_frame_duration"]
                             )
                     # The following are used for testing and visualizing glasses resync speed after a dropped frame
-                    elif event.key == pg.K_z: 
+                    elif event.key == pg.K_z:
                         self.__skip_n_page_flips = 1
                     elif event.key == pg.K_x:
                         self.__skip_n_page_flips = 2
                     elif event.key == pg.K_c:
                         self.__skip_n_page_flips = 3
+
+                    # print(f"Requests: {self.__requests}")
 
             # this hack is necessary because for some reason if we don't do this in this loop the fullscreen from the menu button doesn't actually change the video size only the window size
             if self.__do_fullscreen is not None:
@@ -1125,15 +1127,6 @@ class PageflipGLWindow(threading.Thread):
         self.__do_stop = True
 
     @property
-    def use_separate_process(self):
-        return self.__use_separate_process
-
-    @use_separate_process.setter
-    def use_separate_process(self, value):
-        if value != self.__use_separate_process:
-            self.__use_separate_process = value
-
-    @property
     def fullscreen(self):
         return self.__fullscreen
 
@@ -1227,6 +1220,15 @@ class PageflipGLWindow(threading.Thread):
             self.__whitebox_brightness = int(value)
 
     @property
+    def whitebox_corner_position(self):
+        return self.__whitebox_corner_position
+
+    @whitebox_corner_position.setter
+    def whitebox_corner_position(self, value):
+        if value != self.__whitebox_corner_position:
+            self.__whitebox_corner_position = value
+
+    @property
     def whitebox_vertical_position(self):
         return f"{self.__whitebox_vertical_position}"
 
@@ -1234,6 +1236,24 @@ class PageflipGLWindow(threading.Thread):
     def whitebox_vertical_position(self, value):
         if value != self.__whitebox_vertical_position:
             self.__whitebox_vertical_position = int(value)
+
+    @property
+    def whitebox_horizontal_position(self):
+        return f"{self.__whitebox_horizontal_position}"
+
+    @whitebox_horizontal_position.setter
+    def whitebox_horizontal_position(self, value):
+        if value != self.__whitebox_horizontal_position:
+            self.__whitebox_horizontal_position = int(value)
+
+    @property
+    def whitebox_size(self):
+        return f"{self.__whitebox_size}"
+
+    @whitebox_size.setter
+    def whitebox_size(self, value):
+        if value != self.__whitebox_size:
+            self.__whitebox_size = int(value)
 
     @property
     def whitebox_horizontal_spacing(self):
@@ -1350,369 +1370,6 @@ class PageflipGLWindow(threading.Thread):
         self.__finish_buffer_copy_event.clear()
 
 
-class PageflipGLWindowProcess(multiprocessing.Process):
-    def __init__(self):
-        super(PageflipGLWindowProcess, self).__init__()
-        self.__lock = multiprocessing.Lock()
-        self.__do_stop = multiprocessing.sharedctypes.Value(
-            ctypes.c_bool, False, lock=self.__lock
-        )
-        self.__use_separate_process = multiprocessing.sharedctypes.Value(
-            ctypes.c_bool, True, lock=self.__lock
-        )
-        self.__fullscreen = multiprocessing.sharedctypes.Value(
-            ctypes.c_bool, False, lock=self.__lock
-        )
-        self.__do_fullscreen = multiprocessing.sharedctypes.Value(
-            ctypes.c_bool, False, lock=self.__lock
-        )
-        self.__frame_packing = multiprocessing.sharedctypes.RawArray(
-            ctypes.c_wchar, 64
-        )  # , lock=self.__lock) # broken see https://stackoverflow.com/questions/76440266/python-shared-memory-string-variable-synchronizedarray-has-no-attribute-value and https://github.com/python/typeshed/issues/8799#issuecomment-1285897528
-        self.__frame_packing.value = "side-by-side"
-        self.__right_eye = multiprocessing.sharedctypes.RawArray(
-            ctypes.c_wchar, 64
-        )  # , lock=self.__lock)
-        self.__right_eye.value = "right"
-        self.__target_framerate = multiprocessing.sharedctypes.RawArray(
-            ctypes.c_wchar, 64
-        )  # , lock=self.__lock)
-        self.__target_framerate.value = "0"
-        self.__display_resolution = multiprocessing.sharedctypes.RawArray(
-            ctypes.c_wchar, 64
-        )  # , lock=self.__lock)
-        self.__display_resolution.value = "1920x1080"
-        self.__display_size = multiprocessing.sharedctypes.RawArray(
-            ctypes.c_wchar, 64
-        )  # , lock=self.__lock)
-        self.__display_size.value = "55"
-        self.__whitebox_brightness = multiprocessing.sharedctypes.RawArray(
-            ctypes.c_wchar, 64
-        )  # , lock=self.__lock)
-        self.__whitebox_brightness.value = "255"
-        self.__whitebox_vertical_position = multiprocessing.sharedctypes.RawArray(
-            ctypes.c_wchar, 64
-        )  # , lock=self.__lock)
-        self.__whitebox_vertical_position.value = "0"
-        self.__whitebox_horizontal_spacing = multiprocessing.sharedctypes.RawArray(
-            ctypes.c_wchar, 64
-        )  # , lock=self.__lock)
-        self.__whitebox_horizontal_spacing.value = "23"
-        self.__requests = multiprocessing.sharedctypes.RawArray(
-            ctypes.c_wchar, 65536
-        )  # , lock=self.__lock)
-        self.__requests.value = ""
-        self.__latest_subtitle_data = multiprocessing.sharedctypes.RawArray(
-            ctypes.c_wchar, 65536
-        )  # , lock=self.__lock)
-        self.__latest_subtitle_data.value = ""
-        self.__subtitle_font = multiprocessing.sharedctypes.RawArray(
-            ctypes.c_wchar, 1024
-        )  # , lock=self.__lock)
-        self.__subtitle_font.value = "ariel"
-        self.__subtitle_size = multiprocessing.sharedctypes.RawArray(
-            ctypes.c_wchar, 64
-        )  # , lock=self.__lock)
-        self.__subtitle_size.value = "30"
-        self.__subtitle_depth = multiprocessing.sharedctypes.RawArray(
-            ctypes.c_wchar, 64
-        )  # , lock=self.__lock)
-        self.__subtitle_depth.value = "0"
-        self.__subtitle_vertical_offset = multiprocessing.sharedctypes.RawArray(
-            ctypes.c_wchar, 64
-        )  # , lock=self.__lock)
-        self.__subtitle_vertical_offset.value = "150"
-        self.__skip_n_page_flips = multiprocessing.sharedctypes.RawArray(
-            ctypes.c_wchar, 64
-        )  # , lock=self.__lock)
-        self.__skip_n_page_flips.value = "0"
-        self.__calibration_mode = multiprocessing.sharedctypes.Value(
-            ctypes.c_bool, False, lock=self.__lock
-        )
-
-        self.__in_image_updated = multiprocessing.sharedctypes.Value(
-            ctypes.c_bool, False, lock=self.__lock
-        )
-        self.__in_image_width = multiprocessing.sharedctypes.Value(
-            ctypes.c_longlong, 0, lock=self.__lock
-        )
-        self.__in_image_height = multiprocessing.sharedctypes.Value(
-            ctypes.c_longlong, 0, lock=self.__lock
-        )
-        self.__in_image_play_timestamp = multiprocessing.sharedctypes.Value(
-            ctypes.c_longlong, 0, lock=self.__lock
-        )
-        self.__in_image = multiprocessing.shared_memory.SharedMemory(
-            create=True, size=20000000
-        )  # 20 Megabytes should be big enough for all 1080p displays
-
-    def run(self):
-        process = psutil.Process(os.getpid())
-        if os.name == "nt":
-            process.nice(psutil.HIGH_PRIORITY_CLASS)
-        else:
-            pass  # commented out for now as you need root to set permissions on my system
-            # process.nice(-20)
-        pageflip_gl_window = PageflipGLWindow()
-        started = False
-        last_do_fullscreen = self.__do_fullscreen.value
-        last_requests = self.__requests.value
-        last_latest_subtitle_data = self.__latest_subtitle_data.value
-        last_skip_n_page_flips = self.__skip_n_page_flips.value
-        while not self.__do_stop.value:
-            if pageflip_gl_window.fullscreen != self.__fullscreen.value:
-                self.__fullscreen.value = pageflip_gl_window.fullscreen
-            if self.__do_fullscreen.value != last_do_fullscreen:
-                last_do_fullscreen = self.__do_fullscreen.value
-                pageflip_gl_window.do_fullscreen = self.__do_fullscreen.value
-            if pageflip_gl_window.frame_packing != self.__frame_packing.value:
-                pageflip_gl_window.frame_packing = self.__frame_packing.value
-            if pageflip_gl_window.right_eye != self.__right_eye.value:
-                pageflip_gl_window.right_eye = self.__right_eye.value
-            if pageflip_gl_window.target_framerate != self.__target_framerate.value:
-                pageflip_gl_window.target_framerate = self.__target_framerate.value
-            if pageflip_gl_window.display_resolution != self.__display_resolution.value:
-                pageflip_gl_window.display_resolution = self.__display_resolution.value
-            if pageflip_gl_window.display_size != self.__display_size.value:
-                pageflip_gl_window.display_size = self.__display_size.value
-            if (
-                pageflip_gl_window.whitebox_brightness
-                != self.__whitebox_brightness.value
-            ):
-                pageflip_gl_window.whitebox_brightness = (
-                    self.__whitebox_brightness.value
-                )
-            if (
-                pageflip_gl_window.whitebox_vertical_position
-                != self.__whitebox_vertical_position.value
-            ):
-                pageflip_gl_window.whitebox_vertical_position = (
-                    self.__whitebox_vertical_position.value
-                )
-            if (
-                pageflip_gl_window.whitebox_horizontal_spacing
-                != self.__whitebox_horizontal_spacing.value
-            ):
-                pageflip_gl_window.whitebox_horizontal_spacing = (
-                    self.__whitebox_horizontal_spacing.value
-                )
-            if pageflip_gl_window.requests != last_requests:
-                last_requests = pageflip_gl_window.requests
-                self.__requests.value = pageflip_gl_window.requests
-            elif pageflip_gl_window.requests != self.__requests.value:
-                pageflip_gl_window.requests = self.__requests.value
-            if pageflip_gl_window.latest_subtitle_data != last_latest_subtitle_data:
-                last_latest_subtitle_data = pageflip_gl_window.latest_subtitle_data
-                self.__latest_subtitle_data.value = (
-                    pageflip_gl_window.latest_subtitle_data
-                )
-            elif (
-                pageflip_gl_window.latest_subtitle_data
-                != self.__latest_subtitle_data.value
-            ):
-                pageflip_gl_window.latest_subtitle_data = (
-                    self.__latest_subtitle_data.value
-                )
-            if pageflip_gl_window.subtitle_font != self.__subtitle_font.value:
-                pageflip_gl_window.subtitle_font = self.__subtitle_font.value
-            if pageflip_gl_window.subtitle_size != self.__subtitle_size.value:
-                pageflip_gl_window.subtitle_size = self.__subtitle_size.value
-            if pageflip_gl_window.subtitle_depth != self.__subtitle_depth.value:
-                pageflip_gl_window.subtitle_depth = self.__subtitle_depth.value
-            if (
-                pageflip_gl_window.subtitle_vertical_offset
-                != self.__subtitle_vertical_offset.value
-            ):
-                pageflip_gl_window.subtitle_vertical_offset = (
-                    self.__subtitle_vertical_offset.value
-                )
-            if pageflip_gl_window.skip_n_page_flips != last_skip_n_page_flips:
-                last_skip_n_page_flips = pageflip_gl_window.skip_n_page_flips
-                self.__skip_n_page_flips.value = pageflip_gl_window.skip_n_page_flips
-            elif pageflip_gl_window.skip_n_page_flips != self.__skip_n_page_flips.value:
-                pageflip_gl_window.skip_n_page_flips = self.__skip_n_page_flips.value
-            if pageflip_gl_window.calibration_mode != self.__calibration_mode.value:
-                pageflip_gl_window.calibration_mode = self.__calibration_mode.value
-            if not started:
-                pageflip_gl_window.start()
-                started = True
-            if self.__in_image_updated.value:
-                pageflip_gl_window.update_image(
-                    self.__in_image_play_timestamp.value,
-                    self.__in_image.buf,
-                    self.__in_image_width.value,
-                    self.__in_image_height.value,
-                )
-                self.__in_image_updated.value = False
-            time.sleep(0.001)
-        pageflip_gl_window.stop()
-        self.__in_image.close()
-        self.__in_image.unlink()
-
-    def stop(self):
-        self.__do_stop.value = True
-
-    @property
-    def use_separate_process(self):
-        return self.__use_separate_process.value
-
-    @use_separate_process.setter
-    def use_separate_process(self, value):
-        self.__use_separate_process.value = value
-
-    @property
-    def fullscreen(self):
-        return self.__fullscreen.value
-
-    @fullscreen.setter
-    def fullscreen(self, value):
-        self.__fullscreen.value = value
-
-    @property
-    def do_fullscreen(self):
-        return self.__do_fullscreen.value
-
-    @do_fullscreen.setter
-    def do_fullscreen(self, value):
-        self.__do_fullscreen.value = value
-
-    @property
-    def frame_packing(self):
-        return self.__frame_packing.value
-
-    @frame_packing.setter
-    def frame_packing(self, value):
-        self.__frame_packing.value = value
-
-    @property
-    def right_eye(self):
-        return self.__right_eye.value
-
-    @right_eye.setter
-    def right_eye(self, value):
-        self.__right_eye.value = value
-
-    @property
-    def target_framerate(self):
-        return self.__target_framerate.value
-
-    @target_framerate.setter
-    def target_framerate(self, value):
-        self.__target_framerate.value = value
-
-    @property
-    def display_resolution(self):
-        return self.__display_resolution.value
-
-    @display_resolution.setter
-    def display_resolution(self, value):
-        self.__display_resolution.value = value
-
-    @property
-    def display_size(self):
-        return self.__display_size.value
-
-    @display_size.setter
-    def display_size(self, value):
-        self.__display_size.value = value
-
-    @property
-    def whitebox_brightness(self):
-        return self.__whitebox_brightness.value
-
-    @whitebox_brightness.setter
-    def whitebox_brightness(self, value):
-        self.__whitebox_brightness.value = value
-
-    @property
-    def whitebox_vertical_position(self):
-        return self.__whitebox_vertical_position.value
-
-    @whitebox_vertical_position.setter
-    def whitebox_vertical_position(self, value):
-        self.__whitebox_vertical_position.value = value
-
-    @property
-    def whitebox_horizontal_spacing(self):
-        return self.__whitebox_horizontal_spacing.value
-
-    @whitebox_horizontal_spacing.setter
-    def whitebox_horizontal_spacing(self, value):
-        self.__whitebox_horizontal_spacing.value = value
-
-    @property
-    def requests(self):
-        return self.__requests.value
-
-    @requests.setter
-    def requests(self, value):
-        self.__requests.value = value
-
-    @property
-    def latest_subtitle_data(self):
-        return self.__latest_subtitle_data.value
-
-    @latest_subtitle_data.setter
-    def latest_subtitle_data(self, value):
-        self.__latest_subtitle_data.value = value
-
-    @property
-    def subtitle_font(self):
-        return self.__subtitle_font.value
-
-    @subtitle_font.setter
-    def subtitle_font(self, value):
-        self.__subtitle_font.value = value
-
-    @property
-    def subtitle_size(self):
-        return self.__subtitle_size.value
-
-    @subtitle_size.setter
-    def subtitle_size(self, value):
-        self.__subtitle_size.value = value
-
-    @property
-    def subtitle_depth(self):
-        return self.__subtitle_depth.value
-
-    @subtitle_depth.setter
-    def subtitle_depth(self, value):
-        self.__subtitle_depth.value = value
-
-    @property
-    def subtitle_vertical_offset(self):
-        return self.__subtitle_vertical_offset.value
-
-    @subtitle_vertical_offset.setter
-    def subtitle_vertical_offset(self, value):
-        self.__subtitle_vertical_offset.value = value
-
-    @property
-    def skip_n_page_flips(self):
-        return self.__skip_n_page_flips.value
-
-    @skip_n_page_flips.setter
-    def skip_n_page_flips(self, value):
-        self.__skip_n_page_flips.value = value
-
-    @property
-    def calibration_mode(self):
-        return self.__calibration_mode.value
-
-    @calibration_mode.setter
-    def calibration_mode(self, value):
-        self.__calibration_mode.value = value
-
-    def update_image(self, play_timestamp, in_image, in_image_width, in_image_height):
-        self.__in_image.buf[: len(in_image)] = in_image[:]
-        # self.__in_image = in_image.tobytes()
-        self.__in_image_width.value = in_image_width
-        self.__in_image_height.value = in_image_height
-        self.__in_image_updated.value = True
-        self.__in_image_play_timestamp.value = play_timestamp
-
-
 # """
 class GstPageflipGLSink(GstBase.BaseSink):
 
@@ -1730,13 +1387,6 @@ class GstPageflipGLSink(GstBase.BaseSink):
     )
 
     __gproperties__ = {
-        "use_separate_process": (
-            GObject.TYPE_BOOLEAN,
-            "Use Separate Process",
-            "Use separate process for page flipping thread (requires more CPU and memory copies but can reduce eye resynchronization problems)",
-            True,  # default
-            GObject.ParamFlags.READWRITE,
-        ),
         "fullscreen": (
             GObject.TYPE_BOOLEAN,
             "Fullscreen",
@@ -1786,17 +1436,38 @@ class GstPageflipGLSink(GstBase.BaseSink):
             "255",  # default
             GObject.ParamFlags.READWRITE,
         ),
+        "whitebox_corner_position": (
+            GObject.TYPE_STRING,
+            "Whitebox Corner Position",
+            "The whitebox corner position lets the user choose to position the whitebox relative to the top_left, top_right, bottom_left or bottom_right corners of the screen.",
+            "top_left",  # default
+            GObject.ParamFlags.READWRITE,
+        ),
         "whitebox_vertical_position": (
             GObject.TYPE_STRING,
             "Whitebox Vertical Position",
-            "The whitebox vertical position lets the user move the screen based whitebox down to better align with the 3d emitter tv mount they have. It is an arbitrary measurement and has only relative meaning.",
+            "The whitebox vertical position lets the user move the screen based whitebox down to better align with the 3d emitter tv mount they have. It is roughly equivalent to mm when display size is correctly configured.",
             "0",  # default
+            GObject.ParamFlags.READWRITE,
+        ),
+        "whitebox_horizontal_position": (
+            GObject.TYPE_STRING,
+            "Whitebox Horizontal Position",
+            "The whitebox horizontal position lets the user move the screen based whitebox sideways towards the center of the screen. It is roughly equivalent to mm when display size is correctly configured..",
+            "0",  # default
+            GObject.ParamFlags.READWRITE,
+        ),
+        "whitebox_size": (
+            GObject.TYPE_STRING,
+            "Whitebox Size",
+            "The whitebox size lets the user increase or decrease the size of the whitebox. Setting the value too high will lead to cross talk and miss triggering, setting it too low will cause a low signal to noise and also miss triggering.",
+            "13",  # default
             GObject.ParamFlags.READWRITE,
         ),
         "whitebox_horizontal_spacing": (
             GObject.TYPE_STRING,
             "Whitebox Horizontal Spacing",
-            "The whitebox horizontal spacing lets the user increase/decrease the separation between white boxes to better align with the 3d emitter and tv pixel pitch they have. It is an arbitrary measurement and has only relative meaning.",
+            "The whitebox horizontal spacing lets the user increase/decrease the separation between white boxes to better align with the 3d emitter and tv pixel pitch they have. It is roughly equivalent to mm when display size is correctly configured.",
             "0",  # default
             GObject.ParamFlags.READWRITE,
         ),
@@ -1875,7 +1546,6 @@ class GstPageflipGLSink(GstBase.BaseSink):
     def __init__(self):
         super(GstPageflipGLSink, self).__init__()
         self.__started = False
-        self.__use_separate_process = True
         self.__parameters = {
             "fullscreen": False,
             "frame-packing": "side-by-side",
@@ -1884,99 +1554,41 @@ class GstPageflipGLSink(GstBase.BaseSink):
             "display-resolution": "1920x1080",
             "display-size": "55",
             "whitebox-brightness": "255",
+            "whitebox-corner-position": "top_left",
             "whitebox-vertical-position": "0",
+            "whitebox-horizontal-position": "0",
+            "whitebox-size": "13",
             "whitebox-horizontal-spacing": "23",
             "whitebox-brightness": "255",
             "requests": "",
             "latest-subtitle-data": "",
-            "subtitle_font": "arial",
-            "subtitle_size": "30",
-            "subtitle_depth": "0",
-            "subtitle_vertical_offset": "150",
-            "skip_n_page_flips": "0",
-            "calibration_mode": False,
+            "subtitle-font": "arial",
+            "subtitle-size": "30",
+            "subtitle-depth": "0",
+            "subtitle-vertical-offset": "150",
+            "skip-n-page-flips": "0",
+            "calibration-mode": False,
         }
 
     def do_get_property(self, prop: GObject.GParamSpec):
-        if not self.__started:
-            if prop.name == "use-separate-process":
-                return self.__use_separate_process
-            elif prop.name in self.__parameters:
+        if prop.name in self.__parameters:
+            if not self.__started:
                 return self.__parameters[prop.name]
             else:
-                raise AttributeError("unknown property %s" % prop.name)
+                prop_name_fixed = prop.name.replace("-", "_")
+                return getattr(
+                    self.__pageflip_gl_window,
+                    prop_name_fixed,
+                )
         else:
-            if prop.name == "use-separate-process":
-                return self.__pageflip_gl_window.use_separate_process
-            elif prop.name == "fullscreen":
-                return self.__pageflip_gl_window.fullscreen
-            elif prop.name == "frame-packing":
-                return self.__pageflip_gl_window.frame_packing
-            elif prop.name == "right-eye":
-                return self.__pageflip_gl_window.right_eye
-            elif prop.name == "target-framerate":
-                return self.__pageflip_gl_window.target_framerate
-            elif prop.name == "display-resolution":
-                return self.__pageflip_gl_window.display_resolution
-            elif prop.name == "display-size":
-                return self.__pageflip_gl_window.display_size
-            elif prop.name == "whitebox-brightness":
-                return self.__pageflip_gl_window.whitebox_brightness
-            elif prop.name == "whitebox-vertical-position":
-                return self.__pageflip_gl_window.whitebox_vertical_position
-            elif prop.name == "whitebox-horizontal-spacing":
-                return self.__pageflip_gl_window.whitebox_horizontal_spacing
-            elif prop.name == "requests":
-                return self.__pageflip_gl_window.requests
-            elif prop.name == "latest-subtitle-data":
-                return self.__pageflip_gl_window.latest_subtitle_data
-            elif prop.name == "subtitle-font":
-                return self.__pageflip_gl_window.subtitle_font
-            elif prop.name == "subtitle-size":
-                return self.__pageflip_gl_window.subtitle_size
-            elif prop.name == "subtitle-depth":
-                return self.__pageflip_gl_window.subtitle_depth
-            elif prop.name == "subtitle-vertical-offset":
-                return self.__pageflip_gl_window.subtitle_vertical_offset
-            elif prop.name == "skip-n-page-flips":
-                return self.__pageflip_gl_window.skip_n_page_flips
-            elif prop.name == "calibration-mode":
-                return self.__pageflip_gl_window.calibration_mode
-            else:
-                raise AttributeError("unknown property %s" % prop.name)
+            raise AttributeError("unknown property %s" % prop.name)
 
     def do_set_property(self, prop: GObject.GParamSpec, value):
         if not self.__started:
-            if prop.name == "use-separate-process":
-                self.__use_separate_process = value
-            elif prop.name in (
-                "fullscreen",
-                "frame-packing",
-                "right-eye",
-                "target-framerate",
-                "display-resolution",
-                "display-size",
-                "whitebox-brightness",
-                "whitebox-vertical-position",
-                "whitebox-horizontal-spacing",
-                "whitebox-brightness",
-                "requests",
-                "latest-subtitle-data",
-                "subtitle-font",
-                "subtitle-size",
-                "subtitle-depth",
-                "subtitle-vertical-offset",
-                "calibration-mode",
-            ):
+            if prop.name in self.__parameters:
                 self.__parameters[prop.name] = value
             elif prop.name == "start" and value:
-                if not self.__use_separate_process:
-                    self.__pageflip_gl_window = PageflipGLWindow()
-                else:
-                    self.__pageflip_gl_window = PageflipGLWindowProcess()
-                self.__pageflip_gl_window.use_separate_process = (
-                    self.__use_separate_process
-                )
+                self.__pageflip_gl_window = PageflipGLWindow()
                 for prop_name in self.__parameters:
                     if prop_name == "fullscreen":
                         self.__pageflip_gl_window.do_fullscreen = self.__parameters[
@@ -1996,42 +1608,15 @@ class GstPageflipGLSink(GstBase.BaseSink):
         else:
             if prop.name == "fullscreen":
                 self.__pageflip_gl_window.do_fullscreen = value
-            elif prop.name == "frame-packing":
-                self.__pageflip_gl_window.frame_packing = value
-            elif prop.name == "right-eye":
-                self.__pageflip_gl_window.right_eye = value
-            elif prop.name == "target-framerate":
-                self.__pageflip_gl_window.target_framerate = value
-            elif prop.name == "display-resolution":
-                self.__pageflip_gl_window.display_resolution = value
-            elif prop.name == "display-size":
-                self.__pageflip_gl_window.display_size = value
-            elif prop.name == "whitebox-brightness":
-                self.__pageflip_gl_window.whitebox_brightness = value
-            elif prop.name == "whitebox-vertical-position":
-                self.__pageflip_gl_window.whitebox_vertical_position = value
-            elif prop.name == "whitebox-horizontal-spacing":
-                self.__pageflip_gl_window.whitebox_horizontal_spacing = value
             elif prop.name == "close" and value:
                 self.__pageflip_gl_window.stop()
-                if self.__use_separate_process:
-                    self.__pageflip_gl_window.join()  # may not be necessary
-            elif prop.name == "requests":
-                self.__pageflip_gl_window.requests = value
-            elif prop.name == "latest-subtitle-data":
-                self.__pageflip_gl_window.latest_subtitle_data = value
-            elif prop.name == "subtitle-font":
-                self.__pageflip_gl_window.subtitle_font = value
-            elif prop.name == "subtitle-size":
-                self.__pageflip_gl_window.subtitle_size = value
-            elif prop.name == "subtitle-depth":
-                self.__pageflip_gl_window.subtitle_depth = value
-            elif prop.name == "subtitle-vertical-offset":
-                self.__pageflip_gl_window.subtitle_vertical_offset = value
-            elif prop.name == "skip-n-page-flips":
-                self.__pageflip_gl_window.skip_n_page_flips = value
-            elif prop.name == "calibration-mode":
-                self.__pageflip_gl_window.calibration_mode = value
+            elif prop.name in self.__parameters:
+                prop_name_fixed = prop.name.replace("-", "_")
+                setattr(
+                    self.__pageflip_gl_window,
+                    prop_name_fixed,
+                    value,
+                )
             else:
                 raise AttributeError("unknown property %s" % prop.name)
 
@@ -2083,7 +1668,6 @@ __gstelementfactory__ = (
 # """
 if __name__ == "__main__":
     pageflip_gl_window = PageflipGLWindow()
-    pageflip_gl_window.use_separate_process = True
     pageflip_gl_window.display_resolution = resolution
     pageflip_gl_window.display_size = "34"
     pageflip_gl_window.right_eye = "left"
