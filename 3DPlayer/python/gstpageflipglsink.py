@@ -93,14 +93,8 @@ resolution = "1920x1080"
 # defaults for 55inch LG OLED 1920x1080 120hz all in mm to be adjusted by pixel pitch factor for different display sizes
 default_black_box_gradient_width = 7
 default_white_box_gradient_width = 4
-default_black_box_width = 44
-default_black_box_height = 20
-default_white_box_width = 13
-default_white_box_height = 13
-default_white_box_horizontal_offset_1 = 0
-default_white_box_horizontal_offset_2 = (
-    23  # 23 mm sensor spacing x 1.578 pixels / mm = 36 pixels
-)
+default_black_box_spacing = 10
+default_black_box_calibration_border_width = 40
 
 # formats taken from existing videoconvert plugins
 # gst-inspect-1.0 videoconvert
@@ -169,14 +163,32 @@ class PageflipGLWindow(threading.Thread):
         self.__pixel_pitch_x = self.__display_resolution_width / (
             int(self.__display_size) * 0.87 * 25.4
         )  # for a 55 inch 16:9 1080 display gives 1.579739837 pixels per mm (gives bad sizes for non 16:9 display resolutions)
-        self.__black_box_width = int(default_black_box_width * self.__pixel_pitch_x)
-        self.__black_box_height = int(default_black_box_height * self.__pixel_pitch_y)
-        self.__whitebox_brightness = 255
-        self.__whitebox_corner_position = "top_left"
-        self.__whitebox_vertical_position = 0
-        self.__whitebox_horizontal_position = 0
-        self.__whitebox_size = 13
-        self.__whitebox_horizontal_spacing = 23
+        self.__white_box_brightness = 255
+        self.__white_box_corner_position = "top_left"
+        self.__white_box_vertical_position = 0
+        self.__white_box_horizontal_position = 0
+        self.__white_box_size = 13
+        self.__white_box_horizontal_spacing = 23
+        self.__black_box_spacing = default_black_box_spacing
+        self.__black_box_width = int(
+            (
+                self.__white_box_size
+                + self.__white_box_horizontal_spacing
+                + self.__black_box_spacing
+            )
+            * self.__pixel_pitch_x
+        )
+        self.__black_box_height = int(
+            (
+                self.__white_box_vertical_position
+                + self.__white_box_size
+                + self.__black_box_spacing
+            )
+            * self.__pixel_pitch_y
+        )
+        self.__black_box_horizontal_position = (
+            self.__white_box_horizontal_position * self.__pixel_pitch_x
+        )
         self.__last_mouse = True
         self.__last_mouse_moved_at = None
         self.__set_menu_on_top_true = True
@@ -329,46 +341,65 @@ class PageflipGLWindow(threading.Thread):
         white_box_gradient_width = int(
             default_white_box_gradient_width * self.__pixel_pitch_x
         )
-        # original_black_box_width = int(default_black_box_width * self.__pixel_pitch_x)
         original_black_box_width = int(
             (
-                default_black_box_width
-                - default_white_box_horizontal_offset_2
-                + self.__whitebox_horizontal_spacing
+                self.__white_box_size
+                + self.__white_box_horizontal_spacing
+                + self.__black_box_spacing
+                + (
+                    self.__black_box_spacing
+                    if self.__black_box_horizontal_position > 0
+                    else 0
+                )
             )
             * self.__pixel_pitch_x
         )
         original_black_box_height = int(
-            (default_black_box_height + self.__whitebox_vertical_position)
+            (
+                self.__white_box_vertical_position
+                + self.__white_box_size
+                + self.__black_box_spacing
+            )
             * self.__pixel_pitch_y
         )
         if self.__calibration_mode:
             black_box_width = self.__black_box_width = int(
                 original_black_box_width
-                + default_black_box_width * self.__pixel_pitch_x
+                + default_black_box_calibration_border_width * self.__pixel_pitch_x
             )
             black_box_height = self.__black_box_height = int(
                 original_black_box_height
-                + default_black_box_height * self.__pixel_pitch_y
+                + default_black_box_calibration_border_width * self.__pixel_pitch_y
             )
         else:
             black_box_width = self.__black_box_width = original_black_box_width
             black_box_height = self.__black_box_height = original_black_box_height
-        white_box_width = int(default_white_box_width * self.__pixel_pitch_x)
-        white_box_height = int(default_white_box_height * self.__pixel_pitch_y)
-        white_box_horizontal_offset_1 = int(
-            default_white_box_horizontal_offset_1 * self.__pixel_pitch_x
+        self.__black_box_horizontal_position = (
+            self.__white_box_horizontal_position * self.__pixel_pitch_x
         )
-        white_box_horizontal_offset_2 = int(
-            # default_white_box_horizontal_offset_2 * self.__pixel_pitch_x
-            (default_white_box_horizontal_offset_1 + self.__whitebox_horizontal_spacing)
-            * self.__pixel_pitch_x
-        )
-        white_box_horizontal_offsets = (
+        white_box_width = int(self.__white_box_size * self.__pixel_pitch_x)
+        white_box_height = int(self.__white_box_size * self.__pixel_pitch_y)
+        if self.__black_box_horizontal_position > 0:
+            white_box_horizontal_offset_1 = int(
+                self.__black_box_spacing * self.__pixel_pitch_x
+            )
+            white_box_horizontal_offset_2 = int(
+                (self.__black_box_spacing + self.__white_box_horizontal_spacing)
+                * self.__pixel_pitch_x
+            )
+        else:
+            white_box_horizontal_offset_1 = int(0 * self.__pixel_pitch_x)
+            white_box_horizontal_offset_2 = int(
+                self.__white_box_horizontal_spacing * self.__pixel_pitch_x
+            )
+        white_box_horizontal_offsets = [
             white_box_horizontal_offset_1,
             white_box_horizontal_offset_2,
-        )
+        ]
+        if "right" in self.__white_box_corner_position:
+            white_box_horizontal_offsets.reverse()  # we reverse them here because we are going to flip the numpy ndarray later for right aligned boxes
         self.__overlay_boxes = []
+
         for n in range(2):  # 0 left, 1 right
             box = np.ndarray(
                 shape=(black_box_height, black_box_width, 4), dtype=np.uint8
@@ -384,7 +415,7 @@ class PageflipGLWindow(threading.Thread):
                     0,
                     False,
                     True,
-                    False,
+                    (True if self.__black_box_horizontal_position > 0 else False),
                     True,
                     False,
                 ),
@@ -393,7 +424,7 @@ class PageflipGLWindow(threading.Thread):
                     white_box_horizontal_offsets[n],
                     black_box_height
                     - white_box_height
-                    - int(self.__whitebox_vertical_position * self.__pixel_pitch_y),
+                    - int(self.__white_box_vertical_position * self.__pixel_pitch_y),
                     white_box_width,
                     white_box_height,
                     white_box_gradient_width,
@@ -418,12 +449,13 @@ class PageflipGLWindow(threading.Thread):
                             black_box_height
                             - white_box_height // 2
                             - int(
-                                self.__whitebox_vertical_position * self.__pixel_pitch_y
+                                self.__white_box_vertical_position
+                                * self.__pixel_pitch_y
                             ),
                             black_box_width - original_black_box_width,
                             1,
                             0,
-                            int(self.__whitebox_brightness),
+                            int(self.__white_box_brightness),
                             False,
                             False,
                             False,
@@ -436,7 +468,7 @@ class PageflipGLWindow(threading.Thread):
                             1,
                             black_box_height - original_black_box_height,
                             0,
-                            int(self.__whitebox_brightness),
+                            int(self.__white_box_brightness),
                             False,
                             False,
                             False,
@@ -536,7 +568,7 @@ class PageflipGLWindow(threading.Thread):
                             tone = 255
                         if is_white_box:
                             white_box_shade = int(
-                                tone * self.__whitebox_brightness / 255
+                                tone * self.__white_box_brightness / 255
                             )
                             box[max(min(py + y, black_box_height - 1), 0)][px + x][
                                 0
@@ -559,6 +591,15 @@ class PageflipGLWindow(threading.Thread):
                                 shade,
                                 tone,
                             ]
+
+            if self.__white_box_corner_position == "top_left":
+                pass
+            elif self.__white_box_corner_position == "top_right":
+                box = np.flip(box, 1)
+            elif self.__white_box_corner_position == "bottom_left":
+                box = np.flip(box, 0)
+            elif self.__white_box_corner_position == "bottom_right":
+                box = np.flip(box, (0, 1))
 
             self.__overlay_boxes.append(box)
             # np.set_printoptions(threshold=sys.maxsize)
@@ -754,29 +795,41 @@ class PageflipGLWindow(threading.Thread):
                             self.__show_calibration_instruction_image = (
                                 not self.__show_calibration_instruction_image
                             )
-                        elif event.key == pg.K_y:
-                            self.__whitebox_vertical_position -= 1
+                        elif (
+                            event.key == pg.K_y
+                            and "top" in self.__white_box_corner_position
+                        ) or (
+                            event.key == pg.K_h
+                            and "bottom" in self.__white_box_corner_position
+                        ):
+                            self.__white_box_vertical_position -= 1
                             self.__update_overlay_boxes()
                             self.__requests = ",".join(
                                 self.__requests.split(",")
                                 + ["calibration_decrease_whitebox_vertical_position"]
                             )
-                        elif event.key == pg.K_h:
-                            self.__whitebox_vertical_position += 1
+                        elif (
+                            event.key == pg.K_h
+                            and "top" in self.__white_box_corner_position
+                        ) or (
+                            event.key == pg.K_y
+                            and "bottom" in self.__white_box_corner_position
+                        ):
+                            self.__white_box_vertical_position += 1
                             self.__update_overlay_boxes()
                             self.__requests = ",".join(
                                 self.__requests.split(",")
                                 + ["calibration_increase_whitebox_vertical_position"]
                             )
                         elif event.key == pg.K_u:
-                            self.__whitebox_horizontal_spacing -= 1
+                            self.__white_box_horizontal_spacing -= 1
                             self.__update_overlay_boxes()
                             self.__requests = ",".join(
                                 self.__requests.split(",")
                                 + ["calibration_decrease_whitebox_horizontal_spacing"]
                             )
                         elif event.key == pg.K_j:
-                            self.__whitebox_horizontal_spacing += 1
+                            self.__white_box_horizontal_spacing += 1
                             self.__update_overlay_boxes()
                             self.__requests = ",".join(
                                 self.__requests.split(",")
@@ -967,7 +1020,20 @@ class PageflipGLWindow(threading.Thread):
             gl.glRectf(white_box_offset, self.__display_resolution_height-white_box_height, white_box_offset+white_box_width, self.__display_resolution_height)
             """
             gl.glWindowPos2d(
-                0, self.__display_resolution_height - self.__black_box_height
+                (
+                    self.__black_box_horizontal_position
+                    if "left" in self.__white_box_corner_position
+                    else (
+                        self.__display_resolution_width
+                        - self.__black_box_width
+                        - self.__black_box_horizontal_position
+                    )
+                ),
+                (
+                    self.__display_resolution_height - self.__black_box_height
+                    if "top" in self.__white_box_corner_position
+                    else 0
+                ),
             )
             gl.glDrawPixels(
                 self.__black_box_width,
@@ -1212,57 +1278,57 @@ class PageflipGLWindow(threading.Thread):
 
     @property
     def whitebox_brightness(self):
-        return f"{self.__whitebox_brightness}"
+        return f"{self.__white_box_brightness}"
 
     @whitebox_brightness.setter
     def whitebox_brightness(self, value):
-        if value != self.__whitebox_brightness:
-            self.__whitebox_brightness = int(value)
+        if value != self.__white_box_brightness:
+            self.__white_box_brightness = int(value)
 
     @property
     def whitebox_corner_position(self):
-        return self.__whitebox_corner_position
+        return self.__white_box_corner_position
 
     @whitebox_corner_position.setter
     def whitebox_corner_position(self, value):
-        if value != self.__whitebox_corner_position:
-            self.__whitebox_corner_position = value
+        if value != self.__white_box_corner_position:
+            self.__white_box_corner_position = value
 
     @property
     def whitebox_vertical_position(self):
-        return f"{self.__whitebox_vertical_position}"
+        return f"{self.__white_box_vertical_position}"
 
     @whitebox_vertical_position.setter
     def whitebox_vertical_position(self, value):
-        if value != self.__whitebox_vertical_position:
-            self.__whitebox_vertical_position = int(value)
+        if value != self.__white_box_vertical_position:
+            self.__white_box_vertical_position = int(value)
 
     @property
     def whitebox_horizontal_position(self):
-        return f"{self.__whitebox_horizontal_position}"
+        return f"{self.__white_box_horizontal_position}"
 
     @whitebox_horizontal_position.setter
     def whitebox_horizontal_position(self, value):
-        if value != self.__whitebox_horizontal_position:
-            self.__whitebox_horizontal_position = int(value)
+        if value != self.__white_box_horizontal_position:
+            self.__white_box_horizontal_position = int(value)
 
     @property
     def whitebox_size(self):
-        return f"{self.__whitebox_size}"
+        return f"{self.__white_box_size}"
 
     @whitebox_size.setter
     def whitebox_size(self, value):
-        if value != self.__whitebox_size:
-            self.__whitebox_size = int(value)
+        if value != self.__white_box_size:
+            self.__white_box_size = int(value)
 
     @property
     def whitebox_horizontal_spacing(self):
-        return f"{self.__whitebox_horizontal_spacing}"
+        return f"{self.__white_box_horizontal_spacing}"
 
     @whitebox_horizontal_spacing.setter
     def whitebox_horizontal_spacing(self, value):
-        if value != self.__whitebox_horizontal_spacing:
-            self.__whitebox_horizontal_spacing = int(value)
+        if value != self.__white_box_horizontal_spacing:
+            self.__white_box_horizontal_spacing = int(value)
 
     @property
     def requests(self):

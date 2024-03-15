@@ -833,12 +833,14 @@ class EmitterSettingsDialog:
 
     def click_close(self):
         self.top.destroy()
+        self.top = None
 
 
 class DisplaySettingsDialog:
     def __init__(self, parent, main_app):
         self.parent = parent
         self.main_app = main_app
+        self.top = None
 
         self.target_framerate_variable = tkinter.StringVar(parent)
         self.target_framerate_variable.set(DEFAULT_TARGET_FRAMERATE)
@@ -1181,9 +1183,10 @@ class DisplaySettingsDialog:
     def click_close(self):
         self.autosave_active_settings()
         self.top.destroy()
+        self.top = None
 
 
-class OpenFileDialog:
+class StartVideoDialog:
 
     LOAD_VIDEO_PROFILE_FROM_HISTORY_OPTION = "Load Video Profile From History"
     VIDEO_HISTORY_MAX_SIZE = 10
@@ -1205,7 +1208,7 @@ class OpenFileDialog:
         else:
             self.video_history = []
         self.video_history_options = [
-            OpenFileDialog.LOAD_VIDEO_PROFILE_FROM_HISTORY_OPTION
+            StartVideoDialog.LOAD_VIDEO_PROFILE_FROM_HISTORY_OPTION
         ]
         self.video_history_options.extend(
             reversed(
@@ -1218,7 +1221,7 @@ class OpenFileDialog:
         self.video_history_frame = tkinter.Frame(top)
         self.video_history_clicked = tkinter.StringVar()
         self.video_history_clicked.set(
-            OpenFileDialog.LOAD_VIDEO_PROFILE_FROM_HISTORY_OPTION
+            StartVideoDialog.LOAD_VIDEO_PROFILE_FROM_HISTORY_OPTION
         )
         self.video_history_dropdown = tkinter.OptionMenu(
             self.video_history_frame,
@@ -1430,7 +1433,7 @@ class OpenFileDialog:
     def load_video_profile_from_history(self):
         if (
             self.video_history_clicked.get()
-            == OpenFileDialog.LOAD_VIDEO_PROFILE_FROM_HISTORY_OPTION
+            == StartVideoDialog.LOAD_VIDEO_PROFILE_FROM_HISTORY_OPTION
         ):
             return
         selected_index = int(self.video_history_clicked.get().split()[0])
@@ -1452,7 +1455,7 @@ class OpenFileDialog:
     def remove_video_profile_from_history(self):
         if (
             self.video_history_clicked.get()
-            == OpenFileDialog.LOAD_VIDEO_PROFILE_FROM_HISTORY_OPTION
+            == StartVideoDialog.LOAD_VIDEO_PROFILE_FROM_HISTORY_OPTION
         ):
             return
         selected_index = int(self.video_history_clicked.get().split()[0])
@@ -1461,7 +1464,7 @@ class OpenFileDialog:
         json.dump(self.video_history, f, indent=2)
         f.close()
         self.video_history_options = [
-            OpenFileDialog.LOAD_VIDEO_PROFILE_FROM_HISTORY_OPTION
+            StartVideoDialog.LOAD_VIDEO_PROFILE_FROM_HISTORY_OPTION
         ]
         self.video_history_options.extend(
             reversed(
@@ -1472,7 +1475,7 @@ class OpenFileDialog:
             )
         )
         self.video_history_clicked.set(
-            OpenFileDialog.LOAD_VIDEO_PROFILE_FROM_HISTORY_OPTION
+            StartVideoDialog.LOAD_VIDEO_PROFILE_FROM_HISTORY_OPTION
         )
         menu = self.video_history_dropdown["menu"]
         menu.delete(1, "end")
@@ -1483,14 +1486,21 @@ class OpenFileDialog:
             )
 
     def select_video_file(self):
-        self.video_file_name = tkinter.filedialog.askopenfilename()
-        self.video_file_location_label.config(text=self.video_file_name)
+        new_video_file_name = tkinter.filedialog.askopenfilename()
+        if new_video_file_name:
+            self.video_file_name = tkinter.filedialog.askopenfilename()
+            self.video_file_location_label.config(text=self.video_file_name)
 
     def select_subtitle_file(self):
-        self.subtitle_file_name = tkinter.filedialog.askopenfilename()
-        self.subtitle_file_location_label.config(text=self.subtitle_file_name)
+        new_subtitle_file_name = tkinter.filedialog.askopenfilename()
+        if new_subtitle_file_name:
+            self.subtitle_file_name = tkinter.filedialog.askopenfilename()
+            self.subtitle_file_location_label.config(text=self.subtitle_file_name)
 
     def send(self):
+        if not self.video_file_name:
+            return
+
         new_video_history_entry = {
             "video_file_name": self.video_file_name,
             "subtitle_file_name": self.subtitle_file_name,
@@ -1505,7 +1515,7 @@ class OpenFileDialog:
         save_history = True
         if (
             self.video_history_clicked.get()
-            != OpenFileDialog.LOAD_VIDEO_PROFILE_FROM_HISTORY_OPTION
+            != StartVideoDialog.LOAD_VIDEO_PROFILE_FROM_HISTORY_OPTION
         ):
             selected_index = self.video_history_clicked.get().split()[0]
             selected_video_history = self.video_history[int(selected_index)]
@@ -1519,7 +1529,7 @@ class OpenFileDialog:
                 datetime.datetime.now().strftime("%Y-%m-%d %H%M%S")
             )
             self.video_history.append(new_video_history_entry)
-            if len(self.video_history) > OpenFileDialog.VIDEO_HISTORY_MAX_SIZE:
+            if len(self.video_history) > StartVideoDialog.VIDEO_HISTORY_MAX_SIZE:
                 self.video_history = self.video_history[1:]
             f = open(self.history_file_path, "w")
             json.dump(self.video_history, f, indent=2)
@@ -1554,6 +1564,9 @@ class TopWindow:
         window.update_idletasks()
         self._offsetx = -self.window.winfo_rootx()
         self._offsety = -self.window.winfo_rooty()
+
+        self.emitter_settings_dialog = None
+        self.display_settings_dialog = None
 
         top_frame = tkinter.Frame(window)
         top_frame.pack(fill="x", expand=1, pady=5, padx=25, anchor="n")
@@ -1616,7 +1629,7 @@ class TopWindow:
             open_video_file_button, "Open a video file for playback.", hover_delay=100
         )
         open_video_file_button.pack(padx=5, side=tkinter.LEFT)
-        open_video_file_button.bind("<Button-1>", self.click_open_video_file_button)
+        open_video_file_button.bind("<Button-1>", self.click_start_video_button)
         stop_video_button_image = svg_to_imagetk_photoimage("./images/stop-fill.svg")
         stop_video_button = tkinter.Button(
             top_frame,
@@ -1903,14 +1916,21 @@ class TopWindow:
             )
 
     def click_open_emitter_settings_button(self, event=None):  # @UnusedVariable
+        if self.emitter_settings_dialog and self.emitter_settings_dialog.top:
+            return
         self.emitter_settings_dialog = EmitterSettingsDialog(self.window, self)
         # self.window.wait_window(self.emitter_settings_dialog.top)
 
     def click_open_display_settings_button(self, event=None):  # @UnusedVariable
+        if self.display_settings_dialog and self.display_settings_dialog.top:
+            return
         self.display_settings_dialog.show()
 
-    def click_open_video_file_button(self, event=None):  # @UnusedVariable
-        open_file_dialog = OpenFileDialog(self.window)
+    def click_start_video_button(self, event=None):  # @UnusedVariable
+        if self.video_open:
+            return
+
+        open_file_dialog = StartVideoDialog(self.window)
         self.window.wait_window(open_file_dialog.top)
 
         if not open_file_dialog.perform_open:
