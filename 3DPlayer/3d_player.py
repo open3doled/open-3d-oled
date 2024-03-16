@@ -1191,7 +1191,9 @@ class StartVideoDialog:
     LOAD_VIDEO_PROFILE_FROM_HISTORY_OPTION = "Load Video Profile From History"
     VIDEO_HISTORY_MAX_SIZE = 10
 
-    def __init__(self, parent):
+    def __init__(self, parent, main_app):
+        self.parent = parent
+        self.main_app = main_app
         top = self.top = tkinter.Toplevel(parent)
 
         self.perform_open = False
@@ -1486,15 +1488,30 @@ class StartVideoDialog:
             )
 
     def select_video_file(self):
-        new_video_file_name = tkinter.filedialog.askopenfilename()
+        new_video_file_name = tkinter.filedialog.askopenfilename(
+            title="Select Video from Disk",
+            initialdir=self.main_app.select_video_initialdir,
+        )
         if new_video_file_name:
-            self.video_file_name = tkinter.filedialog.askopenfilename()
+            self.main_app.select_video_initialdir = os.path.dirname(
+                os.path.abspath(new_video_file_name)
+            )
+            self.main_app.select_subtitle_initialdir = (
+                self.main_app.select_video_initialdir
+            )
+            self.video_file_name = new_video_file_name
             self.video_file_location_label.config(text=self.video_file_name)
 
     def select_subtitle_file(self):
-        new_subtitle_file_name = tkinter.filedialog.askopenfilename()
+        new_subtitle_file_name = tkinter.filedialog.askopenfilename(
+            title="Select Subtitle from Disk",
+            initialdir=self.main_app.select_subtitle_initialdir,
+        )
         if new_subtitle_file_name:
-            self.subtitle_file_name = tkinter.filedialog.askopenfilename()
+            self.main_app.select_subtitle_initialdir = os.path.dirname(
+                os.path.abspath(new_subtitle_file_name)
+            )
+            self.subtitle_file_name = new_subtitle_file_name
             self.subtitle_file_location_label.config(text=self.subtitle_file_name)
 
     def send(self):
@@ -1567,6 +1584,13 @@ class TopWindow:
 
         self.emitter_settings_dialog = None
         self.display_settings_dialog = None
+        self.start_video_dialog = None
+        self.select_video_initialdir = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "videos"
+        )
+        self.select_subtitle_initialdir = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "videos"
+        )
 
         top_frame = tkinter.Frame(window)
         top_frame.pack(fill="x", expand=1, pady=5, padx=25, anchor="n")
@@ -1932,23 +1956,28 @@ class TopWindow:
         if self.video_open:
             return
 
-        open_file_dialog = StartVideoDialog(self.window)
-        self.window.wait_window(open_file_dialog.top)
-
-        if not open_file_dialog.perform_open:
+        if self.start_video_dialog and self.start_video_dialog.top:
             return
 
-        video_file_name = open_file_dialog.video_file_name
-        subtitle_file_name = open_file_dialog.subtitle_file_name
-        subtitle_font = open_file_dialog.subtitle_font_variable.get()
-        subtitle_size = open_file_dialog.subtitle_size_variable.get()
-        subtitle_depth = open_file_dialog.subtitle_depth_variable.get()
-        subtitle_vertical_offset = (
-            open_file_dialog.subtitle_vertical_offset_variable.get()
+        self.start_video_dialog = start_video_dialog = StartVideoDialog(
+            self.window, self
         )
-        subtitle_offset = float(open_file_dialog.subtitle_offset_variable.get())
-        frame_packing = open_file_dialog.frame_packing_variable.get()
-        right_eye = open_file_dialog.right_eye_variable.get()
+        self.window.wait_window(start_video_dialog.top)
+
+        if not start_video_dialog.perform_open:
+            return
+
+        video_file_name = start_video_dialog.video_file_name
+        subtitle_file_name = start_video_dialog.subtitle_file_name
+        subtitle_font = start_video_dialog.subtitle_font_variable.get()
+        subtitle_size = start_video_dialog.subtitle_size_variable.get()
+        subtitle_depth = start_video_dialog.subtitle_depth_variable.get()
+        subtitle_vertical_offset = (
+            start_video_dialog.subtitle_vertical_offset_variable.get()
+        )
+        subtitle_offset = float(start_video_dialog.subtitle_offset_variable.get())
+        frame_packing = start_video_dialog.frame_packing_variable.get()
+        right_eye = start_video_dialog.right_eye_variable.get()
 
         target_framerate = self.display_settings_dialog.target_framerate_variable.get()
         display_resolution = (
