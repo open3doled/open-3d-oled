@@ -1911,7 +1911,9 @@ class TopWindow:
             # 'ACCURATE', 'FLUSH', 'KEY_UNIT', 'NONE', 'SEGMENT', 'SKIP', 'SNAP_AFTER', 'SNAP_BEFORE', 'SNAP_NEAREST', 'TRICKMODE', 'TRICKMODE_KEY_UNITS', 'TRICKMODE_NO_AUDIO'
             self.player.seek_simple(
                 Gst.Format.TIME,
-                Gst.SeekFlags.FLUSH | Gst.SeekFlags.KEY_UNIT,
+                # Gst.SeekFlags.FLUSH | Gst.SeekFlags.KEY_UNIT, # use these flags for fast seeking that isn't accurate
+                Gst.SeekFlags.FLUSH
+                | Gst.SeekFlags.ACCURATE,  # use these flags for slower but accurate seeking
                 max(seek_position, 0),
             )
 
