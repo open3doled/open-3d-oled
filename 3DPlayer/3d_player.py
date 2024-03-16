@@ -1189,12 +1189,15 @@ class DisplaySettingsDialog:
 class StartVideoDialog:
 
     LOAD_VIDEO_PROFILE_FROM_HISTORY_OPTION = "Load Video Profile From History"
+    LOAD_VIDEO_DEFAULTS_HISTORY_OPTION = "Load Defaults"
+    LOAD_VIDEO_DEFAULTS_HISTORY_SAVE_NAME = "Defaults"
     VIDEO_HISTORY_MAX_SIZE = 10
 
     def __init__(self, parent, main_app):
         self.parent = parent
         self.main_app = main_app
         top = self.top = tkinter.Toplevel(parent)
+        top.protocol("WM_DELETE_WINDOW", self.click_close)
 
         self.perform_open = False
         row_count = 0
@@ -1209,17 +1212,7 @@ class StartVideoDialog:
             f.close()
         else:
             self.video_history = []
-        self.video_history_options = [
-            StartVideoDialog.LOAD_VIDEO_PROFILE_FROM_HISTORY_OPTION
-        ]
-        self.video_history_options.extend(
-            reversed(
-                [
-                    f"{idx} {vh['history_datetime']} {vh['video_file_name']}"
-                    for idx, vh in enumerate(self.video_history)
-                ]
-            )
-        )
+        self.__update_video_history_options(update_menu=False)
         self.video_history_frame = tkinter.Frame(top)
         self.video_history_clicked = tkinter.StringVar()
         self.video_history_clicked.set(
@@ -1428,21 +1421,73 @@ class StartVideoDialog:
         self.right_eye_frame.grid(row=row_count, column=0, sticky="w")
         row_count += 1
 
-        self.open_button = tkinter.Button(top, text="Open", command=self.send)
-        # self.open_button.pack(side=tkinter.BOTTOM)
-        self.open_button.grid(row=row_count, column=0)
+        self.action_button_frame_1 = tkinter.Frame(top)
+        self.open_button = tkinter.Button(
+            self.action_button_frame_1, text="Open", command=self.open_video
+        )
+        self.open_button.pack(padx=5, side=tkinter.LEFT)
 
-    def load_video_profile_from_history(self):
-        if (
-            self.video_history_clicked.get()
-            == StartVideoDialog.LOAD_VIDEO_PROFILE_FROM_HISTORY_OPTION
-        ):
-            return
-        selected_index = int(self.video_history_clicked.get().split()[0])
+        self.save_defaults_button = tkinter.Button(
+            self.action_button_frame_1, text="Save Defaults", command=self.save_defaults
+        )
+        self.save_defaults_button.pack(padx=5, side=tkinter.LEFT)
+        self.action_button_frame_1.grid(row=row_count, column=1)
+        row_count += 1
+
+        if self.video_history_default_index is not None:
+            self.__load_video_profile_from_history_idx(self.video_history_default_index)
+
+    def __update_video_history_options(self, update_menu, select_instruction=False):
+        self.video_history_options = [
+            StartVideoDialog.LOAD_VIDEO_PROFILE_FROM_HISTORY_OPTION
+        ]
+        self.video_history_default_index = None
+        for idx, vh in enumerate(self.video_history):
+            if (
+                vh["video_file_name"]
+                == StartVideoDialog.LOAD_VIDEO_DEFAULTS_HISTORY_SAVE_NAME
+            ):
+                self.video_history_default_index = idx
+                self.video_history_options.append(
+                    StartVideoDialog.LOAD_VIDEO_DEFAULTS_HISTORY_OPTION
+                )
+        self.video_history_options.extend(
+            reversed(
+                [
+                    f"{idx} {vh['history_datetime']} {vh['video_file_name']}"
+                    for idx, vh in enumerate(self.video_history)
+                    if vh["video_file_name"]
+                    != StartVideoDialog.LOAD_VIDEO_DEFAULTS_HISTORY_SAVE_NAME
+                ]
+            )
+        )
+        if select_instruction:
+            self.video_history_clicked.set(
+                StartVideoDialog.LOAD_VIDEO_PROFILE_FROM_HISTORY_OPTION
+            )
+        if update_menu:
+            menu = self.video_history_dropdown["menu"]
+            menu.delete(1, "end")
+            for menu_option in self.video_history_options[1:]:
+                menu.add_command(
+                    label=menu_option,
+                    command=_setit(self.video_history_clicked, menu_option),
+                )
+
+    def __load_video_profile_from_history_idx(self, selected_index):
         selected_video_history = self.video_history[selected_index]
-        self.video_file_name = selected_video_history["video_file_name"]
+        target_video_file_name = selected_video_history["video_file_name"]
+        if (
+            target_video_file_name
+            != StartVideoDialog.LOAD_VIDEO_DEFAULTS_HISTORY_SAVE_NAME
+        ):
+            self.video_file_name = target_video_file_name
         self.video_file_location_label.config(text=self.video_file_name)
-        self.subtitle_file_name = selected_video_history["subtitle_file_name"]
+        if (
+            target_video_file_name
+            != StartVideoDialog.LOAD_VIDEO_DEFAULTS_HISTORY_SAVE_NAME
+        ):
+            self.subtitle_file_name = selected_video_history["subtitle_file_name"]
         self.subtitle_file_location_label.config(text=self.subtitle_file_name)
         self.subtitle_font_variable.set(selected_video_history["subtitle_font"])
         self.subtitle_size_variable.set(selected_video_history["subtitle_size"])
@@ -1454,38 +1499,38 @@ class StartVideoDialog:
         self.frame_packing_variable.set(selected_video_history["frame_packing"])
         self.right_eye_variable.set(selected_video_history["right_eye"])
 
+    def load_video_profile_from_history(self):
+        if (
+            self.video_history_clicked.get()
+            == StartVideoDialog.LOAD_VIDEO_PROFILE_FROM_HISTORY_OPTION
+        ):
+            return
+        if (
+            self.video_history_clicked.get()
+            == StartVideoDialog.LOAD_VIDEO_DEFAULTS_HISTORY_OPTION
+        ):
+            selected_index = self.video_history_default_index
+        else:
+            selected_index = int(self.video_history_clicked.get().split()[0])
+        self.__load_video_profile_from_history_idx(selected_index)
+
     def remove_video_profile_from_history(self):
         if (
             self.video_history_clicked.get()
             == StartVideoDialog.LOAD_VIDEO_PROFILE_FROM_HISTORY_OPTION
         ):
             return
+        if (
+            self.video_history_clicked.get()
+            == StartVideoDialog.LOAD_VIDEO_DEFAULTS_HISTORY_OPTION
+        ):
+            selected_index = self.video_history_default_index
         selected_index = int(self.video_history_clicked.get().split()[0])
         self.video_history.pop(selected_index)
         f = open(self.history_file_path, "w")
         json.dump(self.video_history, f, indent=2)
         f.close()
-        self.video_history_options = [
-            StartVideoDialog.LOAD_VIDEO_PROFILE_FROM_HISTORY_OPTION
-        ]
-        self.video_history_options.extend(
-            reversed(
-                [
-                    f"{idx} {vh['history_datetime']} {vh['video_file_name']}"
-                    for idx, vh in enumerate(self.video_history)
-                ]
-            )
-        )
-        self.video_history_clicked.set(
-            StartVideoDialog.LOAD_VIDEO_PROFILE_FROM_HISTORY_OPTION
-        )
-        menu = self.video_history_dropdown["menu"]
-        menu.delete(1, "end")
-        for menu_option in self.video_history_options[1:]:
-            menu.add_command(
-                label=menu_option,
-                command=_setit(self.video_history_clicked, menu_option),
-            )
+        self.__update_video_history_options(update_menu=True, select_instruction=True)
 
     def select_video_file(self):
         new_video_file_name = tkinter.filedialog.askopenfilename(
@@ -1514,12 +1559,9 @@ class StartVideoDialog:
             self.subtitle_file_name = new_subtitle_file_name
             self.subtitle_file_location_label.config(text=self.subtitle_file_name)
 
-    def send(self):
-        if not self.video_file_name:
-            return
-
-        new_video_history_entry = {
-            "video_file_name": self.video_file_name,
+    def __build_video_history_entry(self):
+        return {
+            "video_file_name": None,
             "subtitle_file_name": self.subtitle_file_name,
             "subtitle_font": self.subtitle_font_variable.get(),
             "subtitle_size": self.subtitle_size_variable.get(),
@@ -1529,10 +1571,40 @@ class StartVideoDialog:
             "frame_packing": self.frame_packing_variable.get(),
             "right_eye": self.right_eye_variable.get(),
         }
+
+    def save_defaults(self):
+        new_video_history_entry = self.__build_video_history_entry()
+        new_video_history_entry["video_file_name"] = (
+            StartVideoDialog.LOAD_VIDEO_DEFAULTS_HISTORY_SAVE_NAME
+        )
+        if self.video_history_default_index is None:
+            self.video_history = [new_video_history_entry] + self.video_history
+        else:
+            self.video_history[self.video_history_default_index] = (
+                new_video_history_entry
+            )
+
+        f = open(self.history_file_path, "w")
+        json.dump(self.video_history, f, indent=2)
+        f.close()
+        self.__update_video_history_options(update_menu=True)
+
+    def open_video(self):
+        if (
+            not self.video_file_name
+            or self.video_file_name
+            == StartVideoDialog.LOAD_VIDEO_DEFAULTS_HISTORY_SAVE_NAME
+        ):
+            return
+
+        new_video_history_entry = self.__build_video_history_entry()
+        new_video_history_entry["video_file_name"] = self.video_file_name
         save_history = True
         if (
             self.video_history_clicked.get()
             != StartVideoDialog.LOAD_VIDEO_PROFILE_FROM_HISTORY_OPTION
+            and self.video_history_clicked.get()
+            != StartVideoDialog.LOAD_VIDEO_DEFAULTS_HISTORY_OPTION
         ):
             selected_index = self.video_history_clicked.get().split()[0]
             selected_video_history = self.video_history[int(selected_index)]
@@ -1547,12 +1619,20 @@ class StartVideoDialog:
             )
             self.video_history.append(new_video_history_entry)
             if len(self.video_history) > StartVideoDialog.VIDEO_HISTORY_MAX_SIZE:
-                self.video_history = self.video_history[1:]
+                if self.video_history_default_index is None:
+                    self.video_history = self.video_history[1:]
+                else:
+                    self.video_history = self.video_history[:1] + self.video_history[2:]
             f = open(self.history_file_path, "w")
             json.dump(self.video_history, f, indent=2)
             f.close()
         self.perform_open = True
         self.top.destroy()
+        self.top = None
+
+    def click_close(self):
+        self.top.destroy()
+        self.top = None
 
 
 class TopWindow:
@@ -1877,11 +1957,13 @@ class TopWindow:
 
     def stop_player(self, event=None):  # @UnusedVariable
         print("stop_player")
-        self.player.set_state(Gst.State.NULL)
+        if self.player is not None:
+            self.player.set_state(Gst.State.NULL)
         self.video_open = False
         if self.emitter_serial is not None:
             self.emitter_serial.pageflipglsink = None
-        self.pageflipglsink.set_property("close", True)
+        if self.pageflipglsink is not None:
+            self.pageflipglsink.set_property("close", True)
         self.set_menu_on_top(True)
         # Gst.deinit()
         return "break"
