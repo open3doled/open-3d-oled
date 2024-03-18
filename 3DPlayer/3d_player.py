@@ -184,6 +184,8 @@ class EmitterSettingsDialog:
     def __init__(self, parent, main_app):
         self.main_app = main_app
         top = self.top = tkinter.Toplevel(parent)
+        top.protocol("WM_DELETE_WINDOW", self.click_close)
+
         row_count = 0
         pro_micro_ports = [
             port
@@ -233,6 +235,30 @@ class EmitterSettingsDialog:
             hover_delay=100,
         )
         self.serial_port_identifier_frame.grid(row=row_count, column=0, sticky="w")
+        row_count += 1
+
+        self.setting_emitter_firmware_version_frame = tkinter.Frame(top)
+        self.setting_emitter_firmware_version_variable = tkinter.StringVar(top)
+        self.setting_emitter_firmware_version_variable.set("Not Connected")
+        self.setting_emitter_firmware_version_label = tkinter.Label(
+            self.setting_emitter_firmware_version_frame,
+            text="Emitter Firmware Version: ",
+        )
+        self.setting_emitter_firmware_version_label.pack(padx=5, side=tkinter.LEFT)
+        self.setting_emitter_firmware_version_entry = tkinter.Entry(
+            self.setting_emitter_firmware_version_frame,
+            textvariable=self.setting_emitter_firmware_version_variable,
+        )
+        self.setting_emitter_firmware_version_entry.config(state="disabled")
+        self.setting_emitter_firmware_version_entry.pack(padx=5, side=tkinter.LEFT)
+        self.setting_emitter_firmware_version_tooltip = idlelib.tooltip.Hovertip(
+            self.setting_emitter_firmware_version_entry,
+            "The version of your ir emitter firmware",
+            hover_delay=100,
+        )
+        self.setting_emitter_firmware_version_frame.grid(
+            row=row_count, column=0, sticky="w"
+        )
         row_count += 1
 
         self.setting_ir_protocol_frame = tkinter.Frame(top)
@@ -367,10 +393,42 @@ class EmitterSettingsDialog:
         )
         self.setting_opt101_block_signal_detection_delay_tooltip = idlelib.tooltip.Hovertip(
             self.setting_opt101_block_signal_detection_delay_entry,
-            "(in microseconds) how long to wait after a high tv signal on left or right before allowing another high tv signal \non either channel this is useful to eliminating false triggers when the tv signal is decreasing in a noisy fashion. \nthis is best set to slighly lower than the target refresh rate (about 80-90%).",
+            "(in microseconds) how long to wait after a high tv signal on left or right before allowing another high tv signal \non either channel this is useful to eliminating false triggers when the tv signal is decreasing in a noisy fashion. \nthis is best set to slighly lower than the target refresh rate (about 80-90%). \n(when used in conjunction with a PWM backlit display this should be set to a value 80-90% of the PWM backlight cycle time.)",
             hover_delay=100,
         )
         self.setting_opt101_block_signal_detection_delay_frame.grid(
+            row=row_count, column=0, sticky="w"
+        )
+        row_count += 1
+
+        self.setting_opt101_block_n_subsequent_duplicates_frame = tkinter.Frame(top)
+        self.setting_opt101_block_n_subsequent_duplicates_variable = tkinter.StringVar(
+            top
+        )
+        self.setting_opt101_block_n_subsequent_duplicates_variable.set("0")
+        self.setting_opt101_block_n_subsequent_duplicates_label = tkinter.Label(
+            self.setting_opt101_block_n_subsequent_duplicates_frame,
+            text="OPT101 Block N Subsequent Duplicates*: ",
+        )
+        self.setting_opt101_block_n_subsequent_duplicates_label.pack(
+            padx=5, side=tkinter.LEFT
+        )
+        self.setting_opt101_block_n_subsequent_duplicates_entry = tkinter.Entry(
+            self.setting_opt101_block_n_subsequent_duplicates_frame,
+            textvariable=self.setting_opt101_block_n_subsequent_duplicates_variable,
+        )
+        self.setting_opt101_block_n_subsequent_duplicates_entry.config(
+            state="disabled"
+        )  # we only enable it after we confirm the emitter firmware supports this parameter
+        self.setting_opt101_block_n_subsequent_duplicates_entry.pack(
+            padx=5, side=tkinter.LEFT
+        )
+        self.setting_opt101_block_n_subsequent_duplicates_tooltip = idlelib.tooltip.Hovertip(
+            self.setting_opt101_block_n_subsequent_duplicates_entry,
+            "(number of detections to block) on displays that use a PWM backlight one needs to block fake duplicate frames \nfor at least the first math.ceiling((PWM frequency)/framerate) otherwise a PWM pulse may incorrectly \nbe detected as the next duplicate frame causing the unit to lose proper synchronization. \nWhen using this setting one should set 'OPT101 Block Signal Detection Delay' to a \nvalue 80-90% of the PWM backlight cycle time. \nThis feature is only availble from emitter firmware version 10 \n(default 0).",
+            hover_delay=100,
+        )
+        self.setting_opt101_block_n_subsequent_duplicates_frame.grid(
             row=row_count, column=0, sticky="w"
         )
         row_count += 1
@@ -427,6 +485,97 @@ class EmitterSettingsDialog:
         )
         row_count += 1
 
+        self.setting_opt101_enable_ignore_during_ir_frame = tkinter.Frame(top)
+        self.setting_opt101_enable_ignore_during_ir_variable = tkinter.StringVar(top)
+        self.setting_opt101_enable_ignore_during_ir_variable.set("1")
+        self.setting_opt101_enable_ignore_during_ir_label = tkinter.Label(
+            self.setting_opt101_enable_ignore_during_ir_frame,
+            text="Enable Ignore Frame Start During IR*: ",
+        )
+        self.setting_opt101_enable_ignore_during_ir_label.pack(
+            padx=5, side=tkinter.LEFT
+        )
+        self.setting_opt101_enable_ignore_during_ir_entry = tkinter.Entry(
+            self.setting_opt101_enable_ignore_during_ir_frame,
+            textvariable=self.setting_opt101_enable_ignore_during_ir_variable,
+        )
+        self.setting_opt101_enable_ignore_during_ir_entry.pack(
+            padx=5, side=tkinter.LEFT
+        )
+        self.setting_opt101_enable_ignore_during_ir_tooltip = idlelib.tooltip.Hovertip(
+            self.setting_opt101_enable_ignore_during_ir_entry,
+            "(experimental) disable the opt101 sensor detection during the time when ir signals are being emitted. \nthis stops reflections of IR signals from triggering frame start signals.",
+            hover_delay=100,
+        )
+        self.setting_opt101_enable_ignore_during_ir_frame.grid(
+            row=row_count, column=0, sticky="w"
+        )
+        row_count += 1
+
+        self.setting_opt101_enable_smart_duplicate_frame_handling_frame = tkinter.Frame(
+            top
+        )
+        self.setting_opt101_enable_smart_duplicate_frame_handling_variable = (
+            tkinter.StringVar(top)
+        )
+        self.setting_opt101_enable_smart_duplicate_frame_handling_variable.set("0")
+        self.setting_opt101_enable_smart_duplicate_frame_handling_label = tkinter.Label(
+            self.setting_opt101_enable_smart_duplicate_frame_handling_frame,
+            text="Enable Smart Duplicate Frame Handling*: ",
+        )
+        self.setting_opt101_enable_smart_duplicate_frame_handling_label.pack(
+            padx=5, side=tkinter.LEFT
+        )
+        self.setting_opt101_enable_smart_duplicate_frame_handling_entry = tkinter.Entry(
+            self.setting_opt101_enable_smart_duplicate_frame_handling_frame,
+            textvariable=self.setting_opt101_enable_smart_duplicate_frame_handling_variable,
+        )
+        self.setting_opt101_enable_smart_duplicate_frame_handling_entry.pack(
+            padx=5, side=tkinter.LEFT
+        )
+        self.setting_opt101_enable_smart_duplicate_frame_handling_tooltip = idlelib.tooltip.Hovertip(
+            self.setting_opt101_enable_smart_duplicate_frame_handling_entry,
+            '*experimental* *doesnt work - too much round trip latency* detect duplicate frames and pretend they arent dupes (send no ir) then report the dupe to the host pc so it can skip a second \nframe immediately. duplicaes are reported to pc in the format "+d 0" (right duplicate) "+d 1" (left duplicate)',
+            hover_delay=100,
+        )
+        self.setting_opt101_enable_smart_duplicate_frame_handling_frame.grid(
+            row=row_count, column=0, sticky="w"
+        )
+        row_count += 1
+
+        self.setting_opt101_enable_frequency_analysis_based_duplicate_frame_detection_frame = tkinter.Frame(
+            top
+        )
+        self.setting_opt101_enable_frequency_analysis_based_duplicate_frame_detection_variable = tkinter.StringVar(
+            top
+        )
+        self.setting_opt101_enable_frequency_analysis_based_duplicate_frame_detection_variable.set(
+            "0"
+        )
+        self.setting_opt101_enable_frequency_analysis_based_duplicate_frame_detection_label = tkinter.Label(
+            self.setting_opt101_enable_frequency_analysis_based_duplicate_frame_detection_frame,
+            text="OPT101 Enable Frequency Analysis Based Duplicate Frame Detection*: ",
+        )
+        self.setting_opt101_enable_frequency_analysis_based_duplicate_frame_detection_label.pack(
+            padx=5, side=tkinter.LEFT
+        )
+        self.setting_opt101_enable_frequency_analysis_based_duplicate_frame_detection_entry = tkinter.Entry(
+            self.setting_opt101_enable_frequency_analysis_based_duplicate_frame_detection_frame,
+            textvariable=self.setting_opt101_enable_frequency_analysis_based_duplicate_frame_detection_variable,
+        )
+        self.setting_opt101_enable_frequency_analysis_based_duplicate_frame_detection_entry.pack(
+            padx=5, side=tkinter.LEFT
+        )
+        self.setting_opt101_enable_frequency_analysis_based_duplicate_frame_detection_tooltip = idlelib.tooltip.Hovertip(
+            self.setting_opt101_enable_frequency_analysis_based_duplicate_frame_detection_entry,
+            "*experimental* enables the code to detect duplicate frames on screens without a black frame interval (if built with OPT101_ENABLE_FREQUENCY_ANALYSIS_BASED_DUPLICATE_FRAME_DETECTION).",
+            hover_delay=100,
+        )
+        self.setting_opt101_enable_frequency_analysis_based_duplicate_frame_detection_frame.grid(
+            row=row_count, column=0, sticky="w"
+        )
+        row_count += 1
+
         self.setting_opt101_detection_threshold_repeated_high_frame = tkinter.Frame(top)
         self.setting_opt101_detection_threshold_repeated_high_variable = (
             tkinter.StringVar(top)
@@ -434,7 +583,7 @@ class EmitterSettingsDialog:
         self.setting_opt101_detection_threshold_repeated_high_variable.set("224")
         self.setting_opt101_detection_threshold_repeated_high_label = tkinter.Label(
             self.setting_opt101_detection_threshold_repeated_high_frame,
-            text="OPT101 Detection Threshold High: ",
+            text="OPT101 Detection Threshold High*: ",
         )
         self.setting_opt101_detection_threshold_repeated_high_label.pack(
             padx=5, side=tkinter.LEFT
@@ -463,7 +612,7 @@ class EmitterSettingsDialog:
         self.setting_opt101_detection_threshold_repeated_low_variable.set("32")
         self.setting_opt101_detection_threshold_repeated_low_label = tkinter.Label(
             self.setting_opt101_detection_threshold_repeated_low_frame,
-            text="OPT101 Detection Threshold Low: ",
+            text="OPT101 Detection Threshold Low*: ",
         )
         self.setting_opt101_detection_threshold_repeated_low_label.pack(
             padx=5, side=tkinter.LEFT
@@ -477,68 +626,10 @@ class EmitterSettingsDialog:
         )
         self.setting_opt101_detection_threshold_repeated_low_tooltip = idlelib.tooltip.Hovertip(
             self.setting_opt101_detection_threshold_repeated_low_entry,
-            "(as a value between 1-255) (LCD Specific) see OPT101 Detection Threshold High above",
+            "(as a value between 1-255) (LCD Specific) see OPT101 Detection Threshold High above*",
             hover_delay=100,
         )
         self.setting_opt101_detection_threshold_repeated_low_frame.grid(
-            row=row_count, column=0, sticky="w"
-        )
-        row_count += 1
-
-        self.setting_opt101_enable_ignore_during_ir_frame = tkinter.Frame(top)
-        self.setting_opt101_enable_ignore_during_ir_variable = tkinter.StringVar(top)
-        self.setting_opt101_enable_ignore_during_ir_variable.set("1")
-        self.setting_opt101_enable_ignore_during_ir_label = tkinter.Label(
-            self.setting_opt101_enable_ignore_during_ir_frame,
-            text="Enable Ignore Frame Start During IR: ",
-        )
-        self.setting_opt101_enable_ignore_during_ir_label.pack(
-            padx=5, side=tkinter.LEFT
-        )
-        self.setting_opt101_enable_ignore_during_ir_entry = tkinter.Entry(
-            self.setting_opt101_enable_ignore_during_ir_frame,
-            textvariable=self.setting_opt101_enable_ignore_during_ir_variable,
-        )
-        self.setting_opt101_enable_ignore_during_ir_entry.pack(
-            padx=5, side=tkinter.LEFT
-        )
-        self.setting_opt101_enable_ignore_during_ir_tooltip = idlelib.tooltip.Hovertip(
-            self.setting_opt101_enable_ignore_during_ir_entry,
-            "disable the opt101 sensor detection during the time when ir signals are being emitted. \nthis stops reflections of IR signals from triggering frame start signals.",
-            hover_delay=100,
-        )
-        self.setting_opt101_enable_ignore_during_ir_frame.grid(
-            row=row_count, column=0, sticky="w"
-        )
-        row_count += 1
-
-        self.setting_opt101_enable_smart_duplicate_frame_handling_frame = tkinter.Frame(
-            top
-        )
-        self.setting_opt101_enable_smart_duplicate_frame_handling_variable = (
-            tkinter.StringVar(top)
-        )
-        self.setting_opt101_enable_smart_duplicate_frame_handling_variable.set("0")
-        self.setting_opt101_enable_smart_duplicate_frame_handling_label = tkinter.Label(
-            self.setting_opt101_enable_smart_duplicate_frame_handling_frame,
-            text="Enable Smart Duplicate Frame Handling: ",
-        )
-        self.setting_opt101_enable_smart_duplicate_frame_handling_label.pack(
-            padx=5, side=tkinter.LEFT
-        )
-        self.setting_opt101_enable_smart_duplicate_frame_handling_entry = tkinter.Entry(
-            self.setting_opt101_enable_smart_duplicate_frame_handling_frame,
-            textvariable=self.setting_opt101_enable_smart_duplicate_frame_handling_variable,
-        )
-        self.setting_opt101_enable_smart_duplicate_frame_handling_entry.pack(
-            padx=5, side=tkinter.LEFT
-        )
-        self.setting_opt101_enable_smart_duplicate_frame_handling_tooltip = idlelib.tooltip.Hovertip(
-            self.setting_opt101_enable_smart_duplicate_frame_handling_entry,
-            '*doesnt work - too much round trip latency* detect duplicate frames and pretend they arent dupes (send no ir) then report the dupe to the host pc so it can skip a second \nframe immediately. duplicaes are reported to pc in the format "+d 0" (right duplicate) "+d 1" (left duplicate)',
-            hover_delay=100,
-        )
-        self.setting_opt101_enable_smart_duplicate_frame_handling_frame.grid(
             row=row_count, column=0, sticky="w"
         )
         row_count += 1
@@ -557,43 +648,10 @@ class EmitterSettingsDialog:
         self.setting_opt101_output_stats_entry.pack(padx=5, side=tkinter.LEFT)
         self.setting_opt101_output_stats_tooltip = idlelib.tooltip.Hovertip(
             self.setting_opt101_output_stats_entry,
-            'output statistics (if built with OPT101_ENABLE_STATS) relating to how the opt101 module is processing all lines start with \n"+stats " followed by specific statistics.',
+            'output statistics (if built with OPT101_ENABLE_STATS) relating to how the opt101 module is processing all lines start with \n"+stats " followed by specific statistics. Turn this off when not experimenting as it may degrade timing accuracy when serial communication occurs',
             hover_delay=100,
         )
         self.setting_opt101_output_stats_frame.grid(row=row_count, column=0, sticky="w")
-        row_count += 1
-
-        self.setting_opt101_enable_frequency_analysis_based_duplicate_frame_detection_frame = tkinter.Frame(
-            top
-        )
-        self.setting_opt101_enable_frequency_analysis_based_duplicate_frame_detection_variable = tkinter.StringVar(
-            top
-        )
-        self.setting_opt101_enable_frequency_analysis_based_duplicate_frame_detection_variable.set(
-            "0"
-        )
-        self.setting_opt101_enable_frequency_analysis_based_duplicate_frame_detection_label = tkinter.Label(
-            self.setting_opt101_enable_frequency_analysis_based_duplicate_frame_detection_frame,
-            text="OPT101 Enable Frequency Analysis Based Duplicate Frame Detection: ",
-        )
-        self.setting_opt101_enable_frequency_analysis_based_duplicate_frame_detection_label.pack(
-            padx=5, side=tkinter.LEFT
-        )
-        self.setting_opt101_enable_frequency_analysis_based_duplicate_frame_detection_entry = tkinter.Entry(
-            self.setting_opt101_enable_frequency_analysis_based_duplicate_frame_detection_frame,
-            textvariable=self.setting_opt101_enable_frequency_analysis_based_duplicate_frame_detection_variable,
-        )
-        self.setting_opt101_enable_frequency_analysis_based_duplicate_frame_detection_entry.pack(
-            padx=5, side=tkinter.LEFT
-        )
-        self.setting_opt101_enable_frequency_analysis_based_duplicate_frame_detection_tooltip = idlelib.tooltip.Hovertip(
-            self.setting_opt101_enable_frequency_analysis_based_duplicate_frame_detection_entry,
-            "enables the code to detect duplicate frames on screens without a black frame interval (if built with OPT101_ENABLE_FREQUENCY_ANALYSIS_BASED_DUPLICATE_FRAME_DETECTION).",
-            hover_delay=100,
-        )
-        self.setting_opt101_enable_frequency_analysis_based_duplicate_frame_detection_frame.grid(
-            row=row_count, column=0, sticky="w"
-        )
         row_count += 1
 
         self.action_button_frame_1 = tkinter.Frame(top)
@@ -657,6 +715,7 @@ class EmitterSettingsDialog:
         self.action_button_frame_2.grid(row=row_count, column=0, sticky="w")
         row_count += 1
 
+        self.supported_parameters = None
         self.update_settings_from_serial()
 
     def update_settings_from_serial(self):
@@ -665,7 +724,11 @@ class EmitterSettingsDialog:
                 " "
             )
             if response[0] == "parameters":
+                parameters = response[1].split(",")
+                if int(parameters[0]) < 10:
+                    parameters = [3] + parameters
                 (
+                    emitter_firmware_version,
                     ir_protocol,
                     ir_frame_delay,
                     ir_frame_duration,
@@ -679,7 +742,12 @@ class EmitterSettingsDialog:
                     opt101_enable_smart_duplicate_frame_handling,
                     opt101_output_stats,
                     opt101_enable_frequency_analysis_based_duplicate_frame_detection,
-                ) = response[1].split(",")
+                ) = parameters[:14]
+
+                self.emitter_firmware_version_int = int(emitter_firmware_version)
+                self.setting_emitter_firmware_version_variable.set(
+                    emitter_firmware_version
+                )
                 self.setting_ir_protocol_variable.set(ir_protocol)
                 self.setting_ir_frame_delay_variable.set(ir_frame_delay)
                 self.setting_ir_frame_duration_variable.set(ir_frame_duration)
@@ -709,6 +777,13 @@ class EmitterSettingsDialog:
                 self.setting_opt101_enable_frequency_analysis_based_duplicate_frame_detection_variable.set(
                     opt101_enable_frequency_analysis_based_duplicate_frame_detection
                 )
+                if self.emitter_firmware_version_int > 9:
+                    self.setting_opt101_block_n_subsequent_duplicates_variable.set(
+                        parameters[14]
+                    )
+                    self.setting_opt101_block_n_subsequent_duplicates_entry.config(
+                        state="normal"
+                    )
 
     def serial_port_click_connect(self):
         if self.main_app.emitter_serial:
@@ -741,6 +816,8 @@ class EmitterSettingsDialog:
                 f"{self.setting_opt101_output_stats_variable.get()},"
                 f"{self.setting_opt101_enable_frequency_analysis_based_duplicate_frame_detection_variable.get()}"
             )
+            if self.emitter_firmware_version_int > 9:
+                command += f",{self.setting_opt101_block_n_subsequent_duplicates_variable.get()}"
             print(command)
             self.main_app.emitter_serial.line_reader.command(command)
 
@@ -773,6 +850,7 @@ class EmitterSettingsDialog:
                     "opt101_enable_smart_duplicate_frame_handling": self.setting_opt101_enable_smart_duplicate_frame_handling_variable.get(),
                     "opt101_output_stats": self.setting_opt101_output_stats_variable.get(),
                     "opt101_enable_frequency_analysis_based_duplicate_frame_detection": self.setting_opt101_enable_frequency_analysis_based_duplicate_frame_detection_variable.get(),
+                    "opt101_block_n_subsequent_duplicates_variable": self.setting_opt101_block_n_subsequent_duplicates_variable.get(),
                 },
                 f,
                 indent=2,
@@ -823,6 +901,9 @@ class EmitterSettingsDialog:
                 settings[
                     "opt101_enable_frequency_analysis_based_duplicate_frame_detection"
                 ]
+            )
+            self.setting_opt101_block_n_subsequent_duplicates_variable.set(
+                settings.get("opt101_block_n_subsequent_duplicates_variable", 0)
             )
 
     def click_set_glasses_mode(self):

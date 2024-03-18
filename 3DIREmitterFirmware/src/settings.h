@@ -30,9 +30,9 @@
 
 // defaults LG OLED 1920x1080 120hz
 //*
-#define OPT101_BLOCK_SIGNAL_DETECTION_DELAY 6000 // in micros (some value around 90% of the frame rate, large enough to avoid false positive when signal is going down but small enough that dynamic framerate detection delay still works for displays without BFI)
-#define IR_FRAME_DURATION  (6750)    // Frame exposure duration in microseconds (@16MHz)
-#define IR_FRAME_DELAY       (50)    // Time between opt101 trigger and start of IR token (in microseconds (@16MHz))
+#define OPT101_BLOCK_SIGNAL_DETECTION_DELAY 6500 // in micros (some value around 90% of the frame rate, large enough to avoid false positive when signal is going down but small enough that dynamic framerate detection delay still works for displays without BFI)
+#define IR_FRAME_DURATION  (7000)    // Frame exposure duration in microseconds (@16MHz)
+#define IR_FRAME_DELAY       (500)    // Time between opt101 trigger and start of IR token (in microseconds (@16MHz))
 #define IR_SIGNAL_SPACING   (30)    // Minimum time required between ir signals being sent in us (measured at 17us currently so 30 us should be more than enough I think). 
 //*/
 
@@ -152,6 +152,7 @@
 
 #define EEPROM_SETTING_ADDRESS 0
 #define EEPROM_SETTING_CHECKVALUE 0x3D3D3D3D
+#define EMITTER_VERSION 10
 
 struct EEPROMSettings {
   uint32_t check_value;
@@ -169,6 +170,7 @@ struct EEPROMSettings {
   uint8_t opt101_enable_smart_duplicate_frame_handling;
   uint8_t opt101_output_stats;
   uint8_t opt101_enable_frequency_analysis_based_duplicate_frame_detection;
+  uint8_t opt101_block_n_subsequent_duplicates;
 };
 
 #endif /* _SETTINGS_H_ */

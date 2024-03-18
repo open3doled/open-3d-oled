@@ -36,11 +36,12 @@ bool opt101_reading_above_threshold;
 uint8_t opt101_enable_frequency_analysis_based_duplicate_frame_detection = 0;
 uint8_t opt101_enable_ignore_during_ir = 0;
 uint8_t opt101_enable_smart_duplicate_frame_handling = 0;
-uint8_t opt101_output_stats = 1;
-uint8_t opt101_detection_threshold = 192;
+uint8_t opt101_output_stats = 0;
+uint8_t opt101_detection_threshold = 128;
 uint8_t opt101_detection_threshold_repeated_high = 224;
 uint8_t opt101_detection_threshold_repeated_low = 32;
 uint32_t opt101_block_signal_detection_delay = OPT101_BLOCK_SIGNAL_DETECTION_DELAY;
+uint8_t opt101_block_n_subsequent_duplicates = 0;
 uint8_t opt101_min_threshold_value_to_activate = OPT101_MIN_THRESHOLD_VALUE_TO_ACTIVATE;
 uint32_t opt101_block_signal_detection_until = 0;
 uint32_t opt101_disable_debug_detection_flag_after = 0;
@@ -112,8 +113,8 @@ void opt101_sensor_Init(void)
     #endif
     opt101_enable_frequency_analysis_based_duplicate_frame_detection = 0;
     opt101_enable_smart_duplicate_frame_handling = 0;
-    opt101_output_stats = 1;
-    opt101_detection_threshold = 192;
+    opt101_output_stats = 0;
+    opt101_detection_threshold = 128;
     opt101_detection_threshold_repeated_high = 224;
     opt101_detection_threshold_repeated_low = 32;
     opt101_block_signal_detection_delay = OPT101_BLOCK_SIGNAL_DETECTION_DELAY;

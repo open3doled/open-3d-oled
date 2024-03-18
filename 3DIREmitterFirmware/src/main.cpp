@@ -73,7 +73,7 @@ void setup()
             opt101_output_stats = eeprom_settings.opt101_enable_smart_duplicate_frame_handling;
             opt101_enable_frequency_analysis_based_duplicate_frame_detection = eeprom_settings.opt101_output_stats;
         }
-        else if (eeprom_settings.version == 3) 
+        else if (eeprom_settings.version > 3) 
         {
             ir_glasses_selected = eeprom_settings.ir_glasses_selected;
             ir_frame_delay = eeprom_settings.ir_frame_delay;
@@ -88,6 +88,10 @@ void setup()
             opt101_enable_smart_duplicate_frame_handling = eeprom_settings.opt101_enable_smart_duplicate_frame_handling;
             opt101_output_stats = eeprom_settings.opt101_output_stats;
             opt101_enable_frequency_analysis_based_duplicate_frame_detection = eeprom_settings.opt101_enable_frequency_analysis_based_duplicate_frame_detection;
+            if (eeprom_settings.version > 9) 
+            {
+                opt101_block_n_subsequent_duplicates = eeprom_settings.opt101_block_n_subsequent_duplicates;
+            }
         }
 
         Serial.println("eeprom read_settings");
@@ -131,6 +135,12 @@ void loop()
             *   how long to wait after a high tv signal on left or right before allowing another high tv signal on either 
             *   channel (in microseconds) this is useful to eliminating false triggers when the tv signal is decreasing in a noisy fashion.
             *   this is best set to slighly lower than the target refresh rate (about 80-90%).
+            * 14) opt101_block_n_subsequent_duplicates -
+            *   (number of detections to block) on displays that use a PWM backlight one needs to block fake duplicate frames 
+            *   for at least the first math.ceiling((PWM frequency)/framerate) otherwise a PWM pulse may incorrectly 
+            *   be detected as the next duplicate frame causing the unit to lose proper synchronization. 
+            *   When using this setting one should set opt101_block_signal_detection_delay to a 
+            *   value 80-90% of the PWM backlight cycle time. (default 0).
             * 6) opt101_min_threshold_value_to_activate -
             *   the light intensities threshold value in a given threshold update cycle must exceed this value before the emitter will turn on.
             *   this setting is used to stop the emitter turning on when the TV is turned off.  (default 10)
@@ -158,7 +168,7 @@ void loop()
             *   as a duplicate frame.
             * 9) opt101_detection_threshold_repeated_low - see 5 above
             */
-            for (uint8_t p = 0; p < 15; p++) 
+            for (uint8_t p = 0; p < 16; p++) 
             {
                 end = input.indexOf(",", start);
                 if (end == 255) 
@@ -227,6 +237,10 @@ void loop()
                         {
                             opt101_enable_frequency_analysis_based_duplicate_frame_detection = temp;
                         }
+                        else if (p == 14) 
+                        {
+                            opt101_block_n_subsequent_duplicates = temp;
+                        }
                     }
                     else if (command == 7 && p == 1 && temp >= 0 && temp < 3) // update glasses mode
                     {
@@ -246,7 +260,7 @@ void loop()
                     {
                         EEPROMSettings eeprom_settings = {
                             EEPROM_SETTING_CHECKVALUE,
-                            3,
+                            EMITTER_VERSION,
                             ir_glasses_selected,
                             ir_frame_delay,
                             ir_frame_duration,
@@ -259,7 +273,8 @@ void loop()
                             opt101_enable_ignore_during_ir,
                             opt101_enable_smart_duplicate_frame_handling,
                             opt101_output_stats,
-                            opt101_enable_frequency_analysis_based_duplicate_frame_detection
+                            opt101_enable_frequency_analysis_based_duplicate_frame_detection,
+                            opt101_block_n_subsequent_duplicates
                         };
                         EEPROM.put(EEPROM_SETTING_ADDRESS, eeprom_settings);
                         Serial.println("OK");
@@ -279,6 +294,9 @@ void loop()
             if (command == 0)
             {
                 Serial.print("parameters ");
+
+                Serial.print(EMITTER_VERSION);
+                Serial.print(",");
                 Serial.print(ir_glasses_selected);
                 Serial.print(",");
                 Serial.print(ir_frame_delay);
@@ -303,7 +321,9 @@ void loop()
                 Serial.print(",");
                 Serial.print(opt101_output_stats);
                 Serial.print(",");
-                Serial.println(opt101_enable_frequency_analysis_based_duplicate_frame_detection);
+                Serial.print(opt101_enable_frequency_analysis_based_duplicate_frame_detection);
+                Serial.print(",");
+                Serial.println(opt101_block_n_subsequent_duplicates);
                 Serial.println("OK");
             }
             input = String();
