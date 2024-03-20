@@ -118,6 +118,7 @@ void opt101_sensor_Init(void)
     opt101_detection_threshold_repeated_high = 224;
     opt101_detection_threshold_repeated_low = 32;
     opt101_block_signal_detection_delay = OPT101_BLOCK_SIGNAL_DETECTION_DELAY;
+    opt101_block_n_subsequent_duplicates = 0;
     opt101_min_threshold_value_to_activate = OPT101_MIN_THRESHOLD_VALUE_TO_ACTIVATE;
     opt101_block_signal_detection_until = 0;
     opt101_disable_debug_detection_flag_after = 0;
@@ -578,6 +579,17 @@ void opt101_sensor_CheckReadings(void)
                         opt101_ignore_duplicate = true;
                         Serial.print("+d ");
                         Serial.println(c);
+                    }
+                    if (opt101_duplicate_frames_in_a_row_counter < opt101_block_n_subsequent_duplicates) 
+                    {
+                        opt101_ignore_duplicate = true;
+                        /*
+                            When using opt101_block_n_subsequent_duplicates we need to reset this to 0 so that we continue to block subsequent duplicates.
+                            Otherwise in the case of a real 120hz duplicate frame we would blast out ir signals at the screen backlight PWM 
+                            frequency after we exceed opt101_block_n_subsequent_duplicates.
+
+                        */ 
+                        opt101_duplicate_frames_in_a_row_counter = 0;
                     }
                 }
                 else

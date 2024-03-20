@@ -25,6 +25,7 @@ from PIL import ImageTk
 from io import BytesIO
 import cairosvg
 import PIL.Image
+import avrloader
 
 # defaults LCD 2560x1080 75hz
 # DEFAULT_DISPLAY_RESOLUTION = '2560x1080'
@@ -180,17 +181,219 @@ class EmitterSerial(EmitterSerialLineReader):
             self.line_reader.pageflipglsink = value
 
 
-class EmitterSettingsDialog:
+class EmitterFirmwareUpdateDialog:
     def __init__(self, parent, main_app):
         self.main_app = main_app
         top = self.top = tkinter.Toplevel(parent)
         top.protocol("WM_DELETE_WINDOW", self.click_close)
 
         row_count = 0
+        ports = serial.tools.list_ports.comports()
+        print(f"Available serial ports {[(a,b,c) for a,b,c in ports]}")
+        pro_micro_ports = [
+            port
+            for port, desc, hwid in ports
+            if "1B4F:9206" in hwid
+            or desc == "SparkFun Pro Micro"
+            or desc.startswith("USB Serial Device")
+        ]
+
+        self.warning_frame = tkinter.Frame(top)
+        self.warning_label = tkinter.Label(
+            self.warning_frame,
+            text="Make sure you do not disconnect the unit while updating the firmware or you may need to recover \nthe firmware and bootloader via ISP protocol.",
+            justify=tkinter.LEFT,
+        )
+        self.warning_label.pack(padx=5, side=tkinter.LEFT)
+        self.warning_frame.grid(row=row_count, column=0, sticky="w")
+        row_count += 1
+
+        self.serial_port_identifier_frame = tkinter.Frame(top)
+        self.serial_port_identifier_variable = tkinter.StringVar(top)
+        self.serial_port_identifier_variable.set(
+            pro_micro_ports[0] if pro_micro_ports else "/dev/ttyACM0"
+        )
+        self.serial_port_identifier_label = tkinter.Label(
+            self.serial_port_identifier_frame, text="Serial Port Identifier: "
+        )
+        self.serial_port_identifier_label.pack(padx=5, side=tkinter.LEFT)
+        self.serial_port_identifier_entry = tkinter.Entry(
+            self.serial_port_identifier_frame,
+            textvariable=self.serial_port_identifier_variable,
+        )
+        self.serial_port_identifier_entry.pack(padx=5, side=tkinter.LEFT)
+        self.serial_port_identifier_entry_tooltip = idlelib.tooltip.Hovertip(
+            self.serial_port_identifier_entry,
+            "Used as the serial port when updating the emitter firmware. (On linux use /dev/ttyACM[0-9], on Windows use COM[0-9])",
+            hover_delay=100,
+        )
+        self.serial_port_identifier_frame.grid(row=row_count, column=0, sticky="w")
+        row_count += 1
+
+        self.firmware_file_frame = tkinter.Frame(top)
+        self.firmware_file_name = ""
+        self.firmware_file_label = tkinter.Label(
+            self.firmware_file_frame, text="Firmware File: "
+        )
+        self.firmware_file_label.pack(padx=5, side=tkinter.LEFT)
+        self.firmware_file_location_label = tkinter.Label(
+            self.firmware_file_frame, text=""
+        )
+        self.firmware_file_location_label.pack(padx=5, side=tkinter.LEFT)
+        self.firmware_file_select_button = tkinter.Button(
+            self.firmware_file_frame, text="Select", command=self.select_firmware_file
+        )
+        self.firmware_file_select_button.pack(padx=5, side=tkinter.LEFT)
+        # self.firmware_file_frame.pack()
+        self.firmware_file_frame.grid(row=row_count, column=0, sticky="w")
+        row_count += 1
+
+        self.status_frame = tkinter.Frame(top)
+        self.status_label = tkinter.Label(
+            self.status_frame,
+            text="",
+            justify=tkinter.LEFT,
+        )
+        self.status_label.pack(padx=5, side=tkinter.LEFT)
+        self.status_frame.grid(row=row_count, column=0, sticky="w")
+        row_count += 1
+
+        self.action_button_frame = tkinter.Frame(top)
+        self.update_firmware_button = tkinter.Button(
+            self.action_button_frame,
+            text="Update Firmware",
+            command=self.click_update_firmware,
+        )
+        self.update_firmware_button.pack(padx=5, side=tkinter.LEFT)
+        self.update_firmware_button_tooltip = idlelib.tooltip.Hovertip(
+            self.update_firmware_button,
+            "Updates the emitter firmware.",
+            hover_delay=100,
+        )
+        self.close_button = tkinter.Button(
+            self.action_button_frame, text="Close", command=self.click_close
+        )
+        self.close_button.pack(padx=5, side=tkinter.LEFT)
+        self.close_button_tooltip = idlelib.tooltip.Hovertip(
+            self.close_button,
+            "Closes this window.",
+            hover_delay=100,
+        )
+        self.action_button_frame.grid(row=row_count, column=0, sticky="w")
+        row_count += 1
+
+    def select_firmware_file(self):
+        new_firmware_file_name = tkinter.filedialog.askopenfilename(
+            title="Select Firmware File from Disk",
+            initialdir=self.main_app.select_firmware_file_initialdir,
+            filetypes=[("HEX Firmware File", "*.hex")],
+        )
+        if new_firmware_file_name:
+            self.main_app.select_firmware_file_initialdir = os.path.dirname(
+                os.path.abspath(new_firmware_file_name)
+            )
+            self.firmware_file_name = new_firmware_file_name
+            self.firmware_file_location_label.config(text=self.firmware_file_name)
+
+    def click_update_firmware(self):
+        if os.path.exists(self.firmware_file_name):
+            self.update_firmware_button.config(state="disabled")
+            self.close_button.config(state="disabled")
+
+            port = serial.Serial(
+                port=self.serial_port_identifier_entry.get(), baudrate=1200
+            )
+            port.close()
+
+            while range(10):
+                time.sleep(0.5)
+
+                ports = serial.tools.list_ports.comports()
+                print(
+                    f"Available serial ports for firmware update {[(a,b,c) for a,b,c in ports]}"
+                )
+                pro_micro_ports = [
+                    port
+                    for port, desc, hwid in ports
+                    if "2341:0036" in hwid
+                    or desc == "Arduino Leonardo"
+                    or desc.startswith("USB Serial Device")
+                ]
+                if len(pro_micro_ports) > 0:
+                    break
+            if len(pro_micro_ports) == 0:
+                self.status_label.config(
+                    text=f"Failed to update emitter firmware, unable to enter bootloader."
+                )
+                top_window.window.update_idletasks()
+                self.update_firmware_button.config(state="normal")
+                self.close_button.config(state="normal")
+                return
+
+            self.serial_port_identifier_variable.set(pro_micro_ports[0])
+
+            self.status_label.config(
+                text=f"Updating emitter with firmware file {self.firmware_file_name}..."
+            )
+            top_window.window.update_idletasks()
+
+            j = avrloader.JobInfo()
+            j.com_port_name = self.serial_port_identifier_entry.get()
+            j.device_name = "ATmega32U4"
+            j.input_file_flash = self.firmware_file_name
+            j.flash_start_address = 0x0000
+            j.flash_end_address = 0x6FFF
+            j.memory_fill_pattern = 0x00
+            j.read_signature = True
+            j.program_flash = True
+            j.verify_flash = True
+            j.do_job()
+
+            self.status_label.config(
+                text=f"Completed updating emitter firmware, waiting for emitter restart."
+            )
+            top_window.window.update_idletasks()
+            time.sleep(1)
+
+            ports = serial.tools.list_ports.comports()
+            print(
+                f"Available serial ports after firmware update {[(a,b,c) for a,b,c in ports]}"
+            )
+            pro_micro_ports = [
+                port
+                for port, desc, hwid in ports
+                if "1B4F:9206" in hwid
+                or desc == "SparkFun Pro Micro"
+                or desc.startswith("USB Serial Device")
+            ]
+            self.serial_port_identifier_variable.set(
+                pro_micro_ports[0] if pro_micro_ports else "/dev/ttyACM0"
+            )
+
+            self.status_label.config(text=f"Completed updating emitter firmware.")
+            self.update_firmware_button.config(state="normal")
+            self.close_button.config(state="normal")
+
+    def click_close(self):
+        self.top.destroy()
+        self.top = None
+
+
+class EmitterSettingsDialog:
+    def __init__(self, parent, main_app):
+        self.main_app = main_app
+        top = self.top = tkinter.Toplevel(parent)
+        top.protocol("WM_DELETE_WINDOW", self.click_close)
+
+        self.emitter_firmware_update_dialog = None
+
+        row_count = 0
         pro_micro_ports = [
             port
             for port, desc, hwid in serial.tools.list_ports.comports()
-            if desc == "SparkFun Pro Micro" or desc.startswith("USB Serial Device")
+            if "1B4F:9206" in hwid
+            or desc == "SparkFun Pro Micro"
+            or desc.startswith("USB Serial Device")
         ]
 
         self.serial_port_identifier_frame = tkinter.Frame(top)
@@ -228,10 +431,22 @@ class EmitterSettingsDialog:
             text="Disconnect",
             command=self.serial_port_click_disconnect,
         )
+        self.serial_port_disconnect_button.config(state="disabled")
         self.serial_port_disconnect_button.pack(padx=5, side=tkinter.LEFT)
         self.serial_port_disconnect_button_tooltip = idlelib.tooltip.Hovertip(
             self.serial_port_disconnect_button,
             "Disconnect from the emitter.",
+            hover_delay=100,
+        )
+        self.update_emitter_firmware_button = tkinter.Button(
+            self.serial_port_identifier_frame,
+            text="Update Emitter Firmware",
+            command=self.click_update_emitter_firmware,
+        )
+        self.update_emitter_firmware_button.pack(padx=5, side=tkinter.LEFT)
+        self.update_emitter_firmware_button_tooltip = idlelib.tooltip.Hovertip(
+            self.update_emitter_firmware_button,
+            "Open the dialog to update the emitter firmware.",
             hover_delay=100,
         )
         self.serial_port_identifier_frame.grid(row=row_count, column=0, sticky="w")
@@ -425,7 +640,7 @@ class EmitterSettingsDialog:
         )
         self.setting_opt101_block_n_subsequent_duplicates_tooltip = idlelib.tooltip.Hovertip(
             self.setting_opt101_block_n_subsequent_duplicates_entry,
-            "(number of detections to block) on displays that use a PWM backlight one needs to block fake duplicate frames \nfor at least the first math.ceiling((PWM frequency)/framerate) otherwise a PWM pulse may incorrectly \nbe detected as the next duplicate frame causing the unit to lose proper synchronization. \nWhen using this setting one should set 'OPT101 Block Signal Detection Delay' to a \nvalue 80-90% of the PWM backlight cycle time. \nThis feature is only availble from emitter firmware version 10 \n(default 0).",
+            "(number of detections to block) on displays that use a PWM backlight one needs to block fake duplicate frames \nfor at least the first math.ceiling((PWM frequency)/framerate)-1 otherwise a PWM pulse may incorrectly \nbe detected as the next duplicate frame causing the unit to lose proper synchronization. \nWhen using this setting one should set 'OPT101 Block Signal Detection Delay' to a \nvalue 80-90% of the PWM backlight cycle time. \nThis feature is only availble from emitter firmware version 10 \n(default 0).",
             hover_delay=100,
         )
         self.setting_opt101_block_n_subsequent_duplicates_frame.grid(
@@ -660,6 +875,7 @@ class EmitterSettingsDialog:
             text="Update Settings on Emitter",
             command=self.click_update_settings_on_emitter,
         )
+        self.update_button.config(state="disabled")
         self.update_button.pack(padx=5, side=tkinter.LEFT)
         self.update_button_tooltip = idlelib.tooltip.Hovertip(
             self.update_button,
@@ -671,6 +887,7 @@ class EmitterSettingsDialog:
             text="Save Settings to EEPROM",
             command=self.click_save_settings_to_eeprom,
         )
+        self.save_settings_button.config(state="disabled")
         self.save_settings_button.pack(padx=5, side=tkinter.LEFT)
         self.save_settings_button_tooltip = idlelib.tooltip.Hovertip(
             self.save_settings_button,
@@ -714,6 +931,19 @@ class EmitterSettingsDialog:
         )
         self.action_button_frame_2.grid(row=row_count, column=0, sticky="w")
         row_count += 1
+
+        if self.main_app.emitter_serial:
+            self.update_button.config(state="normal")
+            self.save_settings_button.config(state="normal")
+            self.serial_port_connect_button.config(state="disabled")
+            self.serial_port_disconnect_button.config(state="normal")
+            self.update_emitter_firmware_button.config(state="disabled")
+        else:
+            self.update_emitter_firmware_button.config(state="normal")
+            self.update_button.config(state="disabled")
+            self.serial_port_connect_button.config(state="normal")
+            self.serial_port_disconnect_button.config(state="disabled")
+            self.save_settings_button.config(state="disabled")
 
         self.supported_parameters = None
         self.update_settings_from_serial()
@@ -792,11 +1022,21 @@ class EmitterSettingsDialog:
             self.serial_port_identifier_variable.get(), 115200
         )
         self.update_settings_from_serial()
+        self.update_button.config(state="normal")
+        self.save_settings_button.config(state="normal")
+        self.serial_port_connect_button.config(state="disabled")
+        self.serial_port_disconnect_button.config(state="normal")
+        self.update_emitter_firmware_button.config(state="disabled")
 
     def serial_port_click_disconnect(self):
         if self.main_app.emitter_serial:
             self.main_app.emitter_serial.close()
         self.main_app.emitter_serial = None
+        self.update_emitter_firmware_button.config(state="normal")
+        self.update_button.config(state="disabled")
+        self.serial_port_connect_button.config(state="normal")
+        self.serial_port_disconnect_button.config(state="disabled")
+        self.save_settings_button.config(state="disabled")
 
     def click_update_settings_on_emitter(self):
         if self.main_app.emitter_serial:
@@ -911,6 +1151,27 @@ class EmitterSettingsDialog:
             command = f"7," f"{self.setting_glasses_mode_variable.get()}"
             print(command)
             self.main_app.emitter_serial.line_reader.command(command)
+
+    def click_update_emitter_firmware(self):
+        if (
+            self.emitter_firmware_update_dialog
+            and self.emitter_firmware_update_dialog.top
+        ):
+            return
+        self.emitter_firmware_update_dialog = EmitterFirmwareUpdateDialog(
+            self.top, self.main_app
+        )
+        self.serial_port_connect_button.config(state="disabled")
+        self.top.wait_window(self.emitter_firmware_update_dialog.top)
+        pro_micro_ports = [
+            port
+            for port, desc, hwid in serial.tools.list_ports.comports()
+            if desc == "SparkFun Pro Micro" or desc.startswith("USB Serial Device")
+        ]
+        self.serial_port_identifier_variable.set(
+            pro_micro_ports[0] if pro_micro_ports else "/dev/ttyACM0"
+        )
+        self.serial_port_connect_button.config(state="normal")
 
     def click_close(self):
         self.top.destroy()
@@ -1751,6 +2012,9 @@ class TopWindow:
         )
         self.select_subtitle_initialdir = os.path.join(
             os.path.dirname(os.path.abspath(__file__)), "videos"
+        )
+        self.select_firmware_file_initialdir = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "firmwares"
         )
 
         top_frame = tkinter.Frame(window)
