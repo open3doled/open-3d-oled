@@ -1,4 +1,7 @@
 #!/usr/bin/env python
+"""
+    AVRLoader software is a python3 version of the software combined from https://github.com/topptech/AVRLoader and https://github.com/46cv8/AVRLoader with various tweaks.
+"""
 
 """
     Logging utility with a syslog like API. It is set up to log to

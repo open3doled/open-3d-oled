@@ -321,6 +321,9 @@ class EmitterFirmwareUpdateDialog:
                 ]
                 if len(pro_micro_ports) > 0:
                     break
+            time.sleep(
+                1
+            )  # windows needs afew seconds to figure out the driver situation even after the device is detected...
             if len(pro_micro_ports) == 0:
                 self.status_label.config(
                     text=f"Failed to update emitter firmware, unable to enter bootloader."
@@ -1069,7 +1072,7 @@ class EmitterSettingsDialog:
     def click_save_visible_settings_to_disk(self):
         file_name = tkinter.filedialog.asksaveasfilename(
             title="Save Emitter Settings to Disk",
-            initialdir=os.path.join(base_path, "settings"),
+            initialdir=os.path.join(self.main_app.base_path, "settings"),
             filetypes=[("Emitter Settings FIle", "*.emitter_settings.json")],
             defaultextension=".emitter_settings.json",
         )
@@ -1100,9 +1103,7 @@ class EmitterSettingsDialog:
     def click_load_visisble_settings_from_disk(self):
         file_name = tkinter.filedialog.askopenfilename(
             title="Load Emitter Settings from Disk",
-            initialdir=os.path.join(
-                os.path.dirname(os.path.abspath(__file__)), "settings"
-            ),
+            initialdir=os.path.join(self.main_app.base_path, "settings"),
             filetypes=[("Emitter Settings FIle", "*.emitter_settings.json")],
         )
         if file_name:
@@ -1205,7 +1206,9 @@ class DisplaySettingsDialog:
         self.calibration_mode_variable = tkinter.BooleanVar(parent)
         self.calibration_mode_variable.set(False)
 
-        file_name = os.path.join(base_path, "settings", "last_display_settings.json")
+        file_name = os.path.join(
+            self.main_app.base_path, "settings", "last_display_settings.json"
+        )
         if os.path.exists(file_name):
             self.load_settings_from_file(file_name)
 
@@ -1476,7 +1479,7 @@ class DisplaySettingsDialog:
     def click_save_visible_settings_to_disk(self):
         file_name = tkinter.filedialog.asksaveasfilename(
             title="Save Display Settings to Disk",
-            initialdir=os.path.join(base_path, "settings"),
+            initialdir=os.path.join(self.main_app.base_path, "settings"),
             filetypes=[("Display Settings FIle", "*.display_settings.json")],
             defaultextension=".display_settings.json",
         )
@@ -1509,9 +1512,7 @@ class DisplaySettingsDialog:
     def click_load_visisble_settings_from_disk(self):
         file_name = tkinter.filedialog.askopenfilename(
             title="Load Display Settings from Disk",
-            initialdir=os.path.join(
-                os.path.dirname(os.path.abspath(__file__)), "settings"
-            ),
+            initialdir=os.path.join(self.main_app.base_path, "settings"),
             filetypes=[("Display Settings FIle", "*.display_settings.json")],
         )
         if file_name:
@@ -1519,7 +1520,9 @@ class DisplaySettingsDialog:
 
     def autosave_active_settings(self):
         self.save_settings_to_file(
-            os.path.join(base_path, "settings", "last_display_settings.json")
+            os.path.join(
+                self.main_app.base_path, "settings", "last_display_settings.json"
+            )
         )
 
     def click_close(self):
@@ -1867,7 +1870,8 @@ class StartVideoDialog:
             == StartVideoDialog.LOAD_VIDEO_DEFAULTS_HISTORY_OPTION
         ):
             selected_index = self.video_history_default_index
-        selected_index = int(self.video_history_clicked.get().split()[0])
+        else:
+            selected_index = int(self.video_history_clicked.get().split()[0])
         self.video_history.pop(selected_index)
         f = open(self.history_file_path, "w")
         json.dump(self.video_history, f, indent=2)
@@ -1988,6 +1992,14 @@ class TopWindow:
         self.pageflipglsink = None
         self.subtitle3dsink = None
 
+        # set base path
+        internal_base_path = os.path.dirname(os.path.abspath(__file__))
+        split_base_path = os.path.split(internal_base_path)
+        if "_internal" == split_base_path[1]:
+            self.base_path = split_base_path[0]
+        else:
+            self.base_path = internal_base_path
+
         self.window = window = tkinter.Tk()
         window.wm_attributes("-topmost", True)
         try:
@@ -1997,6 +2009,7 @@ class TopWindow:
         except Exception:
             window.wm_attributes("-toolwindow", True)
         # window.wm_attributes('-type', 'dock') # no titlebar and always on top of regular window manager (but starts off top of screen)
+        window.protocol("WM_DELETE_WINDOW", self.close_player)
         window.title("")
         window.geometry("+300+0")
         # window.geometry("+2000+0")
@@ -2007,15 +2020,9 @@ class TopWindow:
         self.emitter_settings_dialog = None
         self.display_settings_dialog = None
         self.start_video_dialog = None
-        self.select_video_initialdir = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), "videos"
-        )
-        self.select_subtitle_initialdir = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), "videos"
-        )
-        self.select_firmware_file_initialdir = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), "firmwares"
-        )
+        self.select_video_initialdir = os.path.join(self.base_path, "videos")
+        self.select_subtitle_initialdir = os.path.join(self.base_path, "videos")
+        self.select_firmware_file_initialdir = os.path.join(self.base_path, "firmwares")
 
         top_frame = tkinter.Frame(window)
         top_frame.pack(fill="x", expand=1, pady=5, padx=25, anchor="n")
@@ -2616,12 +2623,6 @@ if __name__ == "__main__":
     # set base path
     internal_base_path = os.path.dirname(os.path.abspath(__file__))
     os.environ["GST_PLUGIN_PATH"] = internal_base_path
-
-    split_base_path = os.path.split(internal_base_path)
-    if "_internal" == split_base_path[1]:
-        base_path = split_base_path[0]
-    else:
-        base_path = internal_base_path
 
     import gi
 
