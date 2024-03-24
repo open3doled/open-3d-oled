@@ -32,7 +32,9 @@ uint32_t opt101_stats_count = 0;
 
 uint32_t opt101_current_time;
 bool opt101_reading_above_threshold;
-
+#ifdef OPT101_ENABLE_STREAM_READINGS_TO_SERIAL
+uint8_t opt101_enable_stream_readings_to_serial = 0;
+#endif
 uint8_t opt101_enable_frequency_analysis_based_duplicate_frame_detection = 0;
 uint8_t opt101_enable_ignore_during_ir = 0;
 uint8_t opt101_enable_smart_duplicate_frame_handling = 0;
@@ -110,6 +112,9 @@ void opt101_sensor_Init(void)
     #endif
     #ifdef OPT101_ENABLE_STATS
     opt101_stats_count = 0;
+    #endif
+    #ifdef OPT101_ENABLE_STREAM_READINGS_TO_SERIAL
+    opt101_enable_stream_readings_to_serial = 0;
     #endif
     opt101_enable_frequency_analysis_based_duplicate_frame_detection = 0;
     opt101_enable_smart_duplicate_frame_handling = 0;
@@ -476,6 +481,29 @@ void opt101_sensor_CheckReadings(void)
         checked_readings[c] = opt101_readings[c];
     }
     opt101_current_time = 0;
+    #ifdef OPT101_ENABLE_STREAM_READINGS_TO_SERIAL
+    if (opt101_enable_stream_readings_to_serial)
+    {
+        uint8_t buffer[3+7+2] = {'+', 'o', ' ', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, '\r', '\n'};
+        opt101_current_time = micros();
+        /*
+        Serial.print("+o ");
+        Serial.print(opt101_current_time);
+        Serial.print(",");
+        Serial.print(checked_readings[0]);
+        Serial.print(",");
+        Serial.println(checked_readings[1]);
+        */
+        buffer[3] = 0x80 | ((checked_readings[0] >> 2) & 0x3f);
+        buffer[4] = 0x80 | ((checked_readings[1] >> 3) & 0x1f) | ((checked_readings[0] << 5) & 0x60);
+        buffer[5] = 0x80 | ((opt101_current_time >> 28) & 0x0f) | ((checked_readings[1] << 4) & 0x70);
+        buffer[6] = 0x80 | ((opt101_current_time >> 21) & 0x7f);
+        buffer[7] = 0x80 | ((opt101_current_time >> 14) & 0x7f);
+        buffer[8] = 0x80 | ((opt101_current_time >> 7) & 0x7f);
+        buffer[9] = 0x80 | ((opt101_current_time >> 0) & 0x7f);
+        Serial.write(buffer, 12);
+    }
+    #endif
     if (opt101_block_signal_detection_until == 0)
     {
         for (uint8_t c = 0; c < OPT101_CHANNELS; c++)

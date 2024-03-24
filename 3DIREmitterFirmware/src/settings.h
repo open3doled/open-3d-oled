@@ -7,7 +7,8 @@
 
 #define ENABLE_DEBUG_PIN_OUTPUTS
 #define ENABLE_LOOP_TOGGLE_DEBUG_PIN_D9 // will toggle on/off every time the loop goes round
-//#define EMITTER_TEST_MODE // runs in 120 hz output mode locally without using opt101 sensors to test glasses.
+//#define EMITTER_TEST_MODE // runs in 120 hz output mode locally without using opt101 sensors to test glasses. (also adds code for command "9" to simulate skipped frames)
+#define OPT101_ENABLE_STREAM_READINGS_TO_SERIAL // adds code for command "10" to stream the opt101 readings for the left and right eye over serial to the computer (this is a debug mode, don't use at the same time as show stats or you will get garbled output)
 #define OPT101_ENABLE_IGNORE_DURING_IR // ignore opt101 sensor readings when LED is triggering due to power/light distortions that may cause opt101 sensor reading inconsistencies.
 //#define OPT101_ENABLE_IGNORE_DURING_IR_DEBUG_PIN_D2 // use the D2 pin to show when we disable opt101 reading because we are sending an active led token.
 #define OPT101_ENABLE_STATS // prints opt101 statistics every OPT101_UPDATE_STAT_PERIOD micros
@@ -152,7 +153,13 @@
 
 #define EEPROM_SETTING_ADDRESS 0
 #define EEPROM_SETTING_CHECKVALUE 0x3D3D3D3D
-#define EMITTER_VERSION 10
+#define EMITTER_VERSION 11
+
+/*
+Version History
+11 - Added support for OPT101_ENABLE_STREAM_READINGS_TO_SERIAL to help debug timings on new displays
+10 - First official tracked version
+*/
 
 struct EEPROMSettings {
   uint32_t check_value;

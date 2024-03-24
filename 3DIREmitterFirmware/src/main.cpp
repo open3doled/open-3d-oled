@@ -31,7 +31,8 @@ bool loop_toggle = 0;
 
 void setup()
 {
-    Serial.begin(115200);
+    Serial.begin(118200);
+    //Serial.begin(460800);
     Serial.println("+startup");
     bitSet(DDR_LED_IR_D3, LED_IR_D3);
     //#ifdef ENABLE_DEBUG_PIN_OUTPUTS
@@ -286,6 +287,14 @@ void loop()
                         simulate_frame_skip = 1;
                         Serial.println("OK");
                         //Serial.println("Simulate frame skip");
+                        break;
+                    }
+                    #endif
+                    #ifdef OPT101_ENABLE_STREAM_READINGS_TO_SERIAL
+                    else if (command == 10 && p == 1 && temp >= 0 && temp < 2) // toggle opt101 stream readings to serial
+                    {
+                        opt101_enable_stream_readings_to_serial = temp;
+                        Serial.println("OK");
                         break;
                     }
                     #endif

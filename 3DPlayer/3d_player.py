@@ -59,6 +59,36 @@ class _setit:
             self.__callback(self.__value, *args)
 
 
+def create_toggled_frame(parent, text, expanded=False):
+    top_frame = tkinter.Frame(parent, relief="raised", borderwidth=1)
+    top_frame.pack(fill="x", expand=1, pady=2, padx=2, anchor="n")
+    title_frame = tkinter.Frame(top_frame)
+    title_frame.pack(fill="x", expand=1)
+    tkinter.Label(title_frame, text=text).pack(side="left", fill="x", expand=1)
+
+    def toggle():
+        if expanded_.get() == 1:
+            expanded_.set(0)
+            sub_frame.forget()
+            toggle_button.configure(text="+")
+        else:
+            expanded_.set(1)
+            sub_frame.pack(padx=3, pady=3, fill="x", expand=1)
+            toggle_button.configure(text="-")
+
+    toggle_button = tkinter.Button(title_frame, width=2, text="+", command=toggle)
+    toggle_button.pack(side="left")
+    sub_frame = tkinter.Frame(top_frame, relief="sunken", borderwidth=1)
+    expanded_ = tkinter.IntVar(master=parent)
+    if expanded:
+        expanded_.set(1)
+        sub_frame.pack(padx=3, pady=3, fill="x", expand=1)
+        toggle_button.configure(text="-")
+    else:
+        expanded_.set(0)
+    return sub_frame
+
+
 # from https://stackoverflow.com/questions/67449774/how-to-display-svg-on-tkinter
 def svg_to_imagetk_photoimage(image):
     png_data = cairosvg.svg2png(
@@ -72,6 +102,7 @@ def svg_to_imagetk_photoimage(image):
 class EmitterSerialLineReader(serial.threaded.LineReader):
 
     TERMINATOR = b"\r\n"
+    ENCODING = "iso-8859-1"
 
     def __init__(self):
         super(EmitterSerialLineReader, self).__init__()
@@ -80,6 +111,8 @@ class EmitterSerialLineReader(serial.threaded.LineReader):
         self.total_right_frames = 0
         self.total_duplicate_frames = 0
         self.total_premature_frames = 0
+        self.debug_stream_file = None
+        self.debug_opt101_enable_stream_readings_to_serial = 0
         self.responses = queue.Queue()
         self.events = queue.Queue()
         self._event_thread = threading.Thread(target=self._run_event)
@@ -112,6 +145,24 @@ class EmitterSerialLineReader(serial.threaded.LineReader):
             if self.__pageflipglsink is not None:
                 print("skipped")
                 self.__pageflipglsink.set_property("skip-n-page-flips", "1")
+        elif (
+            event.startswith("+o ")
+            and self.debug_opt101_enable_stream_readings_to_serial == 1
+        ):
+            # self.debug_stream.file.write(f"{event.split(" ")[1]}\n")
+            raw_bytes = event.split(" ")[1].encode("iso-8859-1")
+            opt101_current_time = (
+                (raw_bytes[6] & 0x7F)
+                | ((raw_bytes[5] & 0x7F) << 7)
+                | ((raw_bytes[4] & 0x7F) << 14)
+                | ((raw_bytes[3] & 0x7F) << 21)
+                | ((raw_bytes[2] & 0x0F) << 28)
+            )
+            left_sensor = ((raw_bytes[2] & 0x70) >> 4) | ((raw_bytes[1] & 0x1F) << 3)
+            right_sensor = ((raw_bytes[1] & 0x60) >> 5) | ((raw_bytes[0] & 0x3F) << 2)
+            self.debug_stream_file.write(
+                f"{opt101_current_time},{left_sensor},{right_sensor}\n"
+            )
         else:
             print("event received:", event)
             if event.startswith("+stats general"):
@@ -521,6 +572,7 @@ class EmitterSettingsDialog:
             text="Set Glasses Mode",
             command=self.click_set_glasses_mode,
         )
+        self.setting_glasses_mode_button.config(state="disabled")
         self.setting_glasses_mode_button.pack(padx=5, side=tkinter.LEFT)
         self.setting_glasses_mode_button_tooltip = idlelib.tooltip.Hovertip(
             self.setting_glasses_mode_button,
@@ -703,7 +755,17 @@ class EmitterSettingsDialog:
         )
         row_count += 1
 
-        self.setting_opt101_enable_ignore_during_ir_frame = tkinter.Frame(top)
+        self.experimental_and_debug_grid_frame = tkinter.Frame(top)
+        self.experimental_and_debug_frame = create_toggled_frame(
+            self.experimental_and_debug_grid_frame, "Experimental and Debug"
+        )
+        self.experimental_and_debug_grid_frame.grid(row=row_count, column=0, sticky="w")
+        row_count += 1
+
+        debug_row_count = 0
+        self.setting_opt101_enable_ignore_during_ir_frame = tkinter.Frame(
+            self.experimental_and_debug_frame
+        )
         self.setting_opt101_enable_ignore_during_ir_variable = tkinter.StringVar(top)
         self.setting_opt101_enable_ignore_during_ir_variable.set("1")
         self.setting_opt101_enable_ignore_during_ir_label = tkinter.Label(
@@ -726,12 +788,12 @@ class EmitterSettingsDialog:
             hover_delay=100,
         )
         self.setting_opt101_enable_ignore_during_ir_frame.grid(
-            row=row_count, column=0, sticky="w"
+            row=debug_row_count, column=0, sticky="w"
         )
-        row_count += 1
+        debug_row_count += 1
 
         self.setting_opt101_enable_smart_duplicate_frame_handling_frame = tkinter.Frame(
-            top
+            self.experimental_and_debug_frame
         )
         self.setting_opt101_enable_smart_duplicate_frame_handling_variable = (
             tkinter.StringVar(top)
@@ -757,12 +819,12 @@ class EmitterSettingsDialog:
             hover_delay=100,
         )
         self.setting_opt101_enable_smart_duplicate_frame_handling_frame.grid(
-            row=row_count, column=0, sticky="w"
+            row=debug_row_count, column=0, sticky="w"
         )
-        row_count += 1
+        debug_row_count += 1
 
         self.setting_opt101_enable_frequency_analysis_based_duplicate_frame_detection_frame = tkinter.Frame(
-            top
+            self.experimental_and_debug_frame
         )
         self.setting_opt101_enable_frequency_analysis_based_duplicate_frame_detection_variable = tkinter.StringVar(
             top
@@ -790,11 +852,13 @@ class EmitterSettingsDialog:
             hover_delay=100,
         )
         self.setting_opt101_enable_frequency_analysis_based_duplicate_frame_detection_frame.grid(
-            row=row_count, column=0, sticky="w"
+            row=debug_row_count, column=0, sticky="w"
         )
-        row_count += 1
+        debug_row_count += 1
 
-        self.setting_opt101_detection_threshold_repeated_high_frame = tkinter.Frame(top)
+        self.setting_opt101_detection_threshold_repeated_high_frame = tkinter.Frame(
+            self.experimental_and_debug_frame
+        )
         self.setting_opt101_detection_threshold_repeated_high_variable = (
             tkinter.StringVar(top)
         )
@@ -819,11 +883,13 @@ class EmitterSettingsDialog:
             hover_delay=100,
         )
         self.setting_opt101_detection_threshold_repeated_high_frame.grid(
-            row=row_count, column=0, sticky="w"
+            row=debug_row_count, column=0, sticky="w"
         )
-        row_count += 1
+        debug_row_count += 1
 
-        self.setting_opt101_detection_threshold_repeated_low_frame = tkinter.Frame(top)
+        self.setting_opt101_detection_threshold_repeated_low_frame = tkinter.Frame(
+            self.experimental_and_debug_frame
+        )
         self.setting_opt101_detection_threshold_repeated_low_variable = (
             tkinter.StringVar(top)
         )
@@ -848,11 +914,13 @@ class EmitterSettingsDialog:
             hover_delay=100,
         )
         self.setting_opt101_detection_threshold_repeated_low_frame.grid(
-            row=row_count, column=0, sticky="w"
+            row=debug_row_count, column=0, sticky="w"
         )
-        row_count += 1
+        debug_row_count += 1
 
-        self.setting_opt101_output_stats_frame = tkinter.Frame(top)
+        self.setting_opt101_output_stats_frame = tkinter.Frame(
+            self.experimental_and_debug_frame
+        )
         self.setting_opt101_output_stats_variable = tkinter.StringVar(top)
         self.setting_opt101_output_stats_variable.set("0")
         self.setting_opt101_output_stats_label = tkinter.Label(
@@ -869,8 +937,34 @@ class EmitterSettingsDialog:
             'output statistics (if built with OPT101_ENABLE_STATS) relating to how the opt101 module is processing all lines start with \n"+stats " followed by specific statistics. Turn this off when not experimenting as it may degrade timing accuracy when serial communication occurs',
             hover_delay=100,
         )
-        self.setting_opt101_output_stats_frame.grid(row=row_count, column=0, sticky="w")
-        row_count += 1
+        self.setting_opt101_output_stats_frame.grid(
+            row=debug_row_count, column=0, sticky="w"
+        )
+        debug_row_count += 1
+
+        self.setting_opt101_debug_frame = tkinter.Frame(
+            self.experimental_and_debug_frame
+        )
+        self.setting_opt101_enable_stream_readings_to_serial_toggle_button = (
+            tkinter.Button(
+                self.setting_opt101_debug_frame,
+                text="Toggle OPT101 Enable Stream Readings To Serial",
+                command=self.click_opt101_enable_stream_readings_to_serial_toggle,
+            )
+        )
+        self.setting_opt101_enable_stream_readings_to_serial_toggle_button.config(
+            state="disabled"
+        )
+        self.setting_opt101_enable_stream_readings_to_serial_toggle_button.pack(
+            padx=5, side=tkinter.LEFT
+        )
+        self.setting_opt101_enable_stream_readings_to_serial_toggle_button_tooltip = idlelib.tooltip.Hovertip(
+            self.setting_opt101_enable_stream_readings_to_serial_toggle_button,
+            "toggles logging of opt101 sensor readings to a file for analysis and debugging (if built with OPT101_ENABLE_STREAM_READINGS_TO_SERIAL)",
+            hover_delay=100,
+        )
+        self.setting_opt101_debug_frame.grid(row=debug_row_count, column=0, sticky="w")
+        debug_row_count += 1
 
         self.action_button_frame_1 = tkinter.Frame(top)
         self.update_button = tkinter.Button(
@@ -936,12 +1030,25 @@ class EmitterSettingsDialog:
         row_count += 1
 
         if self.main_app.emitter_serial:
+            if self.emitter_firmware_version_int >= 11:
+                self.setting_opt101_enable_stream_readings_to_serial_toggle_button.config(
+                    state="normal"
+                )
+            else:
+                self.setting_opt101_enable_stream_readings_to_serial_toggle_button.config(
+                    state="disabled"
+                )
+            self.setting_glasses_mode_button.config(state="normal")
+            self.update_emitter_firmware_button.config(state="disabled")
             self.update_button.config(state="normal")
-            self.save_settings_button.config(state="normal")
             self.serial_port_connect_button.config(state="disabled")
             self.serial_port_disconnect_button.config(state="normal")
-            self.update_emitter_firmware_button.config(state="disabled")
+            self.save_settings_button.config(state="normal")
         else:
+            self.setting_opt101_enable_stream_readings_to_serial_toggle_button.config(
+                state="disabled"
+            )
+            self.setting_glasses_mode_button.config(state="disabled")
             self.update_emitter_firmware_button.config(state="normal")
             self.update_button.config(state="disabled")
             self.serial_port_connect_button.config(state="normal")
@@ -1017,24 +1124,37 @@ class EmitterSettingsDialog:
                     self.setting_opt101_block_n_subsequent_duplicates_entry.config(
                         state="normal"
                     )
+                if self.emitter_firmware_version_int >= 11:
+                    self.setting_opt101_enable_stream_readings_to_serial_toggle_button.config(
+                        state="normal"
+                    )
+                else:
+                    self.setting_opt101_enable_stream_readings_to_serial_toggle_button.config(
+                        state="disabled"
+                    )
 
     def serial_port_click_connect(self):
         if self.main_app.emitter_serial:
             self.main_app.emitter_serial.close()
         self.main_app.emitter_serial = EmitterSerial(
-            self.serial_port_identifier_variable.get(), 115200
+            self.serial_port_identifier_variable.get(), 118200  # 118200 or 460800
         )
         self.update_settings_from_serial()
+        self.setting_glasses_mode_button.config(state="normal")
+        self.update_emitter_firmware_button.config(state="disabled")
         self.update_button.config(state="normal")
         self.save_settings_button.config(state="normal")
         self.serial_port_connect_button.config(state="disabled")
         self.serial_port_disconnect_button.config(state="normal")
-        self.update_emitter_firmware_button.config(state="disabled")
 
     def serial_port_click_disconnect(self):
         if self.main_app.emitter_serial:
             self.main_app.emitter_serial.close()
         self.main_app.emitter_serial = None
+        self.setting_opt101_enable_stream_readings_to_serial_toggle_button.config(
+            state="disabled"
+        )
+        self.setting_glasses_mode_button.config(state="disabled")
         self.update_emitter_firmware_button.config(state="normal")
         self.update_button.config(state="disabled")
         self.serial_port_connect_button.config(state="normal")
@@ -1149,9 +1269,46 @@ class EmitterSettingsDialog:
 
     def click_set_glasses_mode(self):
         if self.main_app.emitter_serial:
-            command = f"7," f"{self.setting_glasses_mode_variable.get()}"
+            command = f"7,{self.setting_glasses_mode_variable.get()}"
             print(command)
             self.main_app.emitter_serial.line_reader.command(command)
+
+    def click_opt101_enable_stream_readings_to_serial_toggle(self):
+        if self.main_app.emitter_serial:
+            new_value = (
+                self.main_app.emitter_serial.line_reader.debug_opt101_enable_stream_readings_to_serial
+                ^ 1
+            )
+            if new_value == 1:
+                if (
+                    self.main_app.emitter_serial.line_reader.debug_stream_file
+                    is not None
+                ):
+                    return
+                self.main_app.emitter_serial.line_reader.debug_stream_file = open(
+                    os.path.join(
+                        self.main_app.base_path,
+                        f'{datetime.datetime.now().strftime("%Y-%m-%d_%H%M%S")}_debug_opt101_stream_readings.csv',
+                    ),
+                    "wt",
+                )
+
+            self.main_app.emitter_serial.line_reader.debug_opt101_enable_stream_readings_to_serial = (
+                new_value
+            )
+
+            if new_value == 0:
+                self.main_app.emitter_serial.line_reader.debug_stream_file.close()
+                self.main_app.emitter_serial.line_reader.debug_stream_file = None
+            command = f"10,{new_value}"
+            print(command)
+            try:
+                self.main_app.emitter_serial.line_reader.command(command)
+            except:
+                if (
+                    new_value == 1
+                ):  # we have trouble disabling the stream so we ignore no response as the buffer is flooded by incoming data so the OK doesn't always come through as uninterrupted...
+                    raise
 
     def click_update_emitter_firmware(self):
         if (
