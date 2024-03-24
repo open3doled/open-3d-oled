@@ -152,16 +152,22 @@ class EmitterSerialLineReader(serial.threaded.LineReader):
             # self.debug_stream.file.write(f"{event.split(" ")[1]}\n")
             raw_bytes = event.split(" ")[1].encode("iso-8859-1")
             opt101_current_time = (
-                (raw_bytes[6] & 0x7F)
-                | ((raw_bytes[5] & 0x7F) << 7)
-                | ((raw_bytes[4] & 0x7F) << 14)
-                | ((raw_bytes[3] & 0x7F) << 21)
-                | ((raw_bytes[2] & 0x0F) << 28)
+                (raw_bytes[8] & 0x7F)
+                | ((raw_bytes[7] & 0x7F) << 7)
+                | ((raw_bytes[6] & 0x7F) << 14)
+                | ((raw_bytes[5] & 0x7F) << 21)
+                | ((raw_bytes[4] & 0x0F) << 28)
             )
-            left_sensor = ((raw_bytes[2] & 0x70) >> 4) | ((raw_bytes[1] & 0x1F) << 3)
-            right_sensor = ((raw_bytes[1] & 0x60) >> 5) | ((raw_bytes[0] & 0x3F) << 2)
+            left_sensor = ((raw_bytes[4] & 0x70) >> 4) | ((raw_bytes[3] & 0x1F) << 3)
+            right_sensor = ((raw_bytes[3] & 0x60) >> 5) | ((raw_bytes[2] & 0x3F) << 2)
+            duplicate_frames_in_a_row_counter = raw_bytes[1] & 0x7F
+            opt101_duplicate_frame = 1 if (raw_bytes[0] & 0x10) else 0
+            opt101_ignore_duplicate = 1 if (raw_bytes[0] & 0x08) else 0
+            opt101_detected_signal_start_eye = 1 if (raw_bytes[0] & 0x04) else 0
+            opt101_block_signal_detection_until = 1 if (raw_bytes[0] & 0x02) else 0
+            opt101_reading_above_threshold = 1 if (raw_bytes[0] & 0x01) else 0
             self.debug_stream_file.write(
-                f"{opt101_current_time},{left_sensor},{right_sensor}\n"
+                f"{opt101_current_time},{left_sensor},{right_sensor},{duplicate_frames_in_a_row_counter},{opt101_duplicate_frame},{opt101_ignore_duplicate},{opt101_detected_signal_start_eye},{opt101_block_signal_detection_until},{opt101_reading_above_threshold}\n"
             )
         else:
             print("event received:", event)

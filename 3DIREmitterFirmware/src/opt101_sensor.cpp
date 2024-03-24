@@ -51,6 +51,8 @@ uint8_t opt101_detected_signal_start_eye = 0;
 bool opt101_detected_signal_start_eye_set = false;
 volatile uint8_t opt101_sensor_channel = 0;
 bool opt101_readings_active = false;
+bool opt101_ignore_duplicate = false;
+bool opt101_duplicate_frame = false;
 uint16_t opt101_duplicate_frames_in_a_row_counter = 0;
 uint8_t opt101_readings_last[OPT101_CHANNELS];
 
@@ -131,6 +133,8 @@ void opt101_sensor_Init(void)
     opt101_detected_signal_start_eye_set = false;
     opt101_sensor_channel = 0;
     opt101_readings_active = false;
+    opt101_ignore_duplicate = false;
+    opt101_duplicate_frame = false;
     opt101_duplicate_frames_in_a_row_counter = 0;
 
     opt101_reading_counter = 0;
@@ -481,29 +485,6 @@ void opt101_sensor_CheckReadings(void)
         checked_readings[c] = opt101_readings[c];
     }
     opt101_current_time = 0;
-    #ifdef OPT101_ENABLE_STREAM_READINGS_TO_SERIAL
-    if (opt101_enable_stream_readings_to_serial)
-    {
-        uint8_t buffer[3+7+2] = {'+', 'o', ' ', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, '\r', '\n'};
-        opt101_current_time = micros();
-        /*
-        Serial.print("+o ");
-        Serial.print(opt101_current_time);
-        Serial.print(",");
-        Serial.print(checked_readings[0]);
-        Serial.print(",");
-        Serial.println(checked_readings[1]);
-        */
-        buffer[3] = 0x80 | ((checked_readings[0] >> 2) & 0x3f);
-        buffer[4] = 0x80 | ((checked_readings[1] >> 3) & 0x1f) | ((checked_readings[0] << 5) & 0x60);
-        buffer[5] = 0x80 | ((opt101_current_time >> 28) & 0x0f) | ((checked_readings[1] << 4) & 0x70);
-        buffer[6] = 0x80 | ((opt101_current_time >> 21) & 0x7f);
-        buffer[7] = 0x80 | ((opt101_current_time >> 14) & 0x7f);
-        buffer[8] = 0x80 | ((opt101_current_time >> 7) & 0x7f);
-        buffer[9] = 0x80 | ((opt101_current_time >> 0) & 0x7f);
-        Serial.write(buffer, 12);
-    }
-    #endif
     if (opt101_block_signal_detection_until == 0)
     {
         for (uint8_t c = 0; c < OPT101_CHANNELS; c++)
@@ -593,8 +574,8 @@ void opt101_sensor_CheckReadings(void)
                     bitSet(PORT_DEBUG_DETECTED_RIGHT_D5, DEBUG_DETECTED_RIGHT_D5);
                 }
                 #endif
-                bool opt101_ignore_duplicate = false;
-                bool opt101_duplicate_frame = (opt101_detected_signal_start_eye == c && opt101_detected_signal_start_eye_set);
+                opt101_ignore_duplicate = false;
+                opt101_duplicate_frame = (opt101_detected_signal_start_eye == c && opt101_detected_signal_start_eye_set);
                 if (opt101_duplicate_frame) 
                 {
                     #ifdef ENABLE_DEBUG_PIN_OUTPUTS
@@ -663,6 +644,42 @@ void opt101_sensor_CheckReadings(void)
             opt101_block_signal_detection_until = 0;
         }
     }
+
+    #ifdef OPT101_ENABLE_STREAM_READINGS_TO_SERIAL
+    if (opt101_enable_stream_readings_to_serial)
+    {
+        uint8_t buffer[3+9+2] = {'+', 'o', ' ', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, '\r', '\n'};
+        if (opt101_current_time == 0)
+        {
+            opt101_current_time = micros();
+        }
+        /*
+        Serial.print("+o ");
+        Serial.print(opt101_current_time);
+        Serial.print(",");
+        Serial.print(checked_readings[0]);
+        Serial.print(",");
+        Serial.println(checked_readings[1]);
+        */
+        buffer[3] = (
+            0x80 | 
+            (opt101_duplicate_frame ? 0x10 : 0x00) | 
+            (opt101_ignore_duplicate ? 0x08 : 0x00) | 
+            (opt101_detected_signal_start_eye == 1 ? 0x04 : 0x00) | 
+            (opt101_block_signal_detection_until > 0 ? 0x02 : 0x00) | 
+            (opt101_reading_above_threshold ? 0x01 : 0x00)
+        );
+        buffer[4] = 0x80 | ((opt101_duplicate_frames_in_a_row_counter) & 0x7f);
+        buffer[5] = 0x80 | ((checked_readings[0] >> 2) & 0x3f);
+        buffer[6] = 0x80 | ((checked_readings[1] >> 3) & 0x1f) | ((checked_readings[0] << 5) & 0x60);
+        buffer[7] = 0x80 | ((opt101_current_time >> 28) & 0x0f) | ((checked_readings[1] << 4) & 0x70);
+        buffer[8] = 0x80 | ((opt101_current_time >> 21) & 0x7f);
+        buffer[9] = 0x80 | ((opt101_current_time >> 14) & 0x7f);
+        buffer[10] = 0x80 | ((opt101_current_time >> 7) & 0x7f);
+        buffer[11] = 0x80 | ((opt101_current_time >> 0) & 0x7f);
+        Serial.write(buffer, 14);
+    }
+    #endif
     for (uint8_t c = 0; c < OPT101_CHANNELS; c++)
     {
         uint8_t reading = checked_readings[c];
