@@ -54,6 +54,7 @@ bool opt101_readings_active = false;
 bool opt101_ignore_duplicate = false;
 bool opt101_duplicate_frame = false;
 uint16_t opt101_duplicate_frames_in_a_row_counter = 0;
+uint8_t other_channel = 0;
 uint8_t opt101_readings_last[OPT101_CHANNELS];
 
 uint16_t opt101_reading_counter = 0;
@@ -136,6 +137,7 @@ void opt101_sensor_Init(void)
     opt101_ignore_duplicate = false;
     opt101_duplicate_frame = false;
     opt101_duplicate_frames_in_a_row_counter = 0;
+    other_channel = 0;
 
     opt101_reading_counter = 0;
     opt101_duplicate_frames_counter = 0;
@@ -492,15 +494,32 @@ void opt101_sensor_CheckReadings(void)
             uint8_t last_reading = opt101_readings_last[c];
             checked_readings[c] = opt101_readings[c];
             #ifdef OPT101_ENABLE_FREQUENCY_ANALYSIS_BASED_DUPLICATE_FRAME_DETECTION
-            uint8_t other_channel = c == 1 ? 0 : 1;
+            other_channel = (c == 1 ? 0 : 1);
             #endif
             opt101_reading_above_threshold = false;
             if (opt101_readings_active)
             {
+                /*
                 if (last_reading < opt101_readings_threshold[c] && 
+                    checked_readings[c] >= opt101_readings_threshold[c])
+                    */
+                if (last_reading < checked_readings[c] && 
                     checked_readings[c] >= opt101_readings_threshold[c])
                 {
                     opt101_reading_above_threshold = true;
+                    // This is logic to ensure on LCD's where there may be pixel persistence with PWM backlight displays.
+                    // If the current eye signal is the same as the last detected one then if the other eyes signal is 
+                    // increasing and the number of duplicates on this eye less than opt101_block_n_subsequent_duplicates and
+                    // the detected value on the opposite eye is greater than 75% of it's threshold level
+                    // then we ignore this detection for now...
+                    if (opt101_detected_signal_start_eye == c && opt101_detected_signal_start_eye_set)
+                    {
+                        other_channel = (c == 1 ? 0 : 1);
+                        if (checked_readings[other_channel] >= last_reading && 
+                            checked_readings[other_channel] >= ((opt101_readings_threshold[other_channel] >> 4) + (opt101_readings_threshold[other_channel] >> 2))) {
+                            opt101_reading_above_threshold = false;
+                        }
+                    }
                 }
                 #ifdef OPT101_ENABLE_FREQUENCY_ANALYSIS_BASED_DUPLICATE_FRAME_DETECTION
                 else if (opt101_enable_frequency_analysis_based_duplicate_frame_detection)
@@ -589,16 +608,21 @@ void opt101_sensor_CheckReadings(void)
                         Serial.print("+d ");
                         Serial.println(c);
                     }
-                    if (opt101_duplicate_frames_in_a_row_counter < opt101_block_n_subsequent_duplicates) 
+                    if (opt101_block_n_subsequent_duplicates) 
                     {
-                        opt101_ignore_duplicate = true;
-                        /*
-                            When using opt101_block_n_subsequent_duplicates we need to reset this to 0 so that we continue to block subsequent duplicates.
-                            Otherwise in the case of a real 120hz duplicate frame we would blast out ir signals at the screen backlight PWM 
-                            frequency after we exceed opt101_block_n_subsequent_duplicates.
+                        if (opt101_duplicate_frames_in_a_row_counter < opt101_block_n_subsequent_duplicates) 
+                        {
+                            opt101_ignore_duplicate = true;
+                        }
+                        else {
+                            /*
+                                When using opt101_block_n_subsequent_duplicates we need to reset this to 0 so that we continue to block subsequent duplicates.
+                                Otherwise in the case of a real 120hz duplicate frame we would blast out ir signals at the screen backlight PWM 
+                                frequency after we exceed opt101_block_n_subsequent_duplicates.
 
-                        */ 
-                        opt101_duplicate_frames_in_a_row_counter = 0;
+                            */ 
+                            opt101_duplicate_frames_in_a_row_counter = 0;
+                        }
                     }
                 }
                 else
@@ -616,19 +640,8 @@ void opt101_sensor_CheckReadings(void)
                     else {
                         ir_signal_process_opt101(opt101_detected_signal_start_eye, false);
                     }
-                    /*
-                    {
-                        #ifdef ENABLE_DEBUG_PIN_OUTPUTS
-                        bitSet(PORT_DEBUG_PREMATURE_FRAME_D14, DEBUG_PREMATURE_FRAME_D14);
-                        #endif
-                        opt101_premature_frames_counter += 1;
-                    }
-                    */
+                    opt101_channel_frequency_detection_counter[opt101_detected_signal_start_eye] += 1;
                 }
-                opt101_channel_frequency_detection_counter[opt101_detected_signal_start_eye] += 1;
-            }
-            if (opt101_reading_above_threshold)
-            {
                 break;
             }
         }

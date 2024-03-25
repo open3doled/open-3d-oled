@@ -701,7 +701,7 @@ class EmitterSettingsDialog:
         )
         self.setting_opt101_block_n_subsequent_duplicates_tooltip = idlelib.tooltip.Hovertip(
             self.setting_opt101_block_n_subsequent_duplicates_entry,
-            "(number of detections to block) on displays that use a PWM backlight one needs to block fake duplicate frames \nfor at least the first math.ceiling((PWM frequency)/framerate)-1 otherwise a PWM pulse may incorrectly \nbe detected as the next duplicate frame causing the unit to lose proper synchronization. \nWhen using this setting one should set 'OPT101 Block Signal Detection Delay' to a \nvalue 80-90% of the PWM backlight cycle time. \nThis feature is only availble from emitter firmware version 10 \n(default 0).",
+            "(number of detections to block) on displays that use a PWM backlight one needs to block fake duplicate frames \nfor at least the first math.ceiling((PWM frequency)/framerate) otherwise a PWM pulse may incorrectly \nbe detected as the next duplicate frame causing the unit to lose proper synchronization. \nWhen using this setting one should set 'OPT101 Block Signal Detection Delay' to a \nvalue 80-90% of the PWM backlight cycle time. \nThis feature is only availble from emitter firmware version 10 \n(default 0).",
             hover_delay=100,
         )
         self.setting_opt101_block_n_subsequent_duplicates_frame.grid(
