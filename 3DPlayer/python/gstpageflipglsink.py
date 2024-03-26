@@ -39,11 +39,6 @@ import time
 import json
 import collections
 import threading
-import ctypes
-import multiprocessing  # @UnusedImport
-import multiprocessing.sharedctypes
-import multiprocessing.shared_memory
-import psutil
 import os
 
 # """
@@ -398,7 +393,7 @@ class PageflipGLWindow(threading.Thread):
         ]
         if "right" in self.__white_box_corner_position:
             white_box_horizontal_offsets.reverse()  # we reverse them here because we are going to flip the numpy ndarray later for right aligned boxes
-        self.__overlay_boxes = []
+        temp_overlay_boxes = []
 
         for n in range(2):  # 0 left, 1 right
             box = np.ndarray(
@@ -601,10 +596,12 @@ class PageflipGLWindow(threading.Thread):
             elif self.__white_box_corner_position == "bottom_right":
                 box = np.flip(box, (0, 1))
 
-            self.__overlay_boxes.append(box)
+            temp_overlay_boxes.append(box)
             # np.set_printoptions(threshold=sys.maxsize)
             # print(box)
             # self.__overlay_boxes.append(box.convert_alpha())
+
+        self.__overlay_boxes = temp_overlay_boxes
 
     def __update_subtitle_surface_and_data(self):
         if self.__latest_subtitle_data:
@@ -724,8 +721,7 @@ class PageflipGLWindow(threading.Thread):
                 self.__last_mouse_moved_at = time.time()
             for event in pg.event.get():
                 if event.type == pg.QUIT:
-                    # TODO: figure out how to gracefully communicate shutdown back to main app
-                    pass
+                    self.__requests = ",".join(self.__requests.split(",") + ["close"])
                 elif event.type == pg.VIDEORESIZE:
                     self.__window_width, self.__window_height = event.size
                     print(
@@ -749,24 +745,15 @@ class PageflipGLWindow(threading.Thread):
                             self.__requests.split(",")
                             + [f"seek_percent_{event.key - pg.K_0}"]
                         )
-                    elif event.key == pg.K_RIGHT:
-                        if event.mod & pg.KMOD_SHIFT:
-                            self.__requests = ",".join(
-                                self.__requests.split(",") + ["seek_forward_big"]
-                            )
-                        else:
-                            self.__requests = ",".join(
-                                self.__requests.split(",") + ["seek_forward_small"]
-                            )
-                    elif event.key == pg.K_LEFT:
-                        if event.mod & pg.KMOD_SHIFT:
-                            self.__requests = ",".join(
-                                self.__requests.split(",") + ["seek_backward_big"]
-                            )
-                        else:
-                            self.__requests = ",".join(
-                                self.__requests.split(",") + ["seek_backward_small"]
-                            )
+                    elif event.key == pg.K_RIGHT or event.key == pg.K_LEFT:
+                        seek_direction = (
+                            "forward" if event.key == pg.K_RIGHT else "backward)"
+                        )
+                        seek_size = "big" if event.mod & pg.KMOD_SHIFT else "small"
+                        self.__requests = ",".join(
+                            self.__requests.split(",")
+                            + [f"seek_{seek_direction}_{seek_size}"]
+                        )
                     elif event.key == pg.K_F9:
                         if USE_LINE_PROFILER:
                             if not line_profiler_obj.global_enable:
@@ -795,65 +782,106 @@ class PageflipGLWindow(threading.Thread):
                             self.__show_calibration_instruction_image = (
                                 not self.__show_calibration_instruction_image
                             )
-                        elif (
-                            event.key == pg.K_y
+                        calibration_target_field = None
+                        calibration_decrease_or_increase = None
+                        calibration_adjustment_amount = None
+                        shift_down = event.mod & pg.KMOD_SHIFT
+                        if (
+                            event.key == pg.K_w
                             and "top" in self.__white_box_corner_position
                         ) or (
-                            event.key == pg.K_h
+                            event.key == pg.K_s
                             and "bottom" in self.__white_box_corner_position
                         ):
-                            self.__white_box_vertical_position -= 1
-                            self.__update_overlay_boxes()
-                            self.__requests = ",".join(
-                                self.__requests.split(",")
-                                + ["calibration_decrease_whitebox_vertical_position"]
-                            )
+                            calibration_emitter_or_display = "display"
+                            calibration_target_field = "white_box_vertical_position"
+                            calibration_decrease_or_increase = "decrease"
+                            calibration_adjustment_amount = 10 if shift_down else 1
+                            # self.__white_box_vertical_position -= calibration_adjustment_amount
+                            # self.__update_overlay_boxes()
                         elif (
-                            event.key == pg.K_h
+                            event.key == pg.K_s
                             and "top" in self.__white_box_corner_position
                         ) or (
-                            event.key == pg.K_y
+                            event.key == pg.K_w
                             and "bottom" in self.__white_box_corner_position
                         ):
-                            self.__white_box_vertical_position += 1
-                            self.__update_overlay_boxes()
-                            self.__requests = ",".join(
-                                self.__requests.split(",")
-                                + ["calibration_increase_whitebox_vertical_position"]
-                            )
-                        elif event.key == pg.K_u:
-                            self.__white_box_horizontal_spacing -= 1
-                            self.__update_overlay_boxes()
-                            self.__requests = ",".join(
-                                self.__requests.split(",")
-                                + ["calibration_decrease_whitebox_horizontal_spacing"]
-                            )
-                        elif event.key == pg.K_j:
-                            self.__white_box_horizontal_spacing += 1
-                            self.__update_overlay_boxes()
-                            self.__requests = ",".join(
-                                self.__requests.split(",")
-                                + ["calibration_increase_whitebox_horizontal_spacing"]
-                            )
+                            calibration_target_field = "white_box_vertical_position"
+                            calibration_decrease_or_increase = "increase"
+                            calibration_adjustment_amount = 10 if shift_down else 1
+                            # self.__white_box_vertical_position += calibration_adjustment_amount
+                            # self.__update_overlay_boxes()
+                        elif (
+                            event.key == pg.K_a
+                            and "left" in self.__white_box_corner_position
+                        ) or (
+                            event.key == pg.K_d
+                            and "right" in self.__white_box_corner_position
+                        ):
+                            calibration_emitter_or_display = "display"
+                            calibration_target_field = "white_box_horizontal_position"
+                            calibration_decrease_or_increase = "decrease"
+                            calibration_adjustment_amount = 10 if shift_down else 1
+                            # self.__white_box_vertical_position -= calibration_adjustment_amount
+                            # self.__update_overlay_boxes()
+                        elif (
+                            event.key == pg.K_d
+                            and "left" in self.__white_box_corner_position
+                        ) or (
+                            event.key == pg.K_a
+                            and "right" in self.__white_box_corner_position
+                        ):
+                            calibration_target_field = "white_box_horizontal_position"
+                            calibration_decrease_or_increase = "increase"
+                            calibration_adjustment_amount = 10 if shift_down else 1
+                            # self.__white_box_vertical_position += calibration_adjustment_amount
+                            # self.__update_overlay_boxes()
+                        elif event.key == pg.K_q:
+                            calibration_target_field = "white_box_horizontal_spacing"
+                            calibration_decrease_or_increase = "decrease"
+                            calibration_adjustment_amount = 5 if shift_down else 1
+                            # self.__white_box_horizontal_spacing -= calibration_adjustment_amount
+                            # self.__update_overlay_boxes()
+                        elif event.key == pg.K_e:
+                            calibration_target_field = "white_box_horizontal_spacing"
+                            calibration_decrease_or_increase = "increase"
+                            calibration_adjustment_amount = 5 if shift_down else 1
+                            # self.__white_box_horizontal_spacing += calibration_adjustment_amount
+                            # self.__update_overlay_boxes()
+                        elif event.key == pg.K_z:
+                            calibration_target_field = "white_box_size"
+                            calibration_decrease_or_increase = "decrease"
+                            calibration_adjustment_amount = 10 if shift_down else 1
+                            # self.__white_box_size -= calibration_adjustment_amount
+                            # self.__update_overlay_boxes()
+                        elif event.key == pg.K_x:
+                            calibration_target_field = "white_box_size"
+                            calibration_decrease_or_increase = "increase"
+                            calibration_adjustment_amount = 10 if shift_down else 1
+                            # self.__white_box_size += calibration_adjustment_amount
+                            # self.__update_overlay_boxes()
                         elif event.key == pg.K_i:
-                            self.__requests = ",".join(
-                                self.__requests.split(",")
-                                + ["calibration_decrease_frame_delay"]
-                            )
+                            calibration_target_field = "frame_delay"
+                            calibration_decrease_or_increase = "decrease"
+                            calibration_adjustment_amount = 200 if shift_down else 10
                         elif event.key == pg.K_k:
-                            self.__requests = ",".join(
-                                self.__requests.split(",")
-                                + ["calibration_increase_frame_delay"]
-                            )
+                            calibration_target_field = "frame_delay"
+                            calibration_decrease_or_increase = "increase"
+                            calibration_adjustment_amount = 200 if shift_down else 10
                         elif event.key == pg.K_o:
-                            self.__requests = ",".join(
-                                self.__requests.split(",")
-                                + ["calibration_decrease_frame_duration"]
-                            )
+                            calibration_target_field = "frame_duration"
+                            calibration_decrease_or_increase = "decrease"
+                            calibration_adjustment_amount = 200 if shift_down else 10
                         elif event.key == pg.K_l:
+                            calibration_target_field = "frame_duration"
+                            calibration_decrease_or_increase = "increase"
+                            calibration_adjustment_amount = 200 if shift_down else 10
+                        if calibration_target_field:
                             self.__requests = ",".join(
                                 self.__requests.split(",")
-                                + ["calibration_increase_frame_duration"]
+                                + [
+                                    f"calibration-{calibration_target_field}-{calibration_decrease_or_increase}-{calibration_adjustment_amount}"
+                                ]
                             )
                     # The following are used for testing and visualizing glasses resync speed after a dropped frame
                     elif event.key == pg.K_z:
@@ -1284,6 +1312,8 @@ class PageflipGLWindow(threading.Thread):
     def whitebox_brightness(self, value):
         if value != self.__white_box_brightness:
             self.__white_box_brightness = int(value)
+            if self.__started:
+                self.__update_overlay_boxes()
 
     @property
     def whitebox_corner_position(self):
@@ -1293,6 +1323,8 @@ class PageflipGLWindow(threading.Thread):
     def whitebox_corner_position(self, value):
         if value != self.__white_box_corner_position:
             self.__white_box_corner_position = value
+            if self.__started:
+                self.__update_overlay_boxes()
 
     @property
     def whitebox_vertical_position(self):
@@ -1302,6 +1334,8 @@ class PageflipGLWindow(threading.Thread):
     def whitebox_vertical_position(self, value):
         if value != self.__white_box_vertical_position:
             self.__white_box_vertical_position = int(value)
+            if self.__started:
+                self.__update_overlay_boxes()
 
     @property
     def whitebox_horizontal_position(self):
@@ -1311,6 +1345,8 @@ class PageflipGLWindow(threading.Thread):
     def whitebox_horizontal_position(self, value):
         if value != self.__white_box_horizontal_position:
             self.__white_box_horizontal_position = int(value)
+            if self.__started:
+                self.__update_overlay_boxes()
 
     @property
     def whitebox_size(self):
@@ -1320,6 +1356,8 @@ class PageflipGLWindow(threading.Thread):
     def whitebox_size(self, value):
         if value != self.__white_box_size:
             self.__white_box_size = int(value)
+            if self.__started:
+                self.__update_overlay_boxes()
 
     @property
     def whitebox_horizontal_spacing(self):
@@ -1329,6 +1367,8 @@ class PageflipGLWindow(threading.Thread):
     def whitebox_horizontal_spacing(self, value):
         if value != self.__white_box_horizontal_spacing:
             self.__white_box_horizontal_spacing = int(value)
+            if self.__started:
+                self.__update_overlay_boxes()
 
     @property
     def requests(self):
@@ -1352,14 +1392,15 @@ class PageflipGLWindow(threading.Thread):
             if self.__latest_subtitles_event.wait(
                 0.2
             ):  # if we don't get a signal within 200ms just drop the subtitle and carry on
-                self.__latest_subtitles.append(
-                    {
-                        "start": parsed_data["start"],
-                        "end": parsed_data["start"] + parsed_data["duration"],
-                        "text": parsed_data["text"],
-                    }
-                )
-                if len(self.__latest_subtitles) > 5:
+                if "show_now" in parsed_data:
+                    parsed_data["start"] = self.__in_image_play_timestamp
+                parsed_data["end"] = parsed_data["start"] + parsed_data["duration"]
+                self.__latest_subtitles.append(parsed_data)
+                if len(self.__latest_subtitles) > 5 or (
+                    self.__calibration_mode
+                    and len(self.__latest_subtitles)
+                    > 1  # in calibration mode we only allow 1 subtitle to preven overlapping
+                ):
                     self.__latest_subtitles.popleft()
                 self.__update_subtitle_surface_and_data()
             # print(f"pts:{self.__in_image_play_timestamp} b:{self.__latest_subtitles[-1]['start']} e:{self.__latest_subtitles[-1]['end']} {self.__latest_subtitles[-1]['text']}")

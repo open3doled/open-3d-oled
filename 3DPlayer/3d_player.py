@@ -443,6 +443,7 @@ class EmitterSettingsDialog:
     def __init__(self, parent, main_app):
         self.main_app = main_app
         top = self.top = tkinter.Toplevel(parent)
+        top.title("Emitter Settings")
         top.protocol("WM_DELETE_WINDOW", self.click_close)
 
         self.emitter_firmware_update_dialog = None
@@ -1377,6 +1378,7 @@ class DisplaySettingsDialog:
 
     def show(self):
         top = self.top = tkinter.Toplevel(self.parent)
+        top.title("Display Settings")
         top.protocol("WM_DELETE_WINDOW", self.click_close)
 
         row_count = 0
@@ -1527,6 +1529,25 @@ class DisplaySettingsDialog:
         )
         row_count += 1
 
+        self.whitebox_horizontal_spacing_frame = tkinter.Frame(top)
+        self.whitebox_horizontal_spacing_label = tkinter.Label(
+            self.whitebox_horizontal_spacing_frame, text="Whitebox Horozontal Spacing: "
+        )
+        self.whitebox_horizontal_spacing_label.pack(padx=5, side=tkinter.LEFT)
+        self.whitebox_horizontal_spacing_entry = tkinter.Entry(
+            self.whitebox_horizontal_spacing_frame,
+            textvariable=self.whitebox_horizontal_spacing_variable,
+        )
+        self.whitebox_horizontal_spacing_entry.pack(padx=5, side=tkinter.LEFT)
+        self.whitebox_horizontal_spacing_tooltip = idlelib.tooltip.Hovertip(
+            self.whitebox_horizontal_spacing_frame,
+            "The whitebox horizontal spacing lets the user increase/decrease the separation between white boxes to better align with the 3d emitter and tv pixel pitch they have. It is roughly equivalent to mm when display size is correctly configured. (default 23)",
+            hover_delay=100,
+        )
+        # self.whitebox_horizontal_spacing_frame.pack()
+        self.whitebox_horizontal_spacing_frame.grid(row=row_count, column=0, sticky="w")
+        row_count += 1
+
         self.whitebox_size_frame = tkinter.Frame(top)
         self.whitebox_size_label = tkinter.Label(
             self.whitebox_size_frame,
@@ -1545,25 +1566,6 @@ class DisplaySettingsDialog:
         )
         # self.whitebox_size_frame.pack()
         self.whitebox_size_frame.grid(row=row_count, column=0, sticky="w")
-        row_count += 1
-
-        self.whitebox_horizontal_spacing_frame = tkinter.Frame(top)
-        self.whitebox_horizontal_spacing_label = tkinter.Label(
-            self.whitebox_horizontal_spacing_frame, text="Whitebox Horozontal Spacing: "
-        )
-        self.whitebox_horizontal_spacing_label.pack(padx=5, side=tkinter.LEFT)
-        self.whitebox_horizontal_spacing_entry = tkinter.Entry(
-            self.whitebox_horizontal_spacing_frame,
-            textvariable=self.whitebox_horizontal_spacing_variable,
-        )
-        self.whitebox_horizontal_spacing_entry.pack(padx=5, side=tkinter.LEFT)
-        self.whitebox_horizontal_spacing_tooltip = idlelib.tooltip.Hovertip(
-            self.whitebox_horizontal_spacing_frame,
-            "The whitebox horizontal spacing lets the user increase/decrease the separation between white boxes to better align with the 3d emitter and tv pixel pitch they have. It is roughly equivalent to mm when display size is correctly configured. (default 23)",
-            hover_delay=100,
-        )
-        # self.whitebox_horizontal_spacing_frame.pack()
-        self.whitebox_horizontal_spacing_frame.grid(row=row_count, column=0, sticky="w")
         row_count += 1
 
         self.calibration_mode_frame = tkinter.Frame(top)
@@ -1605,6 +1607,17 @@ class DisplaySettingsDialog:
         self.load_settings_from_disk_button_tooltip = idlelib.tooltip.Hovertip(
             self.load_settings_from_disk_button,
             "Loads the display settings from the JSON file specified to the UI.",
+            hover_delay=100,
+        )
+        self.apply_settings_to_active_video_button = tkinter.Button(
+            self.action_button_frame_2,
+            text="Apply Settings to Active Video",
+            command=self.click_apply_settings_to_active_video,
+        )
+        self.apply_settings_to_active_video_button.pack(padx=5, side=tkinter.LEFT)
+        self.apply_settings_to_active_video_button_tooltip = idlelib.tooltip.Hovertip(
+            self.load_settings_from_disk_button,
+            "Apply settings to an active video if there is one running.",
             hover_delay=100,
         )
         self.close_button = tkinter.Button(
@@ -1681,6 +1694,30 @@ class DisplaySettingsDialog:
         if file_name:
             self.load_settings_from_file(file_name)
 
+    def click_apply_settings_to_active_video(self):
+        if self.main_app.pageflipglsink is not None:
+            self.main_app.pageflipglsink.set_property(
+                "whitebox-brightness", self.whitebox_brightness_variable.get()
+            )
+            self.main_app.pageflipglsink.set_property(
+                "whitebox-corner-position", self.whitebox_corner_position_variable.get()
+            )
+            self.main_app.pageflipglsink.set_property(
+                "whitebox-vertical-position",
+                self.whitebox_vertical_position_variable.get(),
+            )
+            self.main_app.pageflipglsink.set_property(
+                "whitebox-horizontal-position",
+                self.whitebox_horizontal_position_variable.get(),
+            )
+            self.main_app.pageflipglsink.set_property(
+                "whitebox-horizontal-spacing",
+                self.whitebox_horizontal_spacing_variable.get(),
+            )
+            self.main_app.pageflipglsink.set_property(
+                "whitebox-size", self.whitebox_size_variable.get()
+            )
+
     def autosave_active_settings(self):
         self.save_settings_to_file(
             os.path.join(
@@ -1705,6 +1742,7 @@ class StartVideoDialog:
         self.parent = parent
         self.main_app = main_app
         top = self.top = tkinter.Toplevel(parent)
+        top.title("Open Video File")
         top.protocol("WM_DELETE_WINDOW", self.click_close)
 
         self.perform_open = False
@@ -2754,13 +2792,15 @@ class TopWindow:
         self.pageflipglsink.set_property(
             "whitebox-horizontal-position", whitebox_horizontal_position
         )
-        self.pageflipglsink.set_property("whitebox-size", whitebox_size)
         self.pageflipglsink.set_property(
             "whitebox-horizontal-spacing", whitebox_horizontal_spacing
         )
+        self.pageflipglsink.set_property("whitebox-size", whitebox_size)
         self.pageflipglsink.set_property("subtitle-font", subtitle_font)
         self.pageflipglsink.set_property("subtitle-size", subtitle_size)
-        self.pageflipglsink.set_property("subtitle-depth", subtitle_depth)
+        self.pageflipglsink.set_property(
+            "subtitle-depth", 0 if calibration_mode else subtitle_depth
+        )  # we want flat subtitles for OSD feedback during calibration
         self.pageflipglsink.set_property(
             "subtitle-vertical-offset", subtitle_vertical_offset
         )
@@ -2840,58 +2880,86 @@ if __name__ == "__main__":
                                 True if r == "set_menu_on_top_true" else False
                             )
                         if r.startswith(
-                            "calibration_"
+                            "calibration-"
                         ) and top_window.pageflipglsink.get_property(
                             "calibration-mode"
                         ):
                             increment_by = 0
                             target = None
-                            if top_window.emitter_serial is not None:
-                                if "frame_delay" in r:
-                                    target = (
-                                        top_window.emitter_settings_dialog.setting_ir_frame_delay_variable
-                                    )
-                                elif "frame_duration" in r:
-                                    target = (
-                                        top_window.emitter_settings_dialog.setting_ir_frame_duration_variable
-                                    )
-                                if target is not None:
-                                    if "decrease_" in r:
-                                        increment_by = -20
-                                    elif "increase_" in r:
-                                        increment_by = 20
-                                    if increment_by != 0:
-                                        target.set(
-                                            str(int(target.get()) + increment_by)
-                                        )
-                                        top_window.emitter_settings_dialog.click_update_settings_on_emitter()
+                            (
+                                _,
+                                calibration_target_field,
+                                calibration_decrease_or_increase,
+                                calibration_adjustment_amount,
+                            ) = r.split("-")
+                            calibration_target_field_map = {
+                                "white_box_vertical_position": (
+                                    "display",
+                                    top_window.display_settings_dialog.whitebox_vertical_position_variable,
+                                ),
+                                "white_box_horizontal_position": (
+                                    "display",
+                                    top_window.display_settings_dialog.whitebox_horizontal_position_variable,
+                                ),
+                                "white_box_horizontal_spacing": (
+                                    "display",
+                                    top_window.display_settings_dialog.whitebox_horizontal_spacing_variable,
+                                ),
+                                "white_box_size": (
+                                    "display",
+                                    top_window.display_settings_dialog.whitebox_size_variable,
+                                ),
+                            }
+                            if top_window.emitter_settings_dialog is not None:
+                                calibration_target_field_map["frame_delay"] = (
+                                    "emitter",
+                                    top_window.emitter_settings_dialog.setting_ir_frame_delay_variable,
+                                )
+                                calibration_target_field_map["frame_duration"] = (
+                                    "emitter",
+                                    top_window.emitter_settings_dialog.setting_ir_frame_duration_variable,
+                                )
+
                             if (
-                                "whitebox_vertical_position" in r
-                                or "whitebox_horizontal_spacing" in r
+                                calibration_target_field
+                                not in calibration_target_field_map
                             ):
-                                if "whitebox_vertical_position" in r:
-                                    target = (
-                                        top_window.display_settings_dialog.whitebox_vertical_position_variable
-                                    )
-                                elif "whitebox_horizontal_spacing" in r:
-                                    target = (
-                                        top_window.display_settings_dialog.whitebox_horizontal_spacing_variable
-                                    )
-                                if target is not None:
-                                    if "decrease_" in r:
-                                        increment_by = -1
-                                    elif "increase_" in r:
-                                        increment_by = 1
-                                    if increment_by != 0:
-                                        target.set(
-                                            str(int(target.get()) + increment_by)
-                                        )
+                                continue
+                            emitter_or_display, target = calibration_target_field_map[
+                                calibration_target_field
+                            ]
+                            if calibration_decrease_or_increase == "increase":
+                                increment_by = int(calibration_adjustment_amount)
+                            elif calibration_decrease_or_increase == "decrease":
+                                increment_by = -1 * int(calibration_adjustment_amount)
+                            else:
+                                continue
+                            if (
+                                emitter_or_display == "emitter"
+                                and top_window.emitter_serial is not None
+                            ):
+                                target.set(str(int(target.get()) + increment_by))
+                                top_window.emitter_settings_dialog.click_update_settings_on_emitter()
+                            if emitter_or_display == "display":
+                                target.set(str(int(target.get()) + increment_by))
+                                top_window.display_settings_dialog.click_apply_settings_to_active_video()
+                            top_window.pageflipglsink.set_property(
+                                "latest-subtitle-data",
+                                json.dumps(
+                                    {
+                                        "show_now": True,
+                                        "text": f"{calibration_target_field} {target.get()}",
+                                        "duration": 1000000000,
+                                    }
+                                ),
+                            )
 
                 if top_window.subtitle3dsink is not None:
                     latest_subtitle_data = top_window.subtitle3dsink.get_property(
                         "latest-subtitle-data"
                     )
                     if latest_subtitle_data:
+                        print(latest_subtitle_data)
                         top_window.subtitle3dsink.set_property(
                             "latest-subtitle-data", ""
                         )
