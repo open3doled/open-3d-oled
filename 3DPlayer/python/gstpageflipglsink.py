@@ -34,6 +34,7 @@ import logging
 import math  # @UnusedImport
 import traceback
 import time
+import datetime
 
 # import sdl2.video
 import json
@@ -193,6 +194,8 @@ class PageflipGLWindow(threading.Thread):
         self.__latest_subtitles = collections.deque()
         self.__latest_subtitles_event = threading.Event()
         self.__latest_subtitle_data = ""
+        self.__latest_overlay_timestamp = None
+        self.__latest_overlay_timestamp_time_str = None
         self.__subtitle_font = "arial"
         self.__subtitle_size = 30
         self.__subtitle_depth = 0
@@ -603,46 +606,35 @@ class PageflipGLWindow(threading.Thread):
 
         self.__overlay_boxes = temp_overlay_boxes
 
+    def __generate_text_surface_with_shadow(self, font_set, text_line):
+        rendered_surface_temp = font_set.render(
+            text_line, True, (170, 170, 170, 255)
+        ).convert_alpha()
+        rendered_surface_shadow_temp = self.__subtitle_font_set.render(
+            text_line, True, (0, 0, 0, 255)
+        ).convert_alpha()
+        return {
+            "rendered_surface": rendered_surface_temp,
+            "rendered_surface_shadow": rendered_surface_shadow_temp,
+            "rendered_data": pg.image.tostring(rendered_surface_temp, "RGBA", True),
+            "rendered_data_shadow": pg.image.tostring(
+                rendered_surface_shadow_temp, "RGBA", True
+            ),
+        }
+
     def __update_subtitle_surface_and_data(self):
         if self.__latest_subtitle_data:
             for latest_subtitle in self.__latest_subtitles:
-                new_latest_subtitle = {
-                    "rendered_surface": [],
-                    "rendered_surface_shadow": [],
-                    "rendered_data": [],
-                    "rendered_data_shadow": [],
-                }
+                subtitle_lines = []
                 latest_subtitle_text_lines = latest_subtitle["text"].splitlines()
                 for latest_subtitle_text_line in latest_subtitle_text_lines:
-                    latest_subtitle_rendered_surface_temp = (
-                        self.__subtitle_font_set.render(
-                            latest_subtitle_text_line, True, (170, 170, 170, 255)
-                        ).convert_alpha()
-                    )
-                    new_latest_subtitle["rendered_surface"].append(
-                        latest_subtitle_rendered_surface_temp
-                    )
-                    new_latest_subtitle["rendered_data"].append(
-                        pg.image.tostring(
-                            latest_subtitle_rendered_surface_temp, "RGBA", True
-                        )
-                    )
-                    latest_subtitle_rendered_surface_shadow_temp = (
-                        self.__subtitle_font_set.render(
-                            latest_subtitle_text_line, True, (0, 0, 0, 255)
-                        ).convert_alpha()
-                    )
-                    new_latest_subtitle["rendered_surface_shadow"].append(
-                        latest_subtitle_rendered_surface_shadow_temp
-                    )
-                    new_latest_subtitle["rendered_data_shadow"].append(
-                        pg.image.tostring(
-                            latest_subtitle_rendered_surface_shadow_temp, "RGBA", True
+                    subtitle_lines.append(
+                        self.__generate_text_surface_with_shadow(
+                            self.__subtitle_font_set, latest_subtitle_text_line
                         )
                     )
                 # TODO: these should be in a mutex to ensure we aren't trying to read these as they are changing
-                latest_subtitle.update(new_latest_subtitle)
-                latest_subtitle["text_line_count"] = len(latest_subtitle_text_lines)
+                latest_subtitle["lines"] = subtitle_lines
 
     def __update_subtitle_fonts(self):
         # font_file = pygame.font.match_font(self.__subtitle_font)  # Select and
@@ -691,6 +683,7 @@ class PageflipGLWindow(threading.Thread):
                             )
                         ]
                     )
+
                 set_video_on_top_true = (
                     True if time.time() - self.__last_mouse_moved_at > 3 else False
                 )
@@ -698,6 +691,7 @@ class PageflipGLWindow(threading.Thread):
                     self.__set_video_on_top_true is False
                     and set_video_on_top_true is True
                 ):
+
                     self.__set_video_on_top_true = set_video_on_top_true
                     if self.__fullscreen:
                         pg.mouse.set_visible(False)
@@ -714,6 +708,30 @@ class PageflipGLWindow(threading.Thread):
                   sdl2.video.SDL_SetWindowFullscreen(window_sdl, sdl2.video.SDL_WINDOW_FULLSCREEN_DESKTOP)
                   """
                         # self.__sdl2_window.position = (0,0)
+
+                # Overlay timestamp
+                if time.time() - self.__last_mouse_moved_at < 2.0:
+                    new_overlay_timestamp_time_str = str(
+                        datetime.timedelta(
+                            seconds=self.__in_image_play_timestamp // 1000000000
+                        )
+                    )
+                    if (
+                        new_overlay_timestamp_time_str
+                        != self.__latest_overlay_timestamp_time_str
+                    ):
+                        self.__latest_overlay_timestamp_time_str = (
+                            new_overlay_timestamp_time_str
+                        )
+                        self.__latest_overlay_timestamp = (
+                            self.__generate_text_surface_with_shadow(
+                                self.__subtitle_font_set,
+                                self.__latest_overlay_timestamp_time_str,
+                            )
+                        )
+                else:
+                    self.__latest_overlay_timestamp = None
+                    self.__latest_overlay_timestamp_time_str = None
 
             latest_mouse = pg.mouse.get_pos()
             if latest_mouse != self.__last_mouse:
@@ -1105,6 +1123,14 @@ class PageflipGLWindow(threading.Thread):
                     float(self.__target_framerate)
                 )  # uses lots of cpu but is accurate at delaying for framerate
 
+            if self.__latest_overlay_timestamp:
+                self.__draw_centered_osd_text(
+                    (self.__display_resolution_height * self.__window_size_scale_factor)
+                    - 20
+                    - self.__latest_overlay_timestamp["rendered_surface"].get_height(),
+                    self.__latest_overlay_timestamp,
+                    0,
+                )
             if self.__latest_subtitle_data:
                 self.__latest_subtitles_event.clear()
                 for latest_subtitle in self.__latest_subtitles:
@@ -1116,53 +1142,15 @@ class PageflipGLWindow(threading.Thread):
                             self.__subtitle_vertical_offset
                             * self.__window_size_scale_factor
                         )
-                        for subtitle_line in range(latest_subtitle["text_line_count"]):
-                            current_horizontal_position = (
-                                (
-                                    self.__display_resolution_width
-                                    * self.__window_size_scale_factor
-                                )
-                                - latest_subtitle["rendered_surface"][
-                                    subtitle_line
-                                ].get_width()
-                            ) / 2 + subtitle_depth_shift
-                            # print(f'current_horizontal_position {current_horizontal_position} scale_factor {self.__window_size_scale_factor} sub_width {latest_subtitle["rendered_surface"][subtitle_line].get_width()}')
-                            for shift_x in range(-1, 2, 2):
-                                for shift_y in range(-1, 2, 2):
-                                    gl.glWindowPos2d(
-                                        current_horizontal_position + shift_x,
-                                        current_vertical_position + shift_y,
-                                    )
-                                    gl.glDrawPixels(
-                                        latest_subtitle["rendered_surface_shadow"][
-                                            subtitle_line
-                                        ].get_width(),
-                                        latest_subtitle["rendered_surface_shadow"][
-                                            subtitle_line
-                                        ].get_height(),
-                                        gl.GL_RGBA,
-                                        gl.GL_UNSIGNED_BYTE,
-                                        latest_subtitle["rendered_data_shadow"][
-                                            subtitle_line
-                                        ],
-                                    )
-                            gl.glWindowPos2d(
-                                current_horizontal_position, current_vertical_position
+                        for latest_subtitle_line in latest_subtitle["lines"]:
+                            self.__draw_centered_osd_text(
+                                current_vertical_position,
+                                latest_subtitle_line,
+                                subtitle_depth_shift,
                             )
-                            gl.glDrawPixels(
-                                latest_subtitle["rendered_surface"][
-                                    subtitle_line
-                                ].get_width(),
-                                latest_subtitle["rendered_surface"][
-                                    subtitle_line
-                                ].get_height(),
-                                gl.GL_RGBA,
-                                gl.GL_UNSIGNED_BYTE,
-                                latest_subtitle["rendered_data"][subtitle_line],
-                            )
-                            current_vertical_position += latest_subtitle[
+                            current_vertical_position += latest_subtitle_line[
                                 "rendered_surface"
-                            ][subtitle_line].get_height()
+                            ].get_height()
                 self.__latest_subtitles_event.set()
 
             loop_time_millis = self.__pg_clock.get_time()
@@ -1201,6 +1189,34 @@ class PageflipGLWindow(threading.Thread):
         except Exception as e:
             traceback.print_exc()
             logging.error(e)
+
+    def __draw_centered_osd_text(self, vertical_position, text_data, depth_shift):
+        current_horizontal_position = (
+            (self.__display_resolution_width * self.__window_size_scale_factor)
+            - text_data["rendered_surface"].get_width()
+        ) / 2 + depth_shift
+        # print(f'current_horizontal_position {current_horizontal_position} scale_factor {self.__window_size_scale_factor} sub_width {latest_subtitle["rendered_surface"][subtitle_line].get_width()}')
+        for shift_x in range(-1, 2, 2):
+            for shift_y in range(-1, 2, 2):
+                gl.glWindowPos2d(
+                    current_horizontal_position + shift_x,
+                    vertical_position + shift_y,
+                )
+                gl.glDrawPixels(
+                    text_data["rendered_surface_shadow"].get_width(),
+                    text_data["rendered_surface_shadow"].get_height(),
+                    gl.GL_RGBA,
+                    gl.GL_UNSIGNED_BYTE,
+                    text_data["rendered_data_shadow"],
+                )
+        gl.glWindowPos2d(current_horizontal_position, vertical_position)
+        gl.glDrawPixels(
+            text_data["rendered_surface"].get_width(),
+            text_data["rendered_surface"].get_height(),
+            gl.GL_RGBA,
+            gl.GL_UNSIGNED_BYTE,
+            text_data["rendered_data"],
+        )
 
     @line_profiler_obj
     def run(self):
@@ -1371,6 +1387,10 @@ class PageflipGLWindow(threading.Thread):
                 self.__update_overlay_boxes()
 
     @property
+    def started(self):
+        return self.__started
+
+    @property
     def requests(self):
         return self.__requests
 
@@ -1460,6 +1480,8 @@ class PageflipGLWindow(threading.Thread):
     def calibration_mode(self, value):
         if value != self.__calibration_mode:
             self.__calibration_mode = value
+            if self.__started:
+                self.__update_overlay_boxes()
 
     def update_image(self, play_timestamp, in_image, in_image_width, in_image_height):
         self.__in_image = in_image
@@ -1583,7 +1605,7 @@ class GstPageflipGLSink(GstBase.BaseSink):
             "Start",
             "Start the player (last action after configuration properties have been set)",
             False,  # default
-            GObject.ParamFlags.WRITABLE,
+            GObject.ParamFlags.READWRITE,
         ),
         "close": (
             GObject.TYPE_BOOLEAN,
@@ -1591,6 +1613,13 @@ class GstPageflipGLSink(GstBase.BaseSink):
             "Close the player (can only be used after starting)",
             False,  # default
             GObject.ParamFlags.WRITABLE,
+        ),
+        "started": (
+            GObject.TYPE_BOOLEAN,
+            "Started",
+            "Check if the player has started playback",
+            False,  # default
+            GObject.ParamFlags.READABLE,
         ),
         "requests": (
             GObject.TYPE_STRING,
@@ -1676,9 +1705,10 @@ class GstPageflipGLSink(GstBase.BaseSink):
             "skip-n-page-flips": "0",
             "calibration-mode": False,
         }
+        self.__readonly_parameters = set(("started",))
 
     def do_get_property(self, prop: GObject.GParamSpec):
-        if prop.name in self.__parameters:
+        if prop.name in self.__parameters or prop.name in self.__readonly_parameters:
             if not self.__started:
                 return self.__parameters[prop.name]
             else:

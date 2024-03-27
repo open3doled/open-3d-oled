@@ -1330,7 +1330,7 @@ class EmitterSettingsDialog:
         self.top.wait_window(self.emitter_firmware_update_dialog.top)
         pro_micro_ports = [
             port
-            for port, desc, hwid in serial.tools.list_ports.comports()
+            for port, desc, hwid in serial.tools.list_ports.comports()  # @UnusedVariable
             if desc == "SparkFun Pro Micro" or desc.startswith("USB Serial Device")
         ]
         self.serial_port_identifier_variable.set(
@@ -1697,6 +1697,9 @@ class DisplaySettingsDialog:
     def click_apply_settings_to_active_video(self):
         if self.main_app.pageflipglsink is not None:
             self.main_app.pageflipglsink.set_property(
+                "calibration-mode", self.calibration_mode_variable.get()
+            )
+            self.main_app.pageflipglsink.set_property(
                 "whitebox-brightness", self.whitebox_brightness_variable.get()
             )
             self.main_app.pageflipglsink.set_property(
@@ -1770,17 +1773,7 @@ class StartVideoDialog:
             *(self.video_history_options),
         )
         self.video_history_dropdown.pack(padx=5, side=tkinter.LEFT)
-        self.video_history_load_button = tkinter.Button(
-            self.video_history_frame,
-            text="Load",
-            command=self.load_video_profile_from_history,
-        )
-        self.video_history_load_button.pack(padx=5, side=tkinter.LEFT)
-        self.video_history_load_button_tooltip = idlelib.tooltip.Hovertip(
-            self.video_history_load_button,
-            "Load the settings from this video history entry below.",
-            hover_delay=100,
-        )
+        self.video_history_clicked.trace("w", self.load_video_profile_from_history)
         self.video_history_remove_button = tkinter.Button(
             self.video_history_frame,
             text="Remove",
@@ -2045,7 +2038,7 @@ class StartVideoDialog:
         self.frame_packing_variable.set(selected_video_history["frame_packing"])
         self.right_eye_variable.set(selected_video_history["right_eye"])
 
-    def load_video_profile_from_history(self):
+    def load_video_profile_from_history(self, *args):  # @UnusedVariable
         if (
             self.video_history_clicked.get()
             == StartVideoDialog.LOAD_VIDEO_PROFILE_FROM_HISTORY_OPTION
@@ -2548,7 +2541,7 @@ class TopWindow:
     def perform_seek(self, seek_command, event=None):  # @UnusedVariable
         query_position = self.player.query_position(Gst.Format.TIME)[1]
         query_duration = self.player.query_duration(Gst.Format.TIME)[1]
-        seek_position = 0
+        seek_position = None
         seek_flags = Gst.SeekFlags.FLUSH | Gst.SeekFlags.KEY_UNIT
         if "seek_percent" in seek_command:
             seek_position = query_duration // 10 * int(r.split("_")[2])
@@ -2565,7 +2558,7 @@ class TopWindow:
         elif "seek_backward_small" == seek_command:
             seek_position = query_position - Gst.SECOND * 5
             seek_flags |= Gst.SeekFlags.SNAP_BEFORE
-        if seek_position:
+        if seek_position is not None:
             # https://gstreamer.freedesktop.org/documentation/gstreamer/gstsegment.html?gi-language=python#GstSeekFlags
             # 'ACCURATE', 'FLUSH', 'KEY_UNIT', 'NONE', 'SEGMENT', 'SKIP', 'SNAP_AFTER', 'SNAP_BEFORE', 'SNAP_NEAREST', 'TRICKMODE', 'TRICKMODE_KEY_UNITS', 'TRICKMODE_NO_AUDIO'
             self.player.seek_simple(
@@ -2812,7 +2805,16 @@ class TopWindow:
         # self.player.set_property('force-aspect-ratio', True)
 
         self.player.set_state(Gst.State.PLAYING)
+
         self.video_open = True
+
+        # setting fullscreen prematurely has no effect until video playback has full started
+        while not self.pageflipglsink.get_property("started"):
+            time.sleep(0.1)
+        # even after playback started it can still take 1 second until all teh renderers are ready
+        for _ in range(10):
+            time.sleep(0.2)
+            self.pageflipglsink.set_property("fullscreen", True)
 
     def click_stop_video_button(self, event=None):  # @UnusedVariable
         self.stop_player()
@@ -2836,9 +2838,9 @@ if __name__ == "__main__":
     # from gi.repository import Gst, GObject, GdkX11, GstVideo, GstBase # windows
     from gi.repository import Gst  # windows
     from gi.repository import (
-        GObject,
-        GstVideo,
-        GstBase,
+        GObject,  # @UnusedImport
+        GstVideo,  # @UnusedImport
+        GstBase,  # @UnusedImport
     )  # we need to import these here or pyinstaller won't pickup GstBase-1.0.typelib and GstVideo-1.0.typelib
 
     # GObject.threads_init()
@@ -2959,7 +2961,6 @@ if __name__ == "__main__":
                         "latest-subtitle-data"
                     )
                     if latest_subtitle_data:
-                        print(latest_subtitle_data)
                         top_window.subtitle3dsink.set_property(
                             "latest-subtitle-data", ""
                         )
