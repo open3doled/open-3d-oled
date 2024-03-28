@@ -12,6 +12,7 @@
 
 extern uint32_t opt101_block_signal_detection_delay;
 extern uint8_t opt101_block_n_subsequent_duplicates;
+extern uint8_t opt101_ignore_all_duplicates;
 extern uint8_t opt101_min_threshold_value_to_activate;
 extern uint8_t opt101_detection_threshold;
 extern uint8_t opt101_detection_threshold_repeated_high;

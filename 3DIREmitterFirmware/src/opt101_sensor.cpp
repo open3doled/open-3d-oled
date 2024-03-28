@@ -44,6 +44,7 @@ uint8_t opt101_detection_threshold_repeated_high = 224;
 uint8_t opt101_detection_threshold_repeated_low = 32;
 uint32_t opt101_block_signal_detection_delay = OPT101_BLOCK_SIGNAL_DETECTION_DELAY;
 uint8_t opt101_block_n_subsequent_duplicates = 0;
+uint8_t opt101_ignore_all_duplicates = 0;
 uint8_t opt101_min_threshold_value_to_activate = OPT101_MIN_THRESHOLD_VALUE_TO_ACTIVATE;
 uint32_t opt101_block_signal_detection_until = 0;
 uint32_t opt101_disable_debug_detection_flag_after = 0;
@@ -127,6 +128,7 @@ void opt101_sensor_Init(void)
     opt101_detection_threshold_repeated_low = 32;
     opt101_block_signal_detection_delay = OPT101_BLOCK_SIGNAL_DETECTION_DELAY;
     opt101_block_n_subsequent_duplicates = 0;
+    opt101_ignore_all_duplicates = 0;
     opt101_min_threshold_value_to_activate = OPT101_MIN_THRESHOLD_VALUE_TO_ACTIVATE;
     opt101_block_signal_detection_until = 0;
     opt101_disable_debug_detection_flag_after = 0;
@@ -581,25 +583,10 @@ void opt101_sensor_CheckReadings(void)
                 opt101_last_detection_time = opt101_current_time;
                 opt101_last_detection_time_initialized = true;
                 #endif
-                opt101_block_signal_detection_until = opt101_current_time + opt101_block_signal_detection_delay;
-                #ifdef ENABLE_DEBUG_PIN_OUTPUTS
-                opt101_disable_debug_detection_flag_after = opt101_current_time + (opt101_block_signal_detection_delay>>2); // half of the block signal detection delay in length
-                if (c) 
-                {
-                    bitSet(PORT_DEBUG_DETECTED_LEFT_D4, DEBUG_DETECTED_LEFT_D4);
-                }
-                else
-                {
-                    bitSet(PORT_DEBUG_DETECTED_RIGHT_D5, DEBUG_DETECTED_RIGHT_D5);
-                }
-                #endif
                 opt101_ignore_duplicate = false;
                 opt101_duplicate_frame = (opt101_detected_signal_start_eye == c && opt101_detected_signal_start_eye_set);
                 if (opt101_duplicate_frame) 
                 {
-                    #ifdef ENABLE_DEBUG_PIN_OUTPUTS
-                    bitSet(PORT_DEBUG_DUPLICATE_FRAME_D16, DEBUG_DUPLICATE_FRAME_D16);
-                    #endif
                     opt101_duplicate_frames_counter++;
                     opt101_duplicate_frames_in_a_row_counter++;
                     if (opt101_enable_smart_duplicate_frame_handling && (opt101_duplicate_frames_in_a_row_counter % 2) == 1) 
@@ -608,7 +595,11 @@ void opt101_sensor_CheckReadings(void)
                         Serial.print("+d ");
                         Serial.println(c);
                     }
-                    if (opt101_block_n_subsequent_duplicates) 
+                    if (opt101_ignore_all_duplicates)
+                    {
+                        opt101_ignore_duplicate = true;
+                    }
+                    else if (opt101_block_n_subsequent_duplicates) 
                     {
                         if (opt101_duplicate_frames_in_a_row_counter < opt101_block_n_subsequent_duplicates) 
                         {
@@ -616,10 +607,10 @@ void opt101_sensor_CheckReadings(void)
                         }
                         else {
                             /*
-                                When using opt101_block_n_subsequent_duplicates we need to reset this to 0 so that we continue to block subsequent duplicates.
+                                When using opt101_block_n_subsequent_duplicates we need to reset this to 0 (after letting one duplicate *this one* through)
+                                so that we continue to block subsequent duplicates.
                                 Otherwise in the case of a real 120hz duplicate frame we would blast out ir signals at the screen backlight PWM 
                                 frequency after we exceed opt101_block_n_subsequent_duplicates.
-
                             */ 
                             opt101_duplicate_frames_in_a_row_counter = 0;
                         }
@@ -629,11 +620,26 @@ void opt101_sensor_CheckReadings(void)
                 {
                     opt101_duplicate_frames_in_a_row_counter = 0;
                 }
-                opt101_detected_signal_start_eye = c;
-                opt101_detected_signal_start_eye_set = true;
                 if (!opt101_ignore_duplicate)
                 {
-                    // TODO: make sure we are doing the right thing here
+                    opt101_block_signal_detection_until = opt101_current_time + opt101_block_signal_detection_delay;
+                    #ifdef ENABLE_DEBUG_PIN_OUTPUTS
+                    opt101_disable_debug_detection_flag_after = opt101_current_time + (opt101_block_signal_detection_delay>>2); // half of the block signal detection delay in length
+                    if (c) 
+                    {
+                        bitSet(PORT_DEBUG_DETECTED_LEFT_D4, DEBUG_DETECTED_LEFT_D4);
+                    }
+                    else
+                    {
+                        bitSet(PORT_DEBUG_DETECTED_RIGHT_D5, DEBUG_DETECTED_RIGHT_D5);
+                    }
+                    if (opt101_duplicate_frame)
+                    {
+                        bitSet(PORT_DEBUG_DUPLICATE_FRAME_D16, DEBUG_DUPLICATE_FRAME_D16);
+                    }
+                    #endif
+                    opt101_detected_signal_start_eye = c;
+                    opt101_detected_signal_start_eye_set = true;
                     if (opt101_duplicate_frame) {
                         ir_signal_process_opt101(opt101_detected_signal_start_eye, true);
                     }
@@ -641,8 +647,8 @@ void opt101_sensor_CheckReadings(void)
                         ir_signal_process_opt101(opt101_detected_signal_start_eye, false);
                     }
                     opt101_channel_frequency_detection_counter[opt101_detected_signal_start_eye] += 1;
+                    break;
                 }
-                break;
             }
         }
     }

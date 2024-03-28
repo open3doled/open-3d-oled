@@ -89,9 +89,13 @@ void setup()
             opt101_enable_smart_duplicate_frame_handling = eeprom_settings.opt101_enable_smart_duplicate_frame_handling;
             opt101_output_stats = eeprom_settings.opt101_output_stats;
             opt101_enable_frequency_analysis_based_duplicate_frame_detection = eeprom_settings.opt101_enable_frequency_analysis_based_duplicate_frame_detection;
-            if (eeprom_settings.version > 9) 
+            if (eeprom_settings.version >= 10) 
             {
                 opt101_block_n_subsequent_duplicates = eeprom_settings.opt101_block_n_subsequent_duplicates;
+            }
+            if (eeprom_settings.version >= 12) 
+            {
+                opt101_ignore_all_duplicates = eeprom_settings.opt101_ignore_all_duplicates;
             }
         }
 
@@ -142,6 +146,11 @@ void loop()
             *   be detected as the next duplicate frame causing the unit to lose proper synchronization. 
             *   When using this setting one should set opt101_block_signal_detection_delay to a 
             *   value 80-90% of the PWM backlight cycle time. (default 0).
+            * 15) opt101_ignore_all_duplicates -
+            *   (0 disable - >1 enable) on displays with too much jitter where setting opt101_block_signal_detection_delay and/or
+            *   opt101_block_n_subsequent_duplicates does not eliminate false dulicate detection due to strange PWM characteristics
+            *   or variable brightness periods, it may be best to ignore any detected duplicates. This will mean that glasses only
+            *   attempt resynchronization when the alternate eye trigger is sent by the display.
             * 6) opt101_min_threshold_value_to_activate -
             *   the light intensities threshold value in a given threshold update cycle must exceed this value before the emitter will turn on.
             *   this setting is used to stop the emitter turning on when the TV is turned off.  (default 10)
@@ -169,7 +178,7 @@ void loop()
             *   as a duplicate frame.
             * 9) opt101_detection_threshold_repeated_low - see 5 above
             */
-            for (uint8_t p = 0; p < 16; p++) 
+            for (uint8_t p = 0; p < 17; p++) 
             {
                 end = input.indexOf(",", start);
                 if (end == 255) 
@@ -242,6 +251,10 @@ void loop()
                         {
                             opt101_block_n_subsequent_duplicates = temp;
                         }
+                        else if (p == 15) 
+                        {
+                            opt101_ignore_all_duplicates = temp;
+                        }
                     }
                     else if (command == 7 && p == 1 && temp >= 0 && temp < 3) // update glasses mode
                     {
@@ -275,7 +288,8 @@ void loop()
                             opt101_enable_smart_duplicate_frame_handling,
                             opt101_output_stats,
                             opt101_enable_frequency_analysis_based_duplicate_frame_detection,
-                            opt101_block_n_subsequent_duplicates
+                            opt101_block_n_subsequent_duplicates,
+                            opt101_ignore_all_duplicates
                         };
                         EEPROM.put(EEPROM_SETTING_ADDRESS, eeprom_settings);
                         Serial.println("OK");
@@ -332,7 +346,9 @@ void loop()
                 Serial.print(",");
                 Serial.print(opt101_enable_frequency_analysis_based_duplicate_frame_detection);
                 Serial.print(",");
-                Serial.println(opt101_block_n_subsequent_duplicates);
+                Serial.print(opt101_block_n_subsequent_duplicates);
+                Serial.print(",");
+                Serial.println(opt101_ignore_all_duplicates);
                 Serial.println("OK");
             }
             input = String();

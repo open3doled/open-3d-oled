@@ -83,8 +83,7 @@ else:
         return wrapper
 
 
-# resolution = '2560x1080'
-resolution = "1920x1080"
+overlay_timestamp_vertical_offset = 60  # this should be more than the height of the emitter box to avoid being blocked by it
 
 # defaults for 55inch LG OLED 1920x1080 120hz all in mm to be adjusted by pixel pitch factor for different display sizes
 default_black_box_gradient_width = 7
@@ -208,20 +207,15 @@ class PageflipGLWindow(threading.Thread):
         self.__show_calibration_instruction_image = (
             True  # this only applies if in calibration mode to begin with
         )
-        calibration_image = pg.image.load(
-            os.path.join(os.path.dirname(__file__), "calibration_message.png")
-        )
-        calibration_image_rgb = pg.surfarray.array3d(calibration_image)
-        calibration_image_alpha = pg.surfarray.array_alpha(calibration_image).reshape(
-            (*calibration_image_rgb.shape[0:2], 1)
-        )
-        calibration_image_rgba = np.concatenate(
-            (calibration_image_rgb, calibration_image_alpha), 2
-        )
-        self.__calibration_instruction_image = np.flip(
-            calibration_image_rgba.transpose((1, 0, 2)), 0
+        self.__calibration_instruction_image = self.__get_local_image_with_alpha(
+            "calibration_message.png"
         )
 
+        self.__help_text = None
+        self.__show_help_instruction_image = False
+        self.__help_instruction_image = self.__get_local_image_with_alpha(
+            "help_message.png"
+        )
         self.__debug_loop_times = dict()
         self.__debug_loop_count = 0
 
@@ -636,6 +630,11 @@ class PageflipGLWindow(threading.Thread):
                 # TODO: these should be in a mutex to ensure we aren't trying to read these as they are changing
                 latest_subtitle["lines"] = subtitle_lines
 
+    def __update_osd_texts(self):
+        self.__help_text = self.__generate_text_surface_with_shadow(
+            self.__subtitle_font_set, "Press (h) for help"
+        )
+
     def __update_subtitle_fonts(self):
         # font_file = pygame.font.match_font(self.__subtitle_font)  # Select and
         # self.__subtitle_font_set = pygame.font.Font(font_file, int(self.__subtitle_size * self.__window_size_scale_factor))
@@ -656,6 +655,7 @@ class PageflipGLWindow(threading.Thread):
                 )
             )
         self.__update_subtitle_fonts()
+        self.__update_osd_texts()
         self.__update_overlay_boxes()
 
     @line_profiler_obj
@@ -754,6 +754,10 @@ class PageflipGLWindow(threading.Thread):
                         self.__requests = ",".join(
                             self.__requests.split(",") + ["close"]
                         )
+                    elif event.key == pg.K_h:
+                        self.__show_help_instruction_image = (
+                            not self.__show_help_instruction_image
+                        )
                     elif event.key == pg.K_SPACE:
                         self.__requests = ",".join(
                             self.__requests.split(",") + ["toggle_paused"]
@@ -811,7 +815,6 @@ class PageflipGLWindow(threading.Thread):
                             event.key == pg.K_s
                             and "bottom" in self.__white_box_corner_position
                         ):
-                            calibration_emitter_or_display = "display"
                             calibration_target_field = "white_box_vertical_position"
                             calibration_decrease_or_increase = "decrease"
                             calibration_adjustment_amount = 10 if shift_down else 1
@@ -836,7 +839,6 @@ class PageflipGLWindow(threading.Thread):
                             event.key == pg.K_d
                             and "right" in self.__white_box_corner_position
                         ):
-                            calibration_emitter_or_display = "display"
                             calibration_target_field = "white_box_horizontal_position"
                             calibration_decrease_or_increase = "decrease"
                             calibration_adjustment_amount = 10 if shift_down else 1
@@ -1059,6 +1061,98 @@ class PageflipGLWindow(threading.Thread):
                     overlay_box = self.__overlay_boxes[0]
                     subtitle_depth_shift = self.__subtitle_depth
 
+            if self.__calibration_mode and self.__show_calibration_instruction_image:
+                (
+                    calibration_instruction_image_height,
+                    calibration_instruction_image_width,
+                    _,
+                ) = self.__calibration_instruction_image.shape
+                gl.glWindowPos2d(
+                    (
+                        self.__display_resolution_width
+                        - calibration_instruction_image_width
+                    )
+                    // 2,
+                    (
+                        self.__display_resolution_height
+                        - calibration_instruction_image_height
+                    )
+                    // 2,
+                )
+                gl.glDrawPixels(
+                    calibration_instruction_image_width,
+                    calibration_instruction_image_height,
+                    gl.GL_RGBA,
+                    gl.GL_UNSIGNED_BYTE,
+                    self.__calibration_instruction_image,
+                )
+
+            if self.__show_help_instruction_image:
+                (
+                    help_instruction_image_height,
+                    help_instruction_image_width,
+                    _,
+                ) = self.__help_instruction_image.shape
+                gl.glWindowPos2d(
+                    (self.__display_resolution_width - help_instruction_image_width)
+                    // 2,
+                    (self.__display_resolution_height - help_instruction_image_height)
+                    // 2,
+                )
+                gl.glDrawPixels(
+                    help_instruction_image_width,
+                    help_instruction_image_height,
+                    gl.GL_RGBA,
+                    gl.GL_UNSIGNED_BYTE,
+                    self.__help_instruction_image,
+                )
+
+            if self.__target_frametime is None:
+                self.__pg_clock.tick()  # just update the frame time for fps calculations and such
+            else:
+                # self.__pg_clock.tick(float(self.__target_framerate)) # uses not much cpu but is not accurate at delaying for framerate (this causes chop due to bad timing)
+                self.__pg_clock.tick_busy_loop(
+                    float(self.__target_framerate)
+                )  # uses lots of cpu but is accurate at delaying for framerate
+
+            if self.__latest_overlay_timestamp and self.__subtitle_font_set:
+                self.__draw_centered_osd_text(
+                    (self.__display_resolution_height * self.__window_size_scale_factor)
+                    - overlay_timestamp_vertical_offset
+                    - self.__latest_overlay_timestamp["rendered_surface"].get_height(),
+                    self.__latest_overlay_timestamp,
+                    0,
+                )
+                self.__draw_centered_osd_text(
+                    (self.__display_resolution_height * self.__window_size_scale_factor)
+                    - overlay_timestamp_vertical_offset
+                    - 2 * self.__help_text["rendered_surface"].get_height(),
+                    self.__help_text,
+                    0,
+                )
+
+            if self.__latest_subtitle_data:
+                self.__latest_subtitles_event.clear()
+                for latest_subtitle in self.__latest_subtitles:
+                    if (
+                        latest_subtitle["start"] <= self.__in_image_play_timestamp
+                        and self.__in_image_play_timestamp <= latest_subtitle["end"]
+                    ):
+                        current_vertical_position = (
+                            self.__subtitle_vertical_offset
+                            * self.__window_size_scale_factor
+                        )
+                        for latest_subtitle_line in latest_subtitle["lines"]:
+                            self.__draw_centered_osd_text(
+                                current_vertical_position,
+                                latest_subtitle_line,
+                                subtitle_depth_shift,
+                            )
+                            current_vertical_position += latest_subtitle_line[
+                                "rendered_surface"
+                            ].get_height()
+                self.__latest_subtitles_event.set()
+
             """
             gl.glColor3fv((0, 0, 0))
             gl.glRectf(0, self.__display_resolution_height-black_box_height, black_box_width, self.__display_resolution_height)
@@ -1088,70 +1182,6 @@ class PageflipGLWindow(threading.Thread):
                 gl.GL_UNSIGNED_BYTE,
                 overlay_box,
             )
-
-            if self.__calibration_mode and self.__show_calibration_instruction_image:
-                (
-                    calibration_instruction_image_height,
-                    calibration_instruction_image_width,
-                    _,
-                ) = self.__calibration_instruction_image.shape
-                gl.glWindowPos2d(
-                    (
-                        self.__display_resolution_width
-                        - calibration_instruction_image_width
-                    )
-                    // 2,
-                    (
-                        self.__display_resolution_height
-                        - calibration_instruction_image_height
-                    )
-                    // 2,
-                )
-                gl.glDrawPixels(
-                    calibration_instruction_image_width,
-                    calibration_instruction_image_height,
-                    gl.GL_RGBA,
-                    gl.GL_UNSIGNED_BYTE,
-                    self.__calibration_instruction_image,
-                )
-
-            if self.__target_frametime is None:
-                self.__pg_clock.tick()  # just update the frame time for fps calculations and such
-            else:
-                # self.__pg_clock.tick(float(self.__target_framerate)) # uses not much cpu but is not accurate at delaying for framerate (this causes chop due to bad timing)
-                self.__pg_clock.tick_busy_loop(
-                    float(self.__target_framerate)
-                )  # uses lots of cpu but is accurate at delaying for framerate
-
-            if self.__latest_overlay_timestamp:
-                self.__draw_centered_osd_text(
-                    (self.__display_resolution_height * self.__window_size_scale_factor)
-                    - 20
-                    - self.__latest_overlay_timestamp["rendered_surface"].get_height(),
-                    self.__latest_overlay_timestamp,
-                    0,
-                )
-            if self.__latest_subtitle_data:
-                self.__latest_subtitles_event.clear()
-                for latest_subtitle in self.__latest_subtitles:
-                    if (
-                        latest_subtitle["start"] <= self.__in_image_play_timestamp
-                        and self.__in_image_play_timestamp <= latest_subtitle["end"]
-                    ):
-                        current_vertical_position = (
-                            self.__subtitle_vertical_offset
-                            * self.__window_size_scale_factor
-                        )
-                        for latest_subtitle_line in latest_subtitle["lines"]:
-                            self.__draw_centered_osd_text(
-                                current_vertical_position,
-                                latest_subtitle_line,
-                                subtitle_depth_shift,
-                            )
-                            current_vertical_position += latest_subtitle_line[
-                                "rendered_surface"
-                            ].get_height()
-                self.__latest_subtitles_event.set()
 
             loop_time_millis = self.__pg_clock.get_time()
             loop_time = loop_time_millis / 1000
@@ -1189,6 +1219,15 @@ class PageflipGLWindow(threading.Thread):
         except Exception as e:
             traceback.print_exc()
             logging.error(e)
+
+    def __get_local_image_with_alpha(self, filename):
+        local_image = pg.image.load(os.path.join(os.path.dirname(__file__), filename))
+        local_image_rgb = pg.surfarray.array3d(local_image)
+        local_image_alpha = pg.surfarray.array_alpha(local_image).reshape(
+            (*local_image_rgb.shape[0:2], 1)
+        )
+        local_image_rgba = np.concatenate((local_image_rgb, local_image_alpha), 2)
+        return np.flip(local_image_rgba.transpose((1, 0, 2)), 0)
 
     def __draw_centered_osd_text(self, vertical_position, text_data, depth_shift):
         current_horizontal_position = (
@@ -1804,6 +1843,8 @@ __gstelementfactory__ = (
 
 # """
 if __name__ == "__main__":
+    # resolution = '2560x1080'
+    resolution = "1920x1080"
     pageflip_gl_window = PageflipGLWindow()
     pageflip_gl_window.display_resolution = resolution
     pageflip_gl_window.display_size = "34"

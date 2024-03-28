@@ -153,7 +153,7 @@
 
 #define EEPROM_SETTING_ADDRESS 0
 #define EEPROM_SETTING_CHECKVALUE 0x3D3D3D3D
-#define EMITTER_VERSION 11
+#define EMITTER_VERSION 12
 
 /*
 Version History
@@ -178,6 +178,7 @@ struct EEPROMSettings {
   uint8_t opt101_output_stats;
   uint8_t opt101_enable_frequency_analysis_based_duplicate_frame_detection;
   uint8_t opt101_block_n_subsequent_duplicates;
+  uint8_t opt101_ignore_all_duplicates;
 };
 
 #endif /* _SETTINGS_H_ */

@@ -685,7 +685,7 @@ class EmitterSettingsDialog:
         self.setting_opt101_block_n_subsequent_duplicates_variable.set("0")
         self.setting_opt101_block_n_subsequent_duplicates_label = tkinter.Label(
             self.setting_opt101_block_n_subsequent_duplicates_frame,
-            text="OPT101 Block N Subsequent Duplicates*: ",
+            text="OPT101 Block N Subsequent Duplicates: ",
         )
         self.setting_opt101_block_n_subsequent_duplicates_label.pack(
             padx=5, side=tkinter.LEFT
@@ -706,6 +706,32 @@ class EmitterSettingsDialog:
             hover_delay=100,
         )
         self.setting_opt101_block_n_subsequent_duplicates_frame.grid(
+            row=row_count, column=0, sticky="w"
+        )
+        row_count += 1
+
+        self.setting_opt101_ignore_all_duplicates_frame = tkinter.Frame(top)
+        self.setting_opt101_ignore_all_duplicates_variable = tkinter.StringVar(top)
+        self.setting_opt101_ignore_all_duplicates_variable.set("0")
+        self.setting_opt101_ignore_all_duplicates_label = tkinter.Label(
+            self.setting_opt101_ignore_all_duplicates_frame,
+            text="OPT101 Ignore All Duplicates: ",
+        )
+        self.setting_opt101_ignore_all_duplicates_label.pack(padx=5, side=tkinter.LEFT)
+        self.setting_opt101_ignore_all_duplicates_entry = tkinter.Entry(
+            self.setting_opt101_ignore_all_duplicates_frame,
+            textvariable=self.setting_opt101_ignore_all_duplicates_variable,
+        )
+        self.setting_opt101_ignore_all_duplicates_entry.config(
+            state="disabled"
+        )  # we only enable it after we confirm the emitter firmware supports this parameter
+        self.setting_opt101_ignore_all_duplicates_entry.pack(padx=5, side=tkinter.LEFT)
+        self.setting_opt101_ignore_all_duplicates_tooltip = idlelib.tooltip.Hovertip(
+            self.setting_opt101_ignore_all_duplicates_entry,
+            "(0=Disable, 1=Enable) On displays with too much jitter where setting OPT101 Block Signal Detection Delay and/or \nOPT101 Block N Subsequent Duplicates does not eliminate false dulicate detection due to strange PWM characteristics \nor variable brightness periods, it may be best to ignore any detected duplicates. This will mean that glasses only \nattempt resynchronization when the alternate eye trigger is sent by the display.",
+            hover_delay=100,
+        )
+        self.setting_opt101_ignore_all_duplicates_frame.grid(
             row=row_count, column=0, sticky="w"
         )
         row_count += 1
@@ -941,7 +967,7 @@ class EmitterSettingsDialog:
         self.setting_opt101_output_stats_entry.pack(padx=5, side=tkinter.LEFT)
         self.setting_opt101_output_stats_tooltip = idlelib.tooltip.Hovertip(
             self.setting_opt101_output_stats_entry,
-            'output statistics (if built with OPT101_ENABLE_STATS) relating to how the opt101 module is processing all lines start with \n"+stats " followed by specific statistics. Turn this off when not experimenting as it may degrade timing accuracy when serial communication occurs',
+            '(0=Disable, 1=Enable) output statistics (if built with OPT101_ENABLE_STATS) relating to how the opt101 module is processing all lines start with \n"+stats " followed by specific statistics. Turn this off when not experimenting as it may degrade timing accuracy when serial communication occurs',
             hover_delay=100,
         )
         self.setting_opt101_output_stats_frame.grid(
@@ -1139,6 +1165,17 @@ class EmitterSettingsDialog:
                     self.setting_opt101_enable_stream_readings_to_serial_toggle_button.config(
                         state="disabled"
                     )
+                if self.emitter_firmware_version_int >= 12:
+                    self.setting_opt101_ignore_all_duplicates_variable.set(
+                        parameters[15]
+                    )
+                    self.setting_opt101_ignore_all_duplicates_entry.config(
+                        state="normal"
+                    )
+                else:
+                    self.setting_opt101_ignore_all_duplicates_entry.config(
+                        state="disabled"
+                    )
 
     def serial_port_click_connect(self):
         if self.main_app.emitter_serial:
@@ -1186,8 +1223,12 @@ class EmitterSettingsDialog:
                 f"{self.setting_opt101_output_stats_variable.get()},"
                 f"{self.setting_opt101_enable_frequency_analysis_based_duplicate_frame_detection_variable.get()}"
             )
-            if self.emitter_firmware_version_int > 9:
+            if self.emitter_firmware_version_int >= 10:
                 command += f",{self.setting_opt101_block_n_subsequent_duplicates_variable.get()}"
+            if self.emitter_firmware_version_int >= 12:
+                command += (
+                    f",{self.setting_opt101_ignore_all_duplicates_variable.get()}"
+                )
             print(command)
             self.main_app.emitter_serial.line_reader.command(command)
 
@@ -1212,6 +1253,8 @@ class EmitterSettingsDialog:
                     "ir_frame_duration": self.setting_ir_frame_duration_variable.get(),
                     "ir_signal_spacing": self.setting_ir_signal_spacing_variable.get(),
                     "opt101_block_signal_detection_delay": self.setting_opt101_block_signal_detection_delay_variable.get(),
+                    "opt101_block_n_subsequent_duplicates": self.setting_opt101_block_n_subsequent_duplicates_variable.get(),
+                    "opt101_ignore_all_duplicates": self.setting_opt101_ignore_all_duplicates_variable.get(),
                     "opt101_min_threshold_value_to_activate": self.setting_opt101_min_threshold_value_to_activate_variable.get(),
                     "opt101_detection_threshold": self.setting_opt101_detection_threshold_variable.get(),
                     "opt101_detection_threshold_repeated_high": self.setting_opt101_detection_threshold_repeated_high_variable.get(),
@@ -1220,7 +1263,6 @@ class EmitterSettingsDialog:
                     "opt101_enable_smart_duplicate_frame_handling": self.setting_opt101_enable_smart_duplicate_frame_handling_variable.get(),
                     "opt101_output_stats": self.setting_opt101_output_stats_variable.get(),
                     "opt101_enable_frequency_analysis_based_duplicate_frame_detection": self.setting_opt101_enable_frequency_analysis_based_duplicate_frame_detection_variable.get(),
-                    "opt101_block_n_subsequent_duplicates_variable": self.setting_opt101_block_n_subsequent_duplicates_variable.get(),
                 },
                 f,
                 indent=2,
@@ -1271,7 +1313,10 @@ class EmitterSettingsDialog:
                 ]
             )
             self.setting_opt101_block_n_subsequent_duplicates_variable.set(
-                settings.get("opt101_block_n_subsequent_duplicates_variable", 0)
+                settings.get("opt101_block_n_subsequent_duplicates", 0)
+            )
+            self.setting_opt101_ignore_all_duplicates_variable.set(
+                settings.get("opt101_ignore_all_duplicates", 0)
             )
 
     def click_set_glasses_mode(self):
@@ -2809,9 +2854,14 @@ class TopWindow:
         self.video_open = True
 
         # setting fullscreen prematurely has no effect until video playback has full started
-        while not self.pageflipglsink.get_property("started"):
-            time.sleep(0.1)
-        # even after playback started it can still take 1 second until all teh renderers are ready
+        for _ in range(50):
+            if self.pageflipglsink.get_property("started"):
+                break
+            time.sleep(0.2)
+        else:
+            # if it didn't start after 10 seconds just stop as it probably means there was a gstreamer decoding error
+            self.stop_player()
+        # even after playback started it can still take 1-2 second until all the renderers are ready
         for _ in range(10):
             time.sleep(0.2)
             self.pageflipglsink.set_property("fullscreen", True)
