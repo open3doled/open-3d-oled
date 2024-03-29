@@ -1784,7 +1784,7 @@ class StartVideoDialog:
     LOAD_VIDEO_PROFILE_FROM_HISTORY_OPTION = "Load Video Profile From History"
     LOAD_VIDEO_DEFAULTS_HISTORY_OPTION = "Load Defaults"
     LOAD_VIDEO_DEFAULTS_HISTORY_SAVE_NAME = "Defaults"
-    VIDEO_HISTORY_MAX_SIZE = 10
+    VIDEO_HISTORY_MAX_SIZE = 30
 
     def __init__(self, parent, main_app):
         self.parent = parent

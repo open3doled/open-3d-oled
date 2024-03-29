@@ -945,10 +945,35 @@ class PageflipGLWindow(threading.Thread):
                 self.__finish_buffer_copy_event.set()
                 self.__in_image_updated = False
 
+            if self.__frame_packing == FRAME_PACKING_SIDE_BY_SIDE_HALF:
+                in_single_width, in_single_height = in_width, in_height
+            elif self.__frame_packing == FRAME_PACKING_SIDE_BY_SIDE_FULL:
+                in_single_width, in_single_height = in_width / 2, in_height
+            elif self.__frame_packing == FRAME_PACKING_OVER_AND_UNDER_HALF:
+                in_single_width, in_single_height = in_width, in_height
+            else:
+                assert self.__frame_packing == FRAME_PACKING_OVER_AND_UNDER_FULL
+                in_single_width, in_single_height = in_width, in_height / 2
+
+            in_single_aspect = in_single_width / in_single_height
+            display_aspect = (
+                self.__display_resolution_width / self.__display_resolution_height
+            )
+            if display_aspect <= in_single_aspect:  # top/bottom borders
+                video_scale_factor = self.__display_resolution_width / in_single_width
+            else:  # side borers
+                video_scale_factor = self.__display_resolution_height / in_single_height
+            video_width = in_width * video_scale_factor
+            video_height = in_height * video_scale_factor
+            video_single_width = in_single_width * video_scale_factor
+            video_single_height = in_single_height * video_scale_factor
+
             # https://community.khronos.org/t/gltexcoord2f-simple-questions/63784
             if self.__frame_packing == FRAME_PACKING_SIDE_BY_SIDE_HALF:
-                crop_pos_x = (self.__display_resolution_width - in_width) / 2
-                crop_pos_y = (self.__display_resolution_height - in_height) / 2
+                crop_pos_x = (self.__display_resolution_width - video_single_width) / 2
+                crop_pos_y = (
+                    self.__display_resolution_height - video_single_height
+                ) / 2
                 texture_pos_x = 0
                 texture_pos_y = 0
                 if self.__left_or_bottom_page:
@@ -960,20 +985,24 @@ class PageflipGLWindow(threading.Thread):
                 texture_coord_y_low = 0.0
                 texture_coord_y_high = 1.0
             elif self.__frame_packing == FRAME_PACKING_SIDE_BY_SIDE_FULL:
-                crop_pos_x = (self.__display_resolution_width - in_width / 2) / 2
-                crop_pos_y = (self.__display_resolution_height - in_height) / 2
+                crop_pos_x = (self.__display_resolution_width - video_single_width) / 2
+                crop_pos_y = (
+                    self.__display_resolution_height - video_single_height
+                ) / 2
                 if self.__left_or_bottom_page:
                     texture_pos_x = 0
                 else:
-                    texture_pos_x = in_width / 2
+                    texture_pos_x = video_width / 2
                 texture_pos_y = 0
                 texture_coord_x_low = 0.0
                 texture_coord_x_high = 1.0
                 texture_coord_y_low = 0.0
                 texture_coord_y_high = 1.0
             elif self.__frame_packing == FRAME_PACKING_OVER_AND_UNDER_HALF:
-                crop_pos_x = (self.__display_resolution_width - in_width) / 2
-                crop_pos_y = (self.__display_resolution_height - in_height) / 2
+                crop_pos_x = (self.__display_resolution_width - video_single_width) / 2
+                crop_pos_y = (
+                    self.__display_resolution_height - video_single_height
+                ) / 2
                 texture_pos_x = 0
                 texture_pos_y = 0
                 texture_coord_x_low = 0.0
@@ -986,34 +1015,37 @@ class PageflipGLWindow(threading.Thread):
                     texture_coord_y_high = 1.0
             else:
                 assert self.__frame_packing == FRAME_PACKING_OVER_AND_UNDER_FULL
-                crop_pos_x = (self.__display_resolution_width - in_width) / 2
-                crop_pos_y = (self.__display_resolution_height - in_height / 2) / 2
+                crop_pos_x = (self.__display_resolution_width - video_single_width) / 2
+                crop_pos_y = (
+                    self.__display_resolution_height - video_single_height
+                ) / 2
                 texture_pos_x = 0
                 if self.__left_or_bottom_page:
                     texture_pos_y = 0
                 else:
-                    texture_pos_y = in_height / 2
+                    texture_pos_y = video_height / 2
                 texture_coord_x_low = 0.0
                 texture_coord_x_high = 1.0
                 texture_coord_y_low = 0.0
                 texture_coord_y_high = 1.0
-            max_width = in_width
-            max_height = in_height
+
             # gl.glColor(0, 0, 0, 1)
             gl.glPushMatrix()
             gl.glTranslate(
-                crop_pos_x - texture_pos_x, max_height + crop_pos_y - texture_pos_y, 0
+                crop_pos_x - texture_pos_x,
+                video_height + crop_pos_y - texture_pos_y,
+                0,
             )
             gl.glPushMatrix()
             gl.glBegin(gl.GL_QUADS)
             gl.glTexCoord2f(texture_coord_x_low, texture_coord_y_high)
-            gl.glVertex(0, -max_height)
+            gl.glVertex(0, -video_height)
             gl.glTexCoord2f(texture_coord_x_low, texture_coord_y_low)
             gl.glVertex(0, 0)
             gl.glTexCoord2f(texture_coord_x_high, texture_coord_y_low)
-            gl.glVertex(max_width, 0)
+            gl.glVertex(video_width, 0)
             gl.glTexCoord2f(texture_coord_x_high, texture_coord_y_high)
-            gl.glVertex(max_width, -max_height)
+            gl.glVertex(video_width, -video_height)
             gl.glEnd()
 
             gl.glPopMatrix()
