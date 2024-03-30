@@ -961,7 +961,7 @@ class PageflipGLWindow(threading.Thread):
             )
             if display_aspect <= in_single_aspect:  # top/bottom borders
                 video_scale_factor = self.__display_resolution_width / in_single_width
-            else:  # side borers
+            else:  # side borders
                 video_scale_factor = self.__display_resolution_height / in_single_height
             video_width = in_width * video_scale_factor
             video_height = in_height * video_scale_factor

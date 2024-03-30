@@ -26,6 +26,9 @@ from io import BytesIO
 import cairosvg
 import PIL.Image
 import avrloader
+import argparse
+import pathlib
+import textwrap
 
 # defaults LCD 2560x1080 75hz
 # DEFAULT_DISPLAY_RESOLUTION = '2560x1080'
@@ -2219,9 +2222,39 @@ class StartVideoDialog:
         self.top.destroy()
         self.top = None
 
+    @staticmethod
+    def get_video_history_default_settings():
+        history_file_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "video_history.json"
+        )
+        if os.path.exists(history_file_path):
+            f = open(history_file_path, "r")
+            video_history = json.load(f)
+            f.close()
+            for vh in video_history:
+                if (
+                    vh["video_file_name"]
+                    == StartVideoDialog.LOAD_VIDEO_DEFAULTS_HISTORY_SAVE_NAME
+                ):
+                    return vh
+        else:
+            return {
+                "video_file_name": "Defaults",
+                "subtitle_file_name": "",
+                "subtitle_font": (
+                    "MS Gothic" if os.name == "nt" else "Noto Sans CJK JP"
+                ),
+                "subtitle_size": "60",
+                "subtitle_depth": "20",
+                "subtitle_vertical_offset": "150",
+                "subtitle_offset": "0",
+                "frame_packing": "side-by-side-full",
+                "right_eye": "right",
+            }
+
 
 class TopWindow:
-    def __init__(self):
+    def __init__(self, command_line_arguments):
         self.player = None
         self.video_open = False
         self.paused = False
@@ -2502,6 +2535,8 @@ class TopWindow:
         # create display settings dialog object to store display settings
         self.display_settings_dialog = DisplaySettingsDialog(self.window, self)
 
+        self.process_command_line_arguments(command_line_arguments)
+
     def move_mouse(self, event=None):
         if ".!frame.!button" in str(event.widget):
             return "break"
@@ -2625,6 +2660,24 @@ class TopWindow:
             return
         self.display_settings_dialog.show()
 
+    def process_command_line_arguments(self, args):
+        if args.video_path:
+            playback_parameters = StartVideoDialog.get_video_history_default_settings()
+            playback_parameters.update(
+                {
+                    "video_file_name": str(pathlib.Path(args.video_path)),
+                    "subtitle_file_name": (
+                        str(pathlib.Path(args.subtitle_path))
+                        if args.subtitle_path
+                        else ""
+                    ),
+                    "frame_packing": args.frame_packing,
+                    "right_eye": args.right_eye,
+                    "display_resolution": args.display_resolution,
+                }
+            )
+            self.start_video(playback_parameters)
+
     def click_start_video_button(self, event=None):  # @UnusedVariable
         if self.video_open:
             return
@@ -2640,21 +2693,38 @@ class TopWindow:
         if not start_video_dialog.perform_open:
             return
 
-        video_file_name = start_video_dialog.video_file_name
-        subtitle_file_name = start_video_dialog.subtitle_file_name
-        subtitle_font = start_video_dialog.subtitle_font_variable.get()
-        subtitle_size = start_video_dialog.subtitle_size_variable.get()
-        subtitle_depth = start_video_dialog.subtitle_depth_variable.get()
-        subtitle_vertical_offset = (
-            start_video_dialog.subtitle_vertical_offset_variable.get()
-        )
-        subtitle_offset = float(start_video_dialog.subtitle_offset_variable.get())
-        frame_packing = start_video_dialog.frame_packing_variable.get()
-        right_eye = start_video_dialog.right_eye_variable.get()
+        playback_parameters = {
+            "video_file_name": start_video_dialog.video_file_name,
+            "subtitle_file_name": start_video_dialog.subtitle_file_name,
+            "subtitle_font": start_video_dialog.subtitle_font_variable.get(),
+            "subtitle_size": start_video_dialog.subtitle_size_variable.get(),
+            "subtitle_depth": start_video_dialog.subtitle_depth_variable.get(),
+            "subtitle_vertical_offset": (
+                start_video_dialog.subtitle_vertical_offset_variable.get()
+            ),
+            "subtitle_offset": start_video_dialog.subtitle_offset_variable.get(),
+            "frame_packing": start_video_dialog.frame_packing_variable.get(),
+            "right_eye": start_video_dialog.right_eye_variable.get(),
+        }
+
+        self.start_video(playback_parameters)
+
+    def start_video(self, playback_parameters):
+
+        video_file_name = playback_parameters["video_file_name"]
+        subtitle_file_name = playback_parameters["subtitle_file_name"]
+        subtitle_font = playback_parameters["subtitle_font"]
+        subtitle_size = playback_parameters["subtitle_size"]
+        subtitle_depth = playback_parameters["subtitle_depth"]
+        subtitle_vertical_offset = playback_parameters["subtitle_vertical_offset"]
+        subtitle_offset = playback_parameters["subtitle_offset"]
+        frame_packing = playback_parameters["frame_packing"]
+        right_eye = playback_parameters["right_eye"]
 
         target_framerate = self.display_settings_dialog.target_framerate_variable.get()
-        display_resolution = (
-            self.display_settings_dialog.display_resolution_variable.get()
+        display_resolution = playback_parameters.get(
+            "display_resolution",
+            (self.display_settings_dialog.display_resolution_variable.get()),
         )
         display_size = self.display_settings_dialog.display_size_variable.get()
         whitebox_brightness = (
@@ -2687,7 +2757,7 @@ class TopWindow:
         if subtitle_file_name:
             show_subtitles = True
             subtitle_file_path = os.path.realpath(subtitle_file_name)
-            if subtitle_offset != 0:
+            if subtitle_offset != "0":
                 subs = pysrt.open(subtitle_file_path)
                 subs.shift(seconds=float(subtitle_offset))
                 subtitle_file_path = f"{subtitle_file_path}.shifted"
@@ -2854,12 +2924,12 @@ class TopWindow:
         self.video_open = True
 
         # setting fullscreen prematurely has no effect until video playback has full started
-        for _ in range(150):
+        for _ in range(75):
             if self.pageflipglsink.get_property("started"):
                 break
             time.sleep(0.2)
         else:
-            # if it didn't start after 30 seconds just stop as it probably means there was a gstreamer decoding error
+            # if it didn't start after 15 seconds just stop as it probably means there was a gstreamer decoding error
             self.stop_player()
         # even after playback started it can still take 1-2 second until all the renderers are ready
         for _ in range(10):
@@ -2896,7 +2966,41 @@ if __name__ == "__main__":
     # GObject.threads_init()
     Gst.init(None)
 
-    top_window = TopWindow()
+    # parse commandline arguments
+    parser = argparse.ArgumentParser(
+        prog="Open3DOLED 3DPlayer",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        description=textwrap.dedent(
+            """\
+        Plays 3D videos for use with Open3DOLED emitter unit. 
+        This commandline interface is used for launching videos directly, unless a video is specified all other parameters will be ignored.
+        """
+        ),
+        epilog="Uses default display settings and video settings set in app to play specified file unless overriden on command-line.",
+    )
+    parser.add_argument("--video-path")
+    parser.add_argument("--subtitle-path")
+    parser.add_argument(
+        "--frame-packing",
+        choices=[
+            "side-by-side-full",
+            "side-by-side-half",
+            "over-and-under-full",
+            "over-and-under-half",
+        ],
+    )
+    parser.add_argument("--right-eye", choices=["right", "left", "top", "bottom"])
+    parser.add_argument(
+        "--display-resolution",
+        choices=[
+            "3840x2160",
+            "2560x1080",
+            "1920x1080",
+            "1280x720",
+        ],
+    )
+
+    top_window = TopWindow(parser.parse_args())
 
     try:
 
