@@ -2854,12 +2854,12 @@ class TopWindow:
         self.video_open = True
 
         # setting fullscreen prematurely has no effect until video playback has full started
-        for _ in range(50):
+        for _ in range(150):
             if self.pageflipglsink.get_property("started"):
                 break
             time.sleep(0.2)
         else:
-            # if it didn't start after 10 seconds just stop as it probably means there was a gstreamer decoding error
+            # if it didn't start after 30 seconds just stop as it probably means there was a gstreamer decoding error
             self.stop_player()
         # even after playback started it can still take 1-2 second until all the renderers are ready
         for _ in range(10):
