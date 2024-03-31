@@ -148,16 +148,22 @@ Not Working (Untested)
   - pacman -S git mingw-w64-ucrt-x86_64-meson-python mingw-w64-ucrt-x86_64-cc mingw-w64-ucrt-x86_64-meson mingw-w64-ucrt-x86_64-ninja mingw-w64-ucrt-x86_64-pkg-config mingw-w64-ucrt-x86_64-pygobject-devel mingw-w64-ucrt-x86_64-python
   - git clone https://gitlab.freedesktop.org/gstreamer/gstreamer.git
   - cd gstreamer
-  - git checkout 1.22.5
+  - git checkout 1.22.9
   - cd subprojects/gst-python/
   - meson build
   - cd build
   - ninja
   - cp plugin/libgstpython.dll /ucrt64/lib/gstreamer-1.0/libgstpython.dll
- - remove gst-plugin-scanner.exe as it is broken under msys2
-  - mv  /ucrt64/libexec/gstreamer-1.0/gst-plugin-scanner.exe /ucrt64/libexec/gstreamer-1.0/gst-plugin-scanner.exe.bak
  - if you run into issues where it says "Unable to find/initialize GStreamer plugin GSTPageflipGLSink." delete the gstreamer plugin registry
   - rm "C:\Users\[USERNAME]\AppData\Local\Microsoft\Windows\INetCache\gstreamer-1.0\registry.x86_64-mingw.bin"
+  
+ - issues blocking update to latest version of msys2 packages
+  - remove gst-plugin-scanner.exe as it is broken under msys2 (this only effects gstreamer 1.24.1 which has another issue)
+   - mv  /ucrt64/libexec/gstreamer-1.0/gst-plugin-scanner.exe /ucrt64/libexec/gstreamer-1.0/gst-plugin-scanner.exe.bak
+  - numpy pyinstaller incompatability for yet unknown reason (not sure which package caused this incompatability because numpy didn't udpate and pyinstaller didn't update)
+   - ImportError: Error importing numpy: you should not try to import numpy from
+        its source directory; please exit the numpy source tree, and relaunch
+        your python interpreter from there.
 ```
   
 ### Windows Standalone Application Build Instructions:
