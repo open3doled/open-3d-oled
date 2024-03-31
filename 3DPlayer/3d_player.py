@@ -3008,7 +3008,7 @@ if __name__ == "__main__":
 
     if os.name == "nt":
         os.system("chcp.com 65001")
-        os.environ["PYTHONLEGACYWINDOWSDLLLOADING"] = 1
+        os.environ["PYTHONLEGACYWINDOWSDLLLOADING"] = "1"
 
     # set base path
     internal_base_path = os.path.dirname(os.path.abspath(__file__))
