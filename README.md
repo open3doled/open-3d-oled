@@ -78,6 +78,14 @@ Unzip and run 3d_player.exe
 * Your now done and should be able to watch 3D videos on your OLED!
 * Refer to this video for an example using a slightly dated version of the software if you need a demonstration of this proceedure https://youtu.be/tEjXUV8hVDs
     
+### Command Line Interface
+3DPlayer supports a simple command line interface for integration into systems like Kodi, if you implement scripts for a video management s ystem please let us know so we can link to them here.
+If the "video-path" command line argument is supplied it will auto launch playback of that video using the default settings you have stored from prior usage.
+Defaults can be overriden using additionally avaiable command line arguments to support videos with different formats and subtitle files.
+```
+python3 3d_player.py --video-path ./videos/ghosting_test_video_1080p_red_left_blue_right_side_by_side_full.mp4 --frame-packing side-by-side-full --right-eye right --display-resolution 2560x1080
+```
+    
 ## FAQ, Useful Commands and Tips
 * Supported TVs
 ```
@@ -126,7 +134,12 @@ Not Working (Untested)
  - install msys2 (https://stackoverflow.com/questions/37460073/msys-vs-mingw-internal-environment-variables)
  - follow steps at https://pygobject.readthedocs.io/en/latest/getting_started.html
  - open ucrt64 shell
- - pacman -Suy
+ - pacman -S git
+ - git clone https://github.com/open3doled/open-3d-oled.git 
+ - due to potential issues with the latest msys2 packages not working a copy of the latest working pacman database files are provided it is recommended you copy them over if you are having difficulty getting a build to work
+  - cp -rf open-3d-oled/3DPlayer/building/msys2_pacman_db_files/* var/lib/pacman/sync
+ - pacman -Su (you can use "pacman -Suy" here to update your database files if you are trying to build using the latest packages otherwise omit the y option) (you will need to restart your ucrt64 shell after this)
+ - pacman -Su
  - pacman -S mingw-w64-ucrt-x86_64-gtk4 mingw-w64-ucrt-x86_64-python3 mingw-w64-ucrt-x86_64-python3-pip mingw-w64-ucrt-x86_64-python3-gobject mingw-w64-ucrt-x86_64-python-pygame mingw-w64-ucrt-x86_64-python-pyopengl mingw-w64-ucrt-x86_64-python-pyopengl-accelerate mingw-w64-ucrt-x86_64-python-numpy mingw-w64-ucrt-x86_64-python-cffi mingw-w64-ucrt-x86_64-python-wheel mingw-w64-ucrt-x86_64-python-pillow mingw-w64-ucrt-x86_64-python-pyusb mingw-w64-ucrt-x86_64-python-pyserial 
  - pacman -S mingw-w64-ucrt-x86_64-gstreamer mingw-w64-ucrt-x86_64-gst-devtools mingw-w64-ucrt-x86_64-gst-plugins-base mingw-w64-ucrt-x86_64-gst-plugin-gtk mingw-w64-ucrt-x86_64-gst-plugins-bad mingw-w64-ucrt-x86_64-gst-plugins-bad-libs mingw-w64-ucrt-x86_64-gst-plugins-good mingw-w64-ucrt-x86_64-gst-plugins-ugly mingw-w64-ucrt-x86_64-gst-python mingw-w64-ucrt-x86_64-gst-libav
  - pacman -S mingw-w64-ucrt-x86_64-python-psutil
@@ -185,6 +198,10 @@ Not Working (Untested)
     zip -r 3d_player.zip 3d_player
     
   - 3d_player.zip will be the equivalent of the release files available on the releases page.
+  
+  - when you are done remove the "dist" and "build" folder under 3DPlayer otherwise it will not run any longer due to finding invalid libraries
+    rm -rf dist
+    rm -rf build
 ```
 
 # Licenses

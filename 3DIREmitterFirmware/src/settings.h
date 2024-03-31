@@ -157,6 +157,7 @@
 
 /*
 Version History
+12 - Added support for OPT101_IGNORE_ALL_DUPLICATES to help with displays with strange timings and PWM values
 11 - Added support for OPT101_ENABLE_STREAM_READINGS_TO_SERIAL to help debug timings on new displays
 10 - First official tracked version
 */

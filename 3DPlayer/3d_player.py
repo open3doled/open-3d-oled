@@ -30,21 +30,45 @@ import argparse
 import pathlib
 import textwrap
 
-# defaults LCD 2560x1080 75hz
-# DEFAULT_DISPLAY_RESOLUTION = '2560x1080'
-# DEFAULT_DISPLAY_SIZE = '34'
-# DEFAULT_TARGET_FRAMERATE = '0'
-# IR_FRAME_DELAY = 500
-# IR_FRAME_DURATION = 11000
-# OPT101_BLOCK_SIGNAL_DETECTION_DELAY = 5000
 
-# defaults LG OLED 1920x1080 120hz
+# Default IR Settings
+DEFAULT_IR_PROTOCOL = "6"
+DEFAULT_GLASSES_MODE = "0"
+DEFAULT_IR_FRAME_DELAY = "500"
+DEFAULT_IR_FRAME_DURATION = "7000"
+DEFAULT_IR_SIGNAL_SPACING = "30"
+DEFAULT_OPT101_BLOCK_SIGNAL_DETECTION_DELAY = "7500"
+DEFAULT_OPT101_BLOCK_N_SUBSEQUENT_DUPLICATES = "0"
+DEFAULT_OPT101_IGNORE_ALL_DUPLICATES = "0"
+DEFAULT_OPT101_MIN_THRESHOLD_VALUE_TO_ACTIVATE = "10"
+DEFAULT_OPT101_DETECTION_THRESHOLD = "128"
+DEFAULT_OPT101_ENABLE_IGNORE_DURING_IR = "0"
+DEFAULT_OPT101_ENABLE_SMART_DUPLICATE_FRAME_HANDLING = "0"
+DEFAULT_OPT101_ENABLE_FREQUENCY_ANALYSIS_BASED_DUPLICATE_FRAME_DETECTION = "0"
+DEFAULT_OPT101_DETECTION_THRESHOLD_REPEATED_HIGH = "224"
+DEFAULT_OPT101_DETECTION_THRESHOLD_REPEATED_LOW = "32"
+DEFAULT_OPT101_OUTPUT_STATS = "0"
+
+# Display Setting Defaults
+DEFAULT_TARGET_FRAMERATE = "0"
 DEFAULT_DISPLAY_RESOLUTION = "1920x1080"
 DEFAULT_DISPLAY_SIZE = "55"
-DEFAULT_TARGET_FRAMERATE = "0"
-IR_FRAME_DELAY = 500
-IR_FRAME_DURATION = 7100
-OPT101_BLOCK_SIGNAL_DETECTION_DELAY = 5000
+DEFAULT_WHITEBOX_BRIGHTNESS = "255"
+DEFAULT_WHITEBOX_CORNER_POSITION = "top_left"
+DEFAULT_WHITEBOX_VERTICAL_POSITION = "0"
+DEFAULT_WHITEBOX_HORIZONTAL_POSITION = "0"
+DEFAULT_WHITEBOX_SIZE = "13"
+DEFAULT_WHITEBOX_HORIZONTAL_SPACING = "23"
+DEFAULT_CALIBRATION_MODE = False
+
+# Video Defaults
+DEFAULT_SUBTITLE_FONT = "MS Gothic" if os.name == "nt" else "Noto Sans CJK JP"
+DEFAULT_SUBTITLE_SIZE = "60"
+DEFAULT_SUBTITLE_DEPTH = "20"
+DEFAULT_SUBTITLE_VERTICAL_OFFSET = "150"
+DEFAULT_SUBTITLE_OFFSET = "0"
+DEFAULT_FRAME_PACKING = "side-by-side-full"
+DEFAULT_RIGHT_EYE = "right"
 
 
 # The following class is extracted from tkinter.
@@ -542,7 +566,7 @@ class EmitterSettingsDialog:
 
         self.setting_ir_protocol_frame = tkinter.Frame(top)
         self.setting_ir_protocol_variable = tkinter.StringVar(top)
-        self.setting_ir_protocol_variable.set("6")
+        self.setting_ir_protocol_variable.set(DEFAULT_IR_PROTOCOL)
         self.setting_ir_protocol_label = tkinter.Label(
             self.setting_ir_protocol_frame, text="IR Protocol: "
         )
@@ -562,7 +586,7 @@ class EmitterSettingsDialog:
 
         self.setting_glasses_mode_frame = tkinter.Frame(top)
         self.setting_glasses_mode_variable = tkinter.StringVar(top)
-        self.setting_glasses_mode_variable.set("0")
+        self.setting_glasses_mode_variable.set(DEFAULT_GLASSES_MODE)
         self.setting_glasses_mode_label = tkinter.Label(
             self.setting_glasses_mode_frame, text="Glasses Mode: "
         )
@@ -594,7 +618,7 @@ class EmitterSettingsDialog:
 
         self.setting_ir_frame_delay_frame = tkinter.Frame(top)
         self.setting_ir_frame_delay_variable = tkinter.StringVar(top)
-        self.setting_ir_frame_delay_variable.set("100")
+        self.setting_ir_frame_delay_variable.set(DEFAULT_IR_FRAME_DELAY)
         self.setting_ir_frame_delay_label = tkinter.Label(
             self.setting_ir_frame_delay_frame, text="IR Frame Delay: "
         )
@@ -614,7 +638,7 @@ class EmitterSettingsDialog:
 
         self.setting_ir_frame_duration_frame = tkinter.Frame(top)
         self.setting_ir_frame_duration_variable = tkinter.StringVar(top)
-        self.setting_ir_frame_duration_variable.set("8000")
+        self.setting_ir_frame_duration_variable.set(DEFAULT_IR_FRAME_DURATION)
         self.setting_ir_frame_duration_label = tkinter.Label(
             self.setting_ir_frame_duration_frame, text="IR Frame Duration: "
         )
@@ -634,7 +658,7 @@ class EmitterSettingsDialog:
 
         self.setting_ir_signal_spacing_frame = tkinter.Frame(top)
         self.setting_ir_signal_spacing_variable = tkinter.StringVar(top)
-        self.setting_ir_signal_spacing_variable.set("30")
+        self.setting_ir_signal_spacing_variable.set(DEFAULT_IR_SIGNAL_SPACING)
         self.setting_ir_signal_spacing_label = tkinter.Label(
             self.setting_ir_signal_spacing_frame, text="IR Signal Spacing: "
         )
@@ -656,7 +680,9 @@ class EmitterSettingsDialog:
         self.setting_opt101_block_signal_detection_delay_variable = tkinter.StringVar(
             top
         )
-        self.setting_opt101_block_signal_detection_delay_variable.set("5000")
+        self.setting_opt101_block_signal_detection_delay_variable.set(
+            DEFAULT_OPT101_BLOCK_SIGNAL_DETECTION_DELAY
+        )
         self.setting_opt101_block_signal_detection_delay_label = tkinter.Label(
             self.setting_opt101_block_signal_detection_delay_frame,
             text="OPT101 Block Signal Detection Delay: ",
@@ -685,7 +711,9 @@ class EmitterSettingsDialog:
         self.setting_opt101_block_n_subsequent_duplicates_variable = tkinter.StringVar(
             top
         )
-        self.setting_opt101_block_n_subsequent_duplicates_variable.set("0")
+        self.setting_opt101_block_n_subsequent_duplicates_variable.set(
+            DEFAULT_OPT101_BLOCK_N_SUBSEQUENT_DUPLICATES
+        )
         self.setting_opt101_block_n_subsequent_duplicates_label = tkinter.Label(
             self.setting_opt101_block_n_subsequent_duplicates_frame,
             text="OPT101 Block N Subsequent Duplicates: ",
@@ -715,7 +743,9 @@ class EmitterSettingsDialog:
 
         self.setting_opt101_ignore_all_duplicates_frame = tkinter.Frame(top)
         self.setting_opt101_ignore_all_duplicates_variable = tkinter.StringVar(top)
-        self.setting_opt101_ignore_all_duplicates_variable.set("0")
+        self.setting_opt101_ignore_all_duplicates_variable.set(
+            DEFAULT_OPT101_IGNORE_ALL_DUPLICATES
+        )
         self.setting_opt101_ignore_all_duplicates_label = tkinter.Label(
             self.setting_opt101_ignore_all_duplicates_frame,
             text="OPT101 Ignore All Duplicates: ",
@@ -743,7 +773,9 @@ class EmitterSettingsDialog:
         self.setting_opt101_min_threshold_value_to_activate_variable = (
             tkinter.StringVar(top)
         )
-        self.setting_opt101_min_threshold_value_to_activate_variable.set("10")
+        self.setting_opt101_min_threshold_value_to_activate_variable.set(
+            DEFAULT_OPT101_MIN_THRESHOLD_VALUE_TO_ACTIVATE
+        )
         self.setting_opt101_min_threshold_value_to_activate_label = tkinter.Label(
             self.setting_opt101_min_threshold_value_to_activate_frame,
             text="OPT101 Min Threshold Value To Activate: ",
@@ -770,7 +802,9 @@ class EmitterSettingsDialog:
 
         self.setting_opt101_detection_threshold_frame = tkinter.Frame(top)
         self.setting_opt101_detection_threshold_variable = tkinter.StringVar(top)
-        self.setting_opt101_detection_threshold_variable.set("128")
+        self.setting_opt101_detection_threshold_variable.set(
+            DEFAULT_OPT101_DETECTION_THRESHOLD
+        )
         self.setting_opt101_detection_threshold_label = tkinter.Label(
             self.setting_opt101_detection_threshold_frame,
             text="OPT101 Detection Threshold: ",
@@ -803,7 +837,9 @@ class EmitterSettingsDialog:
             self.experimental_and_debug_frame
         )
         self.setting_opt101_enable_ignore_during_ir_variable = tkinter.StringVar(top)
-        self.setting_opt101_enable_ignore_during_ir_variable.set("1")
+        self.setting_opt101_enable_ignore_during_ir_variable.set(
+            DEFAULT_OPT101_ENABLE_IGNORE_DURING_IR
+        )
         self.setting_opt101_enable_ignore_during_ir_label = tkinter.Label(
             self.setting_opt101_enable_ignore_during_ir_frame,
             text="Enable Ignore Frame Start During IR*: ",
@@ -834,7 +870,9 @@ class EmitterSettingsDialog:
         self.setting_opt101_enable_smart_duplicate_frame_handling_variable = (
             tkinter.StringVar(top)
         )
-        self.setting_opt101_enable_smart_duplicate_frame_handling_variable.set("0")
+        self.setting_opt101_enable_smart_duplicate_frame_handling_variable.set(
+            DEFAULT_OPT101_ENABLE_SMART_DUPLICATE_FRAME_HANDLING
+        )
         self.setting_opt101_enable_smart_duplicate_frame_handling_label = tkinter.Label(
             self.setting_opt101_enable_smart_duplicate_frame_handling_frame,
             text="Enable Smart Duplicate Frame Handling*: ",
@@ -866,7 +904,7 @@ class EmitterSettingsDialog:
             top
         )
         self.setting_opt101_enable_frequency_analysis_based_duplicate_frame_detection_variable.set(
-            "0"
+            DEFAULT_OPT101_ENABLE_FREQUENCY_ANALYSIS_BASED_DUPLICATE_FRAME_DETECTION
         )
         self.setting_opt101_enable_frequency_analysis_based_duplicate_frame_detection_label = tkinter.Label(
             self.setting_opt101_enable_frequency_analysis_based_duplicate_frame_detection_frame,
@@ -898,7 +936,9 @@ class EmitterSettingsDialog:
         self.setting_opt101_detection_threshold_repeated_high_variable = (
             tkinter.StringVar(top)
         )
-        self.setting_opt101_detection_threshold_repeated_high_variable.set("224")
+        self.setting_opt101_detection_threshold_repeated_high_variable.set(
+            DEFAULT_OPT101_DETECTION_THRESHOLD_REPEATED_HIGH
+        )
         self.setting_opt101_detection_threshold_repeated_high_label = tkinter.Label(
             self.setting_opt101_detection_threshold_repeated_high_frame,
             text="OPT101 Detection Threshold High*: ",
@@ -929,7 +969,9 @@ class EmitterSettingsDialog:
         self.setting_opt101_detection_threshold_repeated_low_variable = (
             tkinter.StringVar(top)
         )
-        self.setting_opt101_detection_threshold_repeated_low_variable.set("32")
+        self.setting_opt101_detection_threshold_repeated_low_variable.set(
+            DEFAULT_OPT101_DETECTION_THRESHOLD_REPEATED_LOW
+        )
         self.setting_opt101_detection_threshold_repeated_low_label = tkinter.Label(
             self.setting_opt101_detection_threshold_repeated_low_frame,
             text="OPT101 Detection Threshold Low*: ",
@@ -958,7 +1000,7 @@ class EmitterSettingsDialog:
             self.experimental_and_debug_frame
         )
         self.setting_opt101_output_stats_variable = tkinter.StringVar(top)
-        self.setting_opt101_output_stats_variable.set("0")
+        self.setting_opt101_output_stats_variable.set(DEFAULT_OPT101_OUTPUT_STATS)
         self.setting_opt101_output_stats_label = tkinter.Label(
             self.setting_opt101_output_stats_frame, text="OPT101 Output Stats: "
         )
@@ -1316,10 +1358,15 @@ class EmitterSettingsDialog:
                 ]
             )
             self.setting_opt101_block_n_subsequent_duplicates_variable.set(
-                settings.get("opt101_block_n_subsequent_duplicates", 0)
+                settings.get(
+                    "opt101_block_n_subsequent_duplicates",
+                    DEFAULT_OPT101_BLOCK_N_SUBSEQUENT_DUPLICATES,
+                )
             )
             self.setting_opt101_ignore_all_duplicates_variable.set(
-                settings.get("opt101_ignore_all_duplicates", 0)
+                settings.get(
+                    "opt101_ignore_all_duplicates", DEFAULT_OPT101_IGNORE_ALL_DUPLICATES
+                )
             )
 
     def click_set_glasses_mode(self):
@@ -1404,17 +1451,21 @@ class DisplaySettingsDialog:
         self.display_size_variable = tkinter.StringVar(parent)
         self.display_size_variable.set(DEFAULT_DISPLAY_SIZE)
         self.whitebox_brightness_variable = tkinter.StringVar(parent)
-        self.whitebox_brightness_variable.set("255")
+        self.whitebox_brightness_variable.set(DEFAULT_WHITEBOX_BRIGHTNESS)
         self.whitebox_corner_position_variable = tkinter.StringVar(parent)
-        self.whitebox_corner_position_variable.set("top_left")
+        self.whitebox_corner_position_variable.set(DEFAULT_WHITEBOX_CORNER_POSITION)
         self.whitebox_vertical_position_variable = tkinter.StringVar(parent)
-        self.whitebox_vertical_position_variable.set("0")
+        self.whitebox_vertical_position_variable.set(DEFAULT_WHITEBOX_VERTICAL_POSITION)
         self.whitebox_horizontal_position_variable = tkinter.StringVar(parent)
-        self.whitebox_horizontal_position_variable.set("0")
+        self.whitebox_horizontal_position_variable.set(
+            DEFAULT_WHITEBOX_HORIZONTAL_POSITION
+        )
         self.whitebox_size_variable = tkinter.StringVar(parent)
-        self.whitebox_size_variable.set("13")
+        self.whitebox_size_variable.set(DEFAULT_WHITEBOX_SIZE)
         self.whitebox_horizontal_spacing_variable = tkinter.StringVar(parent)
-        self.whitebox_horizontal_spacing_variable.set("23")
+        self.whitebox_horizontal_spacing_variable.set(
+            DEFAULT_WHITEBOX_HORIZONTAL_SPACING
+        )
         self.calibration_mode_variable = tkinter.BooleanVar(parent)
         self.calibration_mode_variable.set(False)
 
@@ -1506,7 +1557,7 @@ class DisplaySettingsDialog:
         self.whitebox_brightness_entry.pack(padx=5, side=tkinter.LEFT)
         self.whitebox_brightness_tooltip = idlelib.tooltip.Hovertip(
             self.whitebox_brightness_frame,
-            "The whitebox brightness setting (0 black to 255 white) lets users lower the brightness of the white boxes to help aleviate concerns of OLED burn in.",
+            f"The whitebox brightness setting (0 black to 255 white) lets users lower the brightness of the white boxes to help aleviate concerns of OLED burn in. (default {DEFAULT_WHITEBOX_BRIGHTNESS})",
             hover_delay=100,
         )
         # self.whitebox_brightness_frame.pack()
@@ -1529,7 +1580,7 @@ class DisplaySettingsDialog:
         self.whitebox_corner_position_option_menu.pack(padx=5, side=tkinter.LEFT)
         self.whitebox_corner_position_tooltip = idlelib.tooltip.Hovertip(
             self.whitebox_corner_position_frame,
-            "The whitebox corner position lets the user specify where the whitebox should be positioned, for best performance and duplicate frame (dropped frame) handling on OLED displays (or other displays which update from the top of the screen first) top_left or top_right are recommended. (default top_left)",
+            f"The whitebox corner position lets the user specify where the whitebox should be positioned, for best performance and duplicate frame (dropped frame) handling on OLED displays (or other displays which update from the top of the screen first) top_left or top_right are recommended. (default {DEFAULT_WHITEBOX_CORNER_POSITION})",
             hover_delay=100,
         )
         # self.whitebox_corner_position_frame.pack()
@@ -1548,7 +1599,7 @@ class DisplaySettingsDialog:
         self.whitebox_vertical_position_entry.pack(padx=5, side=tkinter.LEFT)
         self.whitebox_vertical_position_tooltip = idlelib.tooltip.Hovertip(
             self.whitebox_vertical_position_frame,
-            "The whitebox vertical position lets the user move the screen based whitebox down to better align with the 3d emitter tv mount they have. It is roughly equivalent to mm when display size is correctly configured. (default 0)",
+            f"The whitebox vertical position lets the user move the screen based whitebox down to better align with the 3d emitter tv mount they have. It is roughly equivalent to mm when display size is correctly configured. (default {DEFAULT_WHITEBOX_VERTICAL_POSITION})",
             hover_delay=100,
         )
         # self.whitebox_vertical_position_frame.pack()
@@ -1568,7 +1619,7 @@ class DisplaySettingsDialog:
         self.whitebox_horizontal_position_entry.pack(padx=5, side=tkinter.LEFT)
         self.whitebox_horizontal_position_tooltip = idlelib.tooltip.Hovertip(
             self.whitebox_horizontal_position_frame,
-            "The whitebox horizontal position lets the user move the screen based whitebox sideways towards the center of the screen. It is roughly equivalent to mm when display size is correctly configured. (default 0)",
+            f"The whitebox horizontal position lets the user move the screen based whitebox sideways towards the center of the screen. It is roughly equivalent to mm when display size is correctly configured. (default {DEFAULT_WHITEBOX_HORIZONTAL_POSITION})",
             hover_delay=100,
         )
         # self.whitebox_horizontal_position_frame.pack()
@@ -1589,7 +1640,7 @@ class DisplaySettingsDialog:
         self.whitebox_horizontal_spacing_entry.pack(padx=5, side=tkinter.LEFT)
         self.whitebox_horizontal_spacing_tooltip = idlelib.tooltip.Hovertip(
             self.whitebox_horizontal_spacing_frame,
-            "The whitebox horizontal spacing lets the user increase/decrease the separation between white boxes to better align with the 3d emitter and tv pixel pitch they have. It is roughly equivalent to mm when display size is correctly configured. (default 23)",
+            f"The whitebox horizontal spacing lets the user increase/decrease the separation between white boxes to better align with the 3d emitter and tv pixel pitch they have. It is roughly equivalent to mm when display size is correctly configured. (default {DEFAULT_WHITEBOX_HORIZONTAL_SPACING})",
             hover_delay=100,
         )
         # self.whitebox_horizontal_spacing_frame.pack()
@@ -1609,7 +1660,7 @@ class DisplaySettingsDialog:
         self.whitebox_size_entry.pack(padx=5, side=tkinter.LEFT)
         self.whitebox_size_tooltip = idlelib.tooltip.Hovertip(
             self.whitebox_size_frame,
-            "The whitebox size lets the user increase or decrease the size of the whitebox. Setting the value too high will lead to cross talk and miss triggering, setting it too low will cause a low signal to noise and also miss triggering. (default 13)",
+            f"The whitebox size lets the user increase or decrease the size of the whitebox. Setting the value too high will lead to cross talk and miss triggering, setting it too low will cause a low signal to noise and also miss triggering. (default {DEFAULT_WHITEBOX_SIZE})",
             hover_delay=100,
         )
         # self.whitebox_size_frame.pack()
@@ -1714,24 +1765,42 @@ class DisplaySettingsDialog:
         f = open(file_name, "r")
         settings = json.load(f)
         f.close()
-        self.target_framerate_variable.set(settings["target_framerate"])
-        self.display_resolution_variable.set(settings["display_resolution"])
-        self.display_size_variable.set(settings["display_size"])
-        self.whitebox_brightness_variable.set(settings["whitebox_brightness"])
+        self.target_framerate_variable.set(
+            settings.get("target_framerate", DEFAULT_TARGET_FRAMERATE)
+        )
+        self.display_resolution_variable.set(
+            settings.get("display_resolution", DEFAULT_DISPLAY_RESOLUTION)
+        )
+        self.display_size_variable.set(
+            settings.get("display_size", DEFAULT_DISPLAY_SIZE)
+        )
+        self.whitebox_brightness_variable.set(
+            settings.get("whitebox_brightness", DEFAULT_WHITEBOX_BRIGHTNESS)
+        )
         self.whitebox_corner_position_variable.set(
-            settings.get("whitebox_corner_position", "top_left")
+            settings.get("whitebox_corner_position", DEFAULT_WHITEBOX_CORNER_POSITION)
         )
         self.whitebox_vertical_position_variable.set(
-            settings["whitebox_vertical_position"]
+            settings.get(
+                "whitebox_vertical_position", DEFAULT_WHITEBOX_VERTICAL_POSITION
+            )
         )
         self.whitebox_horizontal_position_variable.set(
-            settings.get("whitebox_horizontal_position", "0")
+            settings.get(
+                "whitebox_horizontal_position", DEFAULT_WHITEBOX_HORIZONTAL_POSITION
+            )
         )
-        self.whitebox_size_variable.set(settings.get("whitebox_size", "13"))
+        self.whitebox_size_variable.set(
+            settings.get("whitebox_size", DEFAULT_WHITEBOX_SIZE)
+        )
         self.whitebox_horizontal_spacing_variable.set(
-            settings["whitebox_horizontal_spacing"]
+            settings.get(
+                "whitebox_horizontal_spacing", DEFAULT_WHITEBOX_HORIZONTAL_SPACING
+            )
         )
-        self.calibration_mode_variable.set(settings.get("calibration_mode", False))
+        self.calibration_mode_variable.set(
+            settings.get("calibration_mode", DEFAULT_CALIBRATION_MODE)
+        )
 
     def click_load_visisble_settings_from_disk(self):
         file_name = tkinter.filedialog.askopenfilename(
@@ -1872,10 +1941,7 @@ class StartVideoDialog:
 
         self.subtitle_font_frame = tkinter.Frame(top)
         self.subtitle_font_variable = tkinter.StringVar(top)
-        if os.name == "nt":
-            self.subtitle_font_variable.set("MS Gothic")
-        else:
-            self.subtitle_font_variable.set("Noto Sans CJK JP")
+        self.subtitle_font_variable.set(DEFAULT_SUBTITLE_FONT)
         self.subtitle_font_label = tkinter.Label(
             self.subtitle_font_frame, text="Subtitle Font: "
         )
@@ -1890,7 +1956,7 @@ class StartVideoDialog:
 
         self.subtitle_size_frame = tkinter.Frame(top)
         self.subtitle_size_variable = tkinter.StringVar(top)
-        self.subtitle_size_variable.set("60")
+        self.subtitle_size_variable.set(DEFAULT_SUBTITLE_SIZE)
         self.subtitle_size_label = tkinter.Label(
             self.subtitle_size_frame, text="Subtitle Size: "
         )
@@ -1914,7 +1980,7 @@ class StartVideoDialog:
 
         self.subtitle_depth_frame = tkinter.Frame(top)
         self.subtitle_depth_variable = tkinter.StringVar(top)
-        self.subtitle_depth_variable.set("20")
+        self.subtitle_depth_variable.set(DEFAULT_SUBTITLE_DEPTH)
         self.subtitle_depth_label = tkinter.Label(
             self.subtitle_depth_frame, text="Subtitle Depth: "
         )
@@ -1934,7 +2000,7 @@ class StartVideoDialog:
 
         self.subtitle_vertical_offset_frame = tkinter.Frame(top)
         self.subtitle_vertical_offset_variable = tkinter.StringVar(top)
-        self.subtitle_vertical_offset_variable.set("150")
+        self.subtitle_vertical_offset_variable.set(DEFAULT_SUBTITLE_VERTICAL_OFFSET)
         self.subtitle_vertical_offset_label = tkinter.Label(
             self.subtitle_vertical_offset_frame, text="Subtitle Vertical Offset: "
         )
@@ -1955,7 +2021,7 @@ class StartVideoDialog:
 
         self.subtitle_offset_frame = tkinter.Frame(top)
         self.subtitle_offset_variable = tkinter.StringVar(top)
-        self.subtitle_offset_variable.set("0")
+        self.subtitle_offset_variable.set(DEFAULT_SUBTITLE_OFFSET)
         self.subtitle_offset_label = tkinter.Label(
             self.subtitle_offset_frame, text="Subtitle Time Offset (in seconds): "
         )
@@ -1970,7 +2036,7 @@ class StartVideoDialog:
 
         self.frame_packing_frame = tkinter.Frame(top)
         self.frame_packing_variable = tkinter.StringVar(top)
-        self.frame_packing_variable.set("side-by-side-full")
+        self.frame_packing_variable.set(DEFAULT_FRAME_PACKING)
         self.frame_packing_label = tkinter.Label(
             self.frame_packing_frame, text="Frame Packing: "
         )
@@ -1990,7 +2056,7 @@ class StartVideoDialog:
 
         self.right_eye_frame = tkinter.Frame(top)
         self.right_eye_variable = tkinter.StringVar(top)
-        self.right_eye_variable.set("right")
+        self.right_eye_variable.set(DEFAULT_RIGHT_EYE)
         self.right_eye_label = tkinter.Label(
             self.right_eye_frame, text="Right Eye On: "
         )
@@ -2241,15 +2307,13 @@ class StartVideoDialog:
             return {
                 "video_file_name": "Defaults",
                 "subtitle_file_name": "",
-                "subtitle_font": (
-                    "MS Gothic" if os.name == "nt" else "Noto Sans CJK JP"
-                ),
-                "subtitle_size": "60",
-                "subtitle_depth": "20",
-                "subtitle_vertical_offset": "150",
-                "subtitle_offset": "0",
-                "frame_packing": "side-by-side-full",
-                "right_eye": "right",
+                "subtitle_font": (DEFAULT_SUBTITLE_FONT),
+                "subtitle_size": DEFAULT_SUBTITLE_SIZE,
+                "subtitle_depth": DEFAULT_SUBTITLE_DEPTH,
+                "subtitle_vertical_offset": DEFAULT_SUBTITLE_VERTICAL_OFFSET,
+                "subtitle_offset": DEFAULT_SUBTITLE_OFFSET,
+                "frame_packing": DEFAULT_FRAME_PACKING,
+                "right_eye": DEFAULT_RIGHT_EYE,
             }
 
 
