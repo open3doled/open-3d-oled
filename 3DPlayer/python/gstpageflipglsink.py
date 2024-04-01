@@ -41,6 +41,7 @@ import json
 import collections
 import threading
 import os
+import psutil
 
 # """
 import gi
@@ -226,6 +227,13 @@ class PageflipGLWindow(threading.Thread):
             self.__display_resolution_width // 2,
             self.__display_resolution_height // 2,
         )
+
+        p = psutil.Process(os.getpid())
+        if os.name == "nt":
+            p.nice(psutil.HIGH_PRIORITY_CLASS)
+        else:
+            p.nice(10)
+
         self.__pg_clock = pg.time.Clock()
         self.__pg_window = pg.display.set_mode(
             (self.__display_resolution_width, self.__display_resolution_height),
@@ -769,7 +777,7 @@ class PageflipGLWindow(threading.Thread):
                         )
                     elif event.key == pg.K_RIGHT or event.key == pg.K_LEFT:
                         seek_direction = (
-                            "forward" if event.key == pg.K_RIGHT else "backward)"
+                            "forward" if event.key == pg.K_RIGHT else "backward"
                         )
                         seek_size = "big" if event.mod & pg.KMOD_SHIFT else "small"
                         self.__requests = ",".join(

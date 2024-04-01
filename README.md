@@ -45,6 +45,12 @@ OR
 Download the latest release version from the Releases page.
 Unzip and run 3d_player.exe
 
+If running windows 11 or 10 with DPI scaling be sure to disable it as follows.
+1) Right click properties on 3d_player.exe in the 3DPlayer folder
+2) Click on "Compatability" tab then click on the button at the bottom "Change high DPI settings"
+3) At the very bottom check the box next to the text "Override high DPI scaling behavior. Scaling performed: Application"
+4) Click OK on this sub dialog as well as the parent one
+
 ## Getting Started
 
 ### Configuring TV and Computer
