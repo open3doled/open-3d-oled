@@ -154,25 +154,37 @@ Not Working (Untested)
   - cd build
   - ninja
   - cp plugin/libgstpython.dll /ucrt64/lib/gstreamer-1.0/libgstpython.dll
- - if you run into issues where it says "Unable to find/initialize GStreamer plugin GSTPageflipGLSink." delete the gstreamer plugin registry
-  - rm "C:\Users\[USERNAME]\AppData\Local\Microsoft\Windows\INetCache\gstreamer-1.0\registry.x86_64-mingw.bin"
+ - cd open-3d-oled/3DPlayer
+ - fix to ensure gst-plugin-scanner.exe builds a valid gstreamer plugin cache including our python plugin.
+  - export PYTHONLEGACYWINDOWSDLLLOADING=1
+ - test the application
+  - python3 3d_player.py
   
- - issues blocking update to latest version of msys2 packages
-  - remove gst-plugin-scanner.exe as it is broken under msys2 (this only effects gstreamer 1.24.1 which has another issue)
-   - mv  /ucrt64/libexec/gstreamer-1.0/gst-plugin-scanner.exe /ucrt64/libexec/gstreamer-1.0/gst-plugin-scanner.exe.bak
-  - numpy pyinstaller incompatability for yet unknown reason (not sure which package caused this incompatability because numpy didn't udpate and pyinstaller didn't update)
-   - ImportError: Error importing numpy: you should not try to import numpy from
-        its source directory; please exit the numpy source tree, and relaunch
-        your python interpreter from there.
+ 
+ - if you run into issues where it says "Unable to find/initialize GStreamer plugin GSTPageflipGLSink." try deleting the gstreamer plugin registry
+  - rm "C:\Users\[USERNAME]\AppData\Local\Microsoft\Windows\INetCache\gstreamer-1.0\registry.x86_64-mingw.bin"
+ 
+ - If you run into issues about "ImportError('DLL load failed while importing _gi: The specified module could not be found.'))" try either of the following
+  - export PYTHONLEGACYWINDOWSDLLLOADING=1
+  - mv /ucrt64/libexec/gstreamer-1.0/gst-plugin-scanner.exe /ucrt64/libexec/gstreamer-1.0/gst-plugin-scanner.exe.bak
+  
+ - If the application fails with an error about Gst bad types make sure you don't have reminants from a pyinstaller build still around
+  - rm -rf ~/open-3d-oled/3DPlayer/build
+  - rm -rf ~/open-3d-oled/3DPlayer/dist
 ```
   
 ### Windows Standalone Application Build Instructions:
 ```
   - pip install pyinstaller
+  
+  - build the 3d_player.spec file (be sure to do this if you update anything as the format may have changed)
+  - it used to build fine without '--contents-directory "."' but now it seems to get a bunch of dll import errors without it at least when built under a VM, so you may be able to remove that directive and bundle all internal files in the _internal directory.
+  
   - pyi-makespec \
     3d_player.py \
     --console \
     --onedir \
+    --contents-directory "." \
     --hidden-import pygame \
     --hidden-import pygame._sdl2 \
     --hidden-import pygame.locals \
@@ -185,14 +197,14 @@ Not Working (Untested)
     a.datas += Tree('./images', prefix='images')
     a.datas += Tree('./python', prefix='python')
     
-  - build the pyinstaller release dist  
+  - build the pyinstaller release dist 
     rm -rf ./dist 
-    pyinstaller 3d_player.spec
+    PYTHONLEGACYWINDOWSDLLLOADING=1 pyinstaller 3d_player.spec
     
   - to get rid of gstreamer dll warnings on my system
-    rm dist/3d_player/_internal/OpenGL/DLLS/*32.*
-    rm dist/3d_player/_internal/OpenGL/DLLS/*.vc9.*
-    rm dist/3d_player/_internal/OpenGL/DLLS/*.vc10.*
+    rm dist/3d_player/OpenGL/DLLS/*32.*
+    rm dist/3d_player/OpenGL/DLLS/*.vc9.*
+    rm dist/3d_player/OpenGL/DLLS/*.vc10.*
 
   - copy remaining assets and zip
     cp -R videos dist/3d_player/videos
@@ -205,9 +217,11 @@ Not Working (Untested)
     
   - 3d_player.zip will be the equivalent of the release files available on the releases page.
   
-  - when you are done remove the "dist" and "build" folder under 3DPlayer otherwise it will not run any longer due to finding invalid libraries
+  - when you are done remove the "dist" and "build" folder under 3DPlayer otherwise it will not run any longer due to finding invalid libraries with some error about Gst bad types.
     rm -rf dist
     rm -rf build
+    
+
 ```
 
 # Licenses
