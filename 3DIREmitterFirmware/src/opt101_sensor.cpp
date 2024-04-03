@@ -57,6 +57,9 @@ bool opt101_duplicate_frame = false;
 uint16_t opt101_duplicate_frames_in_a_row_counter = 0;
 uint8_t other_channel = 0;
 uint8_t opt101_readings_last[OPT101_CHANNELS];
+#ifdef OPT101_FILTER_ADC_SIGNAL
+uint8_t opt101_readings_realtime_filter[OPT101_CHANNELS];
+#endif
 
 uint16_t opt101_reading_counter = 0;
 uint16_t opt101_duplicate_frames_counter = 0;
@@ -148,6 +151,11 @@ void opt101_sensor_Init(void)
     opt101_average_detection_time_average = 0;
     #endif
     memset((void *)opt101_channel_frequency_detection_counter, 0, sizeof(opt101_channel_frequency_detection_counter));
+
+    memset((void *)opt101_readings_last, 0, sizeof(opt101_readings_last));
+    #ifdef OPT101_FILTER_ADC_SIGNAL
+    memset((void *)opt101_readings_realtime_filter, 0, sizeof(opt101_readings_realtime_filter));
+    #endif
     memset((void *)opt101_readings, 0, sizeof(opt101_readings));
     memset((void *)opt101_readings_high, 0, sizeof(opt101_readings_high));
     memset((void *)opt101_readings_low, 255, sizeof(opt101_readings_low));
@@ -771,7 +779,16 @@ void opt101_sensor_ClearStats(void)
 ISR(ADC_vect)
 {
     uint8_t reading = ADCH;
+    #ifdef OPT101_FILTER_ADC_SIGNAL
+    uint8_t filter = opt101_readings_realtime_filter[opt101_sensor_channel];
+    uint8_t reading_last = opt101_readings[opt101_sensor_channel];
+    if ((reading > filter && filter > reading_last) || (reading < filter && filter < reading_last)) {
+        opt101_readings[opt101_sensor_channel] = filter;
+    }
+    opt101_readings_realtime_filter[opt101_sensor_channel] = reading;
+    #else
     opt101_readings[opt101_sensor_channel] = reading;
+    #endif
     opt101_sensor_channel++;
     if (opt101_sensor_channel >= OPT101_CHANNELS)
     {
