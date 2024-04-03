@@ -20,7 +20,7 @@
 
 #define OPT101_UPDATE_AVERAGE_PERIOD_FOR_FREQUENCY_ANALYSIS_BASED_DUPLICATE_FRAME_DETECTION 7 // this is 2^n so for 7 it will be 128 we do this because then we can do division for average computation with a bitshift.
 #define OPT101_UPDATE_STAT_PERIOD 5000000 // in micros (frequency to update and optionally display stats for the opt101 sensor module)
-#define OPT101_FILTER_ADC_SIGNAL // This will adjust the code to function properly with the BPW34 photodiode which has no transimpedance amplifier and has an output voltage much closer to 150mV so it can be mistriggered by noise ir led triggering.
+//#define OPT101_FILTER_ADC_SIGNAL // This will adjust the code to function properly with the BPW34 photodiode which has no transimpedance amplifier and has an output voltage much closer to 150mV so it can be mistriggered by noise ir led triggering. (beta testers have reported this causes flickering on some pwm backlit displays (possibly because the flashing of the backlight is irratic, perhaps this needs to be a proper peramater disabling for now by default))
 #define NUMBER_OF_IR_PROTOCOLS 7
 
 // defaults LCD 2560x1080 60hz
