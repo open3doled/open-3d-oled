@@ -67,7 +67,7 @@ DEFAULT_SUBTITLE_SIZE = "60"
 DEFAULT_SUBTITLE_DEPTH = "20"
 DEFAULT_SUBTITLE_VERTICAL_OFFSET = "150"
 DEFAULT_SUBTITLE_OFFSET = "0"
-DEFAULT_FRAME_PACKING = "side-by-side-full"
+DEFAULT_FRAME_PACKING = "side-by-side-half"
 DEFAULT_RIGHT_EYE = "right"
 
 
@@ -2303,18 +2303,17 @@ class StartVideoDialog:
                     == StartVideoDialog.LOAD_VIDEO_DEFAULTS_HISTORY_SAVE_NAME
                 ):
                     return vh
-        else:
-            return {
-                "video_file_name": "Defaults",
-                "subtitle_file_name": "",
-                "subtitle_font": (DEFAULT_SUBTITLE_FONT),
-                "subtitle_size": DEFAULT_SUBTITLE_SIZE,
-                "subtitle_depth": DEFAULT_SUBTITLE_DEPTH,
-                "subtitle_vertical_offset": DEFAULT_SUBTITLE_VERTICAL_OFFSET,
-                "subtitle_offset": DEFAULT_SUBTITLE_OFFSET,
-                "frame_packing": DEFAULT_FRAME_PACKING,
-                "right_eye": DEFAULT_RIGHT_EYE,
-            }
+        return {
+            "video_file_name": "Defaults",
+            "subtitle_file_name": "",
+            "subtitle_font": (DEFAULT_SUBTITLE_FONT),
+            "subtitle_size": DEFAULT_SUBTITLE_SIZE,
+            "subtitle_depth": DEFAULT_SUBTITLE_DEPTH,
+            "subtitle_vertical_offset": DEFAULT_SUBTITLE_VERTICAL_OFFSET,
+            "subtitle_offset": DEFAULT_SUBTITLE_OFFSET,
+            "frame_packing": DEFAULT_FRAME_PACKING,
+            "right_eye": DEFAULT_RIGHT_EYE,
+        }
 
 
 class TopWindow:
@@ -2837,10 +2836,10 @@ class TopWindow:
             map(int, display_resolution.split("x"))
         )
 
-        self.player = Gst.ElementFactory.make("playbin", "Playbin")
+        self.player = Gst.ElementFactory.make("playbin3", "Playbin")
 
         self.player.set_property("uri", video_file_path)
-        self.player.set_property("current-audio", -1)  # -1 is the first audio stream
+        # self.player.set_property("current-audio", -1)  # -1 is the first audio stream
         # self.player.set_property('current-audio', 2) # -1 is the first audio stream
 
         self.pageflipglsink = Gst.ElementFactory.make(
