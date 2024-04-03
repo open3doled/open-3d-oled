@@ -96,12 +96,16 @@ python3 3d_player.py --video-path ./videos/ghosting_test_video_1080p_red_left_bl
 * Supported TVs
 ```
 Working (Tested)
- - LG C1 OLED (Fully working with Motion Pro high setting with no crosstalk due to 41% BFI duty cycle)
- - Sony OLED XBR 48a9s (Working with clearness high setting but the bottom and top 10% of the screen has crosstalk due to 61% BFI duty cycle)
-Untested
- - LG CX OLED (This should work but is as of yet untested)
+ - LG C1 OLED (Fully working with Motion Pro high setting with no crosstalk due to ~41% BFI duty cycle)
+ - Sony OLED XBR 48a9s (Working with clearness high setting but the bottom and top 10% of the screen has crosstalk due to ~61% BFI duty cycle)
+ - Asus VG248QE LightBoost Capable (Works perfectly with [LightBoost enabled](https://blurbusters.com/zero-motion-blur/lightboost/), Works usably with lightboost turned off using "OPT101 Ignore All Duplicates")
+Partially Working (Tested)
+ - Sony X95K MiniLED (Used with "OPT101 Ignore All Duplicates", disable "Local Dimming" to reduce ghosting at top of screen, and run at native 4K with upscaling not 1080p (when run at 1080p there was some strange crosstalk))
+Untested (But should work)
+ - LG CX/GX/G1 OLED (These should work identical to LG C1 OLED but are as of yet untested)
  - Other OLEDs with 120hz BFI technology.
- - LCD Monitors with strobed backlight for BFI and with front polarization that is compatible with 3D glasses (https://www.rtings.com/monitor/tests/motion/black-frame-insertion)
+ - LCD monitors with strobed backlight for BFI and with front polarization that is compatible with 3D glasses (https://www.rtings.com/monitor/tests/motion/black-frame-insertion)
+ - Any monitor with strobed backlight for blur reduction (eg NVIDIA "Ultra Low Motion Blur" (ULMB), EIZO "Turbo240", ASUS "Extreme Low Motion Blur" (ELMB), BenQ "Blur Reduction", BenQ/Zowie "Dynamic Acceleration" (DyAc)) (https://blurbusters.com/faq/120hz-monitors/)
 Not Working (Untested)
  - LG C2/G2 OLED (Missing 120hz BFI)
  - LG C3/G3 OLED (Missing 120hz BFI)
