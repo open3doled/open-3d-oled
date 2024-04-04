@@ -29,6 +29,7 @@ import avrloader
 import argparse
 import pathlib
 import textwrap
+import re
 
 
 # Default IR Settings
@@ -52,6 +53,7 @@ DEFAULT_OPT101_OUTPUT_STATS = "0"
 # Display Setting Defaults
 DEFAULT_TARGET_FRAMERATE = "0"
 DEFAULT_DISPLAY_RESOLUTION = "1920x1080"
+DEFAULT_DISPLAY_ZOOM_FACTOR = "100"
 DEFAULT_DISPLAY_SIZE = "55"
 DEFAULT_WHITEBOX_BRIGHTNESS = "255"
 DEFAULT_WHITEBOX_CORNER_POSITION = "top_left"
@@ -467,8 +469,9 @@ class EmitterFirmwareUpdateDialog:
 
 
 class EmitterSettingsDialog:
-    def __init__(self, parent, main_app):
+    def __init__(self, parent, main_app, close_callback):
         self.main_app = main_app
+        self.close_callback = close_callback
         top = self.top = tkinter.Toplevel(parent)
         top.title("Emitter Settings")
         top.protocol("WM_DELETE_WINDOW", self.click_close)
@@ -1436,6 +1439,7 @@ class EmitterSettingsDialog:
     def click_close(self):
         self.top.destroy()
         self.top = None
+        self.close_callback()
 
 
 class DisplaySettingsDialog:
@@ -1448,6 +1452,8 @@ class DisplaySettingsDialog:
         self.target_framerate_variable.set(DEFAULT_TARGET_FRAMERATE)
         self.display_resolution_variable = tkinter.StringVar(parent)
         self.display_resolution_variable.set(DEFAULT_DISPLAY_RESOLUTION)
+        self.display_zoom_factor_variable = tkinter.StringVar(parent)
+        self.display_zoom_factor_variable.set(DEFAULT_DISPLAY_ZOOM_FACTOR)
         self.display_size_variable = tkinter.StringVar(parent)
         self.display_size_variable.set(DEFAULT_DISPLAY_SIZE)
         self.whitebox_brightness_variable = tkinter.StringVar(parent)
@@ -1525,6 +1531,25 @@ class DisplaySettingsDialog:
         self.display_resolution_option_menu.pack(padx=5, side=tkinter.LEFT)
         # self.display_resolution_frame.pack()
         self.display_resolution_frame.grid(row=row_count, column=0, sticky="w")
+        row_count += 1
+
+        self.display_zoom_factor_frame = tkinter.Frame(top)
+        self.display_zoom_factor_label = tkinter.Label(
+            self.display_zoom_factor_frame, text="Display Zoom Factor: "
+        )
+        self.display_zoom_factor_label.pack(padx=5, side=tkinter.LEFT)
+        self.display_zoom_factor_entry = tkinter.Entry(
+            self.display_zoom_factor_frame,
+            textvariable=self.display_zoom_factor_variable,
+        )
+        self.display_zoom_factor_entry.pack(padx=5, side=tkinter.LEFT)
+        # self.display_zoom_factor_frame.pack()
+        self.display_zoom_factor_tooltip = idlelib.tooltip.Hovertip(
+            self.display_zoom_factor_frame,
+            "(integer 0 to 100) Zooms out the video by the percent specified. This is to shrink videos on displays which have ghosting at the top and bottom of screen.",
+            hover_delay=100,
+        )
+        self.display_zoom_factor_frame.grid(row=row_count, column=0, sticky="w")
         row_count += 1
 
         self.display_size_frame = tkinter.Frame(top)
@@ -1672,10 +1697,10 @@ class DisplaySettingsDialog:
             self.calibration_mode_frame, text="Calibration Mode: "
         )
         self.calibration_mode_label.pack(padx=5, side=tkinter.LEFT)
-        self.calibration_mode_option_menu = tkinter.Checkbutton(
+        self.calibration_mode_check_button = tkinter.Checkbutton(
             self.calibration_mode_frame, variable=self.calibration_mode_variable
         )
-        self.calibration_mode_option_menu.pack(padx=5, side=tkinter.LEFT)
+        self.calibration_mode_check_button.pack(padx=5, side=tkinter.LEFT)
         self.calibration_mode_tooltip = idlelib.tooltip.Hovertip(
             self.calibration_mode_frame,
             "Calibration mode shows a reticule to help with alignment of the sensor bar \nand also allows for adjustment of emitter frame_delay and frame_duration using hotkeys as instructed on the OSD. \nTo adjust emitter timing parameters you will need to ensure the emitter settings dialog is also open and connected to the emitter. \nTo optimize emitter settings adjustment it is recommended to use the red/blue or black/white test videos.",
@@ -1737,6 +1762,7 @@ class DisplaySettingsDialog:
             {
                 "target_framerate": self.target_framerate_variable.get(),
                 "display_resolution": self.display_resolution_variable.get(),
+                "display_zoom_factor": self.display_zoom_factor_variable.get(),
                 "display_size": self.display_size_variable.get(),
                 "whitebox_brightness": self.whitebox_brightness_variable.get(),
                 "whitebox_corner_position": self.whitebox_corner_position_variable.get(),
@@ -1770,6 +1796,9 @@ class DisplaySettingsDialog:
         )
         self.display_resolution_variable.set(
             settings.get("display_resolution", DEFAULT_DISPLAY_RESOLUTION)
+        )
+        self.display_zoom_factor_variable.set(
+            settings.get("display_zoom_factor", DEFAULT_DISPLAY_ZOOM_FACTOR)
         )
         self.display_size_variable.set(
             settings.get("display_size", DEFAULT_DISPLAY_SIZE)
@@ -1815,6 +1844,9 @@ class DisplaySettingsDialog:
         if self.main_app.pageflipglsink is not None:
             self.main_app.pageflipglsink.set_property(
                 "calibration-mode", self.calibration_mode_variable.get()
+            )
+            self.main_app.pageflipglsink.set_property(
+                "display-zoom-factor", self.display_zoom_factor_variable.get()
             )
             self.main_app.pageflipglsink.set_property(
                 "whitebox-brightness", self.whitebox_brightness_variable.get()
@@ -2037,6 +2069,7 @@ class StartVideoDialog:
         self.frame_packing_frame = tkinter.Frame(top)
         self.frame_packing_variable = tkinter.StringVar(top)
         self.frame_packing_variable.set(DEFAULT_FRAME_PACKING)
+        self.frame_packing_variable.trace("w", self.__update_right_eye_options)
         self.frame_packing_label = tkinter.Label(
             self.frame_packing_frame, text="Frame Packing: "
         )
@@ -2069,6 +2102,7 @@ class StartVideoDialog:
             "top",
             "bottom",
         )
+        self.__update_right_eye_options()
         self.right_eye_option_menu.pack(padx=5, side=tkinter.LEFT)
         # self.right_eye_frame.pack()
         self.right_eye_frame.grid(row=row_count, column=0, sticky="w")
@@ -2089,6 +2123,28 @@ class StartVideoDialog:
 
         if self.video_history_default_index is not None:
             self.__load_video_profile_from_history_idx(self.video_history_default_index)
+
+    def __update_right_eye_options(self, *args, **kwargs):
+        frame_packing = self.frame_packing_variable.get()
+        if frame_packing.startswith("side-by-side"):
+            new_menu_options = ["right", "left"]
+        elif frame_packing.startswith("over-and-under"):
+            new_menu_options = ["top", "bottom"]
+        else:
+            return
+        menu = self.right_eye_option_menu["menu"]
+        menu.delete(0, "end")
+        for menu_option in new_menu_options:
+            menu.add_command(
+                label=menu_option,
+                command=_setit(self.right_eye_variable, menu_option),
+            )
+        new_selection = new_menu_options[0]
+        if "select" in kwargs:
+            new_desired_selection = kwargs["select"]
+            if new_desired_selection in new_menu_options:
+                new_selection = new_desired_selection
+        self.right_eye_variable.set(new_selection)
 
     def __update_video_history_options(self, update_menu, select_instruction=False):
         self.video_history_options = [
@@ -2150,7 +2206,8 @@ class StartVideoDialog:
         )
         self.subtitle_offset_variable.set(selected_video_history["subtitle_offset"])
         self.frame_packing_variable.set(selected_video_history["frame_packing"])
-        self.right_eye_variable.set(selected_video_history["right_eye"])
+        self.__update_right_eye_options(select=selected_video_history["right_eye"])
+        # self.right_eye_variable.set(selected_video_history["right_eye"])
 
     def load_video_profile_from_history(self, *args):  # @UnusedVariable
         if (
@@ -2200,6 +2257,10 @@ class StartVideoDialog:
             )
             self.video_file_name = new_video_file_name
             self.video_file_location_label.config(text=self.video_file_name)
+            self.frame_packing_variable.set(
+                StartVideoDialog.get_frame_packing_from_filename(new_video_file_name)
+            )
+            self.__update_right_eye_options()
 
     def select_subtitle_file(self):
         new_subtitle_file_name = tkinter.filedialog.askopenfilename(
@@ -2287,6 +2348,37 @@ class StartVideoDialog:
     def click_close(self):
         self.top.destroy()
         self.top = None
+
+    @staticmethod
+    def get_frame_packing_from_filename(filename):
+        if re.match(".*[_\-\.](((half)|(h))[_\-\.]?)sbs[_\-\.].*", filename, re.I):
+            return "half-side-by-side"
+        if re.match(".*[_\-\.](((full)|(f))[_\-\.]?)sbs[_\-\.].*", filename, re.I):
+            return "full-side-by-side"
+        if re.match(
+            ".*[_\-\.](((half)|(h))[_\-\.]?)((ou)|(tab))[_\-\.].*", filename, re.I
+        ):
+            return "half-over-and-under"
+        if re.match(
+            ".*[_\-\.](((full)|(f))[_\-\.]?)((ou)|(tab))[_\-\.].*", filename, re.I
+        ):
+            return "full-over-and-under"
+        half_or_not = True
+        if re.match(".*[_\-\.]((full)|f)[_\-\.].*", filename):
+            half_or_not = False
+        if re.match(".*[_\-\.]((half)|h)[_\-\.].*", filename):
+            half_or_not = True
+        side_by_side_or_over_and_under = True
+        if re.match(
+            ".*[_\-\.]((ou)|(over[_\-\.]?(and)?[_\-\.]?under)|(tab)|(top[_\-\.]?(and)?[_\-\.]?bottom))[_\-\.].*",
+            filename,
+        ):
+            side_by_side_or_over_and_under = False
+        if re.match(
+            ".*[_\-\.]((sbs)|(side[_\-\.]?(by)?[_\-\.]?side))[_\-\.].*", filename
+        ):
+            side_by_side_or_over_and_under = True
+        return f"{'side-by-side' if side_by_side_or_over_and_under else 'over-and-under'}-{'half' if half_or_not else 'full'}"
 
     @staticmethod
     def get_video_history_default_settings():
@@ -2408,166 +2500,180 @@ class TopWindow:
         open_video_file_button_image = svg_to_imagetk_photoimage(
             "./images/folder2-open.svg"
         )
-        open_video_file_button = tkinter.Button(
+        self.__open_video_file_button = tkinter.Button(
             top_frame,
             text="Open Video File",
             image=open_video_file_button_image,
             highlightthickness=0,
             bd=0,
         )
-        open_video_file_button.tk_img = open_video_file_button_image
+        self.__open_video_file_button.tk_img = open_video_file_button_image
         open_video_file_button_tooltip = idlelib.tooltip.Hovertip(  # @UnusedVariable
-            open_video_file_button, "Open a video file for playback.", hover_delay=100
+            self.__open_video_file_button,
+            "Open a video file for playback.",
+            hover_delay=100,
         )
-        open_video_file_button.pack(padx=5, side=tkinter.LEFT)
-        open_video_file_button.bind("<Button-1>", self.click_start_video_button)
+        self.__open_video_file_button.pack(padx=5, side=tkinter.LEFT)
+        self.__open_video_file_button.bind("<Button-1>", self.click_start_video_button)
         stop_video_button_image = svg_to_imagetk_photoimage("./images/stop-fill.svg")
-        stop_video_button = tkinter.Button(
+        self.__stop_video_button = tkinter.Button(
             top_frame,
             text="Stop Video",
             image=stop_video_button_image,
             highlightthickness=0,
             bd=0,
         )
-        stop_video_button.tk_img = stop_video_button_image
+        self.__stop_video_button.config(state="disabled")
+        self.__stop_video_button.tk_img = stop_video_button_image
         stop_video_button_tooltip = idlelib.tooltip.Hovertip(  # @UnusedVariable
-            stop_video_button, "Click to stop and close current video.", hover_delay=100
+            self.__stop_video_button,
+            "Click to stop and close current video.",
+            hover_delay=100,
         )
-        stop_video_button.pack(padx=5, side=tkinter.LEFT)
-        stop_video_button.bind("<Button-1>", self.click_stop_video_button)
+        self.__stop_video_button.pack(padx=5, side=tkinter.LEFT)
+        self.__stop_video_button.bind("<Button-1>", self.click_stop_video_button)
         fullscreen_button_image = svg_to_imagetk_photoimage(
             "./images/arrows-fullscreen.svg"
         )
-        fullscreen_button = tkinter.Button(
+        self.__fullscreen_button = tkinter.Button(
             top_frame,
             text="Fullscreen/Windowed (F11)",
             image=fullscreen_button_image,
             highlightthickness=0,
             bd=0,
         )
-        fullscreen_button.tk_img = fullscreen_button_image
+        self.__fullscreen_button.config(state="disabled")
+        self.__fullscreen_button.tk_img = fullscreen_button_image
         fullscreen_button_tooltip = idlelib.tooltip.Hovertip(  # @UnusedVariable
-            fullscreen_button, "Toggle fullscreen (F11).", hover_delay=100
+            self.__fullscreen_button, "Toggle fullscreen (F11).", hover_delay=100
         )
-        fullscreen_button.pack(padx=5, side=tkinter.LEFT)
-        fullscreen_button.bind("<Button-1>", self.toggle_fullscreen)
+        self.__fullscreen_button.pack(padx=5, side=tkinter.LEFT)
+        self.__fullscreen_button.bind("<Button-1>", self.toggle_fullscreen)
         flip_right_and_left_button_image = svg_to_imagetk_photoimage(
             "./images/flip-right-and-left.svg"
         )
-        flip_right_and_left_button = tkinter.Button(
+        self.__flip_right_and_left_button = tkinter.Button(
             top_frame,
             text="Flip Right and Left (F)",
             image=flip_right_and_left_button_image,
             highlightthickness=0,
             bd=0,
         )
-        flip_right_and_left_button.tk_img = flip_right_and_left_button_image
+        self.__flip_right_and_left_button.config(state="disabled")
+        self.__flip_right_and_left_button.tk_img = flip_right_and_left_button_image
         flip_right_and_left_button_tooltip = (  # @UnusedVariable
             idlelib.tooltip.Hovertip(
-                flip_right_and_left_button, "Flip Right and Left (F).", hover_delay=100
+                self.__flip_right_and_left_button,
+                "Flip Right and Left (F).",
+                hover_delay=100,
             )
         )
-        flip_right_and_left_button.pack(padx=5, side=tkinter.LEFT)
-        flip_right_and_left_button.bind("<Button-1>", self.flip_right_and_left)
+        self.__flip_right_and_left_button.pack(padx=5, side=tkinter.LEFT)
+        self.__flip_right_and_left_button.bind("<Button-1>", self.flip_right_and_left)
         tooltip_number_text = (
             "\nUse numbers 0-9 to fast seek from 0% to 90% through the video."
         )
         backward_big_button_image = svg_to_imagetk_photoimage(
             "./images/rewind-3-fill.svg"
         )
-        backward_big_button = tkinter.Button(
+        self.__backward_big_button = tkinter.Button(
             top_frame,
             text="Back 60s (shift-left)",
             image=backward_big_button_image,
             highlightthickness=0,
             bd=0,
         )
-        backward_big_button.tk_img = backward_big_button_image
+        self.__backward_big_button.config(state="disabled")
+        self.__backward_big_button.tk_img = backward_big_button_image
         backward_big_button_tooltip = idlelib.tooltip.Hovertip(  # @UnusedVariable
-            backward_big_button,
+            self.__backward_big_button,
             f"Rewind 60s (Shift-Left-Arrow).{tooltip_number_text}",
             hover_delay=100,
         )
-        backward_big_button.pack(padx=5, side=tkinter.LEFT)
-        backward_big_button.bind(
+        self.__backward_big_button.pack(padx=5, side=tkinter.LEFT)
+        self.__backward_big_button.bind(
             "<Button-1>", functools.partial(self.perform_seek, "seek_backward_big")
         )
         backward_small_button_image = svg_to_imagetk_photoimage(
             "./images/rewind-fill.svg"
         )
-        backward_small_button = tkinter.Button(
+        self.__backward_small_button = tkinter.Button(
             top_frame,
             text="Back 5s (left)",
             image=backward_small_button_image,
             highlightthickness=0,
             bd=0,
         )
-        backward_small_button.tk_img = backward_small_button_image
+        self.__backward_small_button.config(state="disabled")
+        self.__backward_small_button.tk_img = backward_small_button_image
         backward_small_button_tooltip = idlelib.tooltip.Hovertip(  # @UnusedVariable
-            backward_small_button,
+            self.__backward_small_button,
             f"Rewind 5s (Left-Arrow).{tooltip_number_text}",
             hover_delay=100,
         )
-        backward_small_button.pack(padx=5, side=tkinter.LEFT)
-        backward_small_button.bind(
+        self.__backward_small_button.pack(padx=5, side=tkinter.LEFT)
+        self.__backward_small_button.bind(
             "<Button-1>", functools.partial(self.perform_seek, "seek_backward_small")
         )
         play_pause_button_image = svg_to_imagetk_photoimage(
             "./images/play-pause-fill.svg"
         )
-        play_pause_button = tkinter.Button(
+        self.__play_pause_button = tkinter.Button(
             top_frame,
             text="Play/Pause (Space)",
             image=play_pause_button_image,
             highlightthickness=0,
             bd=0,
         )
-        play_pause_button.tk_img = play_pause_button_image
+        self.__play_pause_button.config(state="disabled")
+        self.__play_pause_button.tk_img = play_pause_button_image
         play_pause_button_tooltip = idlelib.tooltip.Hovertip(  # @UnusedVariable
-            play_pause_button,
+            self.__play_pause_button,
             "Click to play/pause current video. (Space)",
             hover_delay=100,
         )
-        play_pause_button.pack(padx=5, side=tkinter.LEFT)
-        play_pause_button.bind("<Button-1>", self.toggle_paused)
+        self.__play_pause_button.pack(padx=5, side=tkinter.LEFT)
+        self.__play_pause_button.bind("<Button-1>", self.toggle_paused)
         forward_small_button_image = svg_to_imagetk_photoimage(
             "./images/fast-forward-fill.svg"
         )
-        forward_small_button = tkinter.Button(
+        self.__forward_small_button = tkinter.Button(
             top_frame,
             text="Forward 5s (right)",
             image=forward_small_button_image,
             highlightthickness=0,
             bd=0,
         )
-        forward_small_button.tk_img = forward_small_button_image
+        self.__forward_small_button.config(state="disabled")
+        self.__forward_small_button.tk_img = forward_small_button_image
         forward_small_button_tooltip = idlelib.tooltip.Hovertip(  # @UnusedVariable
-            forward_small_button,
+            self.__forward_small_button,
             f"Fastforward 5s (Right-Arrow).{tooltip_number_text}",
             hover_delay=100,
         )
-        forward_small_button.pack(padx=5, side=tkinter.LEFT)
-        forward_small_button.bind(
+        self.__forward_small_button.pack(padx=5, side=tkinter.LEFT)
+        self.__forward_small_button.bind(
             "<Button-1>", functools.partial(self.perform_seek, "seek_forward_small")
         )
         forward_big_button_image = svg_to_imagetk_photoimage(
             "./images/fast-forward-3-fill.svg"
         )
-        forward_big_button = tkinter.Button(
+        self.__forward_big_button = tkinter.Button(
             top_frame,
             text="Forward 60s (shift-right)",
             image=forward_big_button_image,
             highlightthickness=0,
             bd=0,
         )
-        forward_big_button.tk_img = forward_big_button_image
+        self.__forward_big_button.config(state="disabled")
+        self.__forward_big_button.tk_img = forward_big_button_image
         forward_big_button_tooltip = idlelib.tooltip.Hovertip(  # @UnusedVariable
-            forward_big_button,
+            self.__forward_big_button,
             f"Fastforward 60s (Shift-Right-Arrow).{tooltip_number_text}",
             hover_delay=100,
         )
-        forward_big_button.pack(padx=5, side=tkinter.LEFT)
-        forward_big_button.bind(
+        self.__forward_big_button.pack(padx=5, side=tkinter.LEFT)
+        self.__forward_big_button.bind(
             "<Button-1>", functools.partial(self.perform_seek, "seek_forward_big")
         )
         close_button_image = svg_to_imagetk_photoimage("./images/x.svg")
@@ -2646,6 +2752,17 @@ class TopWindow:
 
     def stop_player(self, event=None):  # @UnusedVariable
         print("stop_player")
+
+        self.__open_video_file_button.config(state="normal")
+        self.__flip_right_and_left_button.config(state="disabled")
+        self.__fullscreen_button.config(state="disabled")
+        self.__backward_big_button.config(state="disabled")
+        self.__backward_small_button.config(state="disabled")
+        self.__stop_video_button.config(state="disabled")
+        self.__play_pause_button.config(state="disabled")
+        self.__forward_small_button.config(state="disabled")
+        self.__forward_big_button.config(state="disabled")
+
         if self.player is not None:
             self.player.set_state(Gst.State.NULL)
         self.video_open = False
@@ -2715,7 +2832,13 @@ class TopWindow:
     def click_open_emitter_settings_button(self, event=None):  # @UnusedVariable
         if self.emitter_settings_dialog and self.emitter_settings_dialog.top:
             return
-        self.emitter_settings_dialog = EmitterSettingsDialog(self.window, self)
+
+        def close_callback():
+            self.emitter_settings_dialog = None
+
+        self.emitter_settings_dialog = EmitterSettingsDialog(
+            self.window, self, close_callback
+        )
         # self.window.wait_window(self.emitter_settings_dialog.top)
 
     def click_open_display_settings_button(self, event=None):  # @UnusedVariable
@@ -2726,19 +2849,26 @@ class TopWindow:
     def process_command_line_arguments(self, args):
         if args.video_path:
             playback_parameters = StartVideoDialog.get_video_history_default_settings()
-            playback_parameters.update(
-                {
-                    "video_file_name": str(pathlib.Path(args.video_path)),
-                    "subtitle_file_name": (
-                        str(pathlib.Path(args.subtitle_path))
-                        if args.subtitle_path
-                        else ""
-                    ),
-                    "frame_packing": args.frame_packing,
-                    "right_eye": args.right_eye,
-                    "display_resolution": args.display_resolution,
-                }
-            )
+            playback_parameters["video_file_name"] = str(pathlib.Path(args.video_path))
+            if args.subtitle_path:
+                playback_parameters["subtitle_file_name"] = str(
+                    pathlib.Path(args.subtitle_path)
+                )
+            if args.frame_packing:
+                frame_packing = args.frame_packing
+            else:
+                frame_packing = StartVideoDialog.get_frame_packing_from_filename(
+                    playback_parameters["video_file_name"]
+                )
+            playback_parameters["frame_packing"] = frame_packing
+            if args.right_eye:
+                playback_parameters["right_eye"] = args.right_eye
+            else:
+                playback_parameters["right_eye"] = (
+                    "right" if frame_packing.startswith("side-by-side") else "top"
+                )
+            if args.display_resolution:
+                playback_parameters["display_resolution"] = args.display_resolution
             self.start_video(playback_parameters)
 
     def click_start_video_button(self, event=None):  # @UnusedVariable
@@ -2789,6 +2919,10 @@ class TopWindow:
             "display_resolution",
             (self.display_settings_dialog.display_resolution_variable.get()),
         )
+        display_zoom_factor = playback_parameters.get(
+            "display_zoom_factor",
+            (self.display_settings_dialog.display_zoom_factor_variable.get()),
+        )
         display_size = self.display_settings_dialog.display_size_variable.get()
         whitebox_brightness = (
             self.display_settings_dialog.whitebox_brightness_variable.get()
@@ -2813,6 +2947,8 @@ class TopWindow:
         if video_file_name == "":
             return
         video_file_path = os.path.realpath(video_file_name)
+        if not os.path.exists(video_file_path):
+            return
         video_file_path = "file:///" + video_file_path.replace("\\", "/").replace(
             ":", "|"
         )
@@ -2952,6 +3088,7 @@ class TopWindow:
         self.pageflipglsink.set_property("right-eye", right_eye)
         self.pageflipglsink.set_property("target-framerate", target_framerate)
         self.pageflipglsink.set_property("display-resolution", display_resolution)
+        self.pageflipglsink.set_property("display-zoom-factor", display_zoom_factor)
         self.pageflipglsink.set_property("display-size", display_size)
         self.pageflipglsink.set_property("whitebox-brightness", whitebox_brightness)
         self.pageflipglsink.set_property(
@@ -2969,9 +3106,7 @@ class TopWindow:
         self.pageflipglsink.set_property("whitebox-size", whitebox_size)
         self.pageflipglsink.set_property("subtitle-font", subtitle_font)
         self.pageflipglsink.set_property("subtitle-size", subtitle_size)
-        self.pageflipglsink.set_property(
-            "subtitle-depth", 0 if calibration_mode else subtitle_depth
-        )  # we want flat subtitles for OSD feedback during calibration
+        self.pageflipglsink.set_property("subtitle-depth", subtitle_depth)
         self.pageflipglsink.set_property(
             "subtitle-vertical-offset", subtitle_vertical_offset
         )
@@ -2994,10 +3129,24 @@ class TopWindow:
         else:
             # if it didn't start after 15 seconds just stop as it probably means there was a gstreamer decoding error
             self.stop_player()
+
+        duration = self.player.query_duration(Gst.Format.TIME).duration
+        self.pageflipglsink.set_property("video-duration", duration)
+
         # even after playback started it can still take 1-2 second until all the renderers are ready
         for _ in range(10):
             time.sleep(0.2)
             self.pageflipglsink.set_property("fullscreen", True)
+
+        self.__open_video_file_button.config(state="disabled")
+        self.__flip_right_and_left_button.config(state="normal")
+        self.__fullscreen_button.config(state="normal")
+        self.__backward_big_button.config(state="normal")
+        self.__backward_small_button.config(state="normal")
+        self.__stop_video_button.config(state="normal")
+        self.__play_pause_button.config(state="normal")
+        self.__forward_small_button.config(state="normal")
+        self.__forward_big_button.config(state="normal")
 
     def click_stop_video_button(self, event=None):  # @UnusedVariable
         self.stop_player()
@@ -3098,20 +3247,20 @@ if __name__ == "__main__":
                             top_window.set_menu_on_top(
                                 True if r == "set_menu_on_top_true" else False
                             )
-                        if r.startswith(
-                            "calibration-"
-                        ) and top_window.pageflipglsink.get_property(
-                            "calibration-mode"
-                        ):
+                        if r.startswith("calibration-"):
                             increment_by = 0
                             target = None
                             (
                                 _,
                                 calibration_target_field,
-                                calibration_decrease_or_increase,
+                                calibration_decrease_or_increase_or_set,
                                 calibration_adjustment_amount,
                             ) = r.split("-")
                             calibration_target_field_map = {
+                                "calibration_mode": (
+                                    "display",
+                                    top_window.display_settings_dialog.calibration_mode_variable,
+                                ),
                                 "white_box_vertical_position": (
                                     "display",
                                     top_window.display_settings_dialog.whitebox_vertical_position_variable,
@@ -3147,31 +3296,47 @@ if __name__ == "__main__":
                             emitter_or_display, target = calibration_target_field_map[
                                 calibration_target_field
                             ]
-                            if calibration_decrease_or_increase == "increase":
-                                increment_by = int(calibration_adjustment_amount)
-                            elif calibration_decrease_or_increase == "decrease":
-                                increment_by = -1 * int(calibration_adjustment_amount)
+                            if calibration_decrease_or_increase_or_set == "increase":
+                                set_to = str(
+                                    int(target.get())
+                                    + int(calibration_adjustment_amount)
+                                )
+                            elif calibration_decrease_or_increase_or_set == "decrease":
+                                set_to = str(
+                                    int(target.get())
+                                    - int(calibration_adjustment_amount)
+                                )
+                            elif calibration_decrease_or_increase_or_set == "set":
+                                set_to = (
+                                    True
+                                    if calibration_adjustment_amount == "true"
+                                    else (
+                                        False
+                                        if calibration_adjustment_amount == "false"
+                                        else calibration_adjustment_amount
+                                    )
+                                )
                             else:
                                 continue
+                            target.set(set_to)
                             if (
                                 emitter_or_display == "emitter"
                                 and top_window.emitter_serial is not None
                             ):
-                                target.set(str(int(target.get()) + increment_by))
                                 top_window.emitter_settings_dialog.click_update_settings_on_emitter()
                             if emitter_or_display == "display":
-                                target.set(str(int(target.get()) + increment_by))
                                 top_window.display_settings_dialog.click_apply_settings_to_active_video()
-                            top_window.pageflipglsink.set_property(
-                                "latest-subtitle-data",
-                                json.dumps(
-                                    {
-                                        "show_now": True,
-                                        "text": f"{calibration_target_field} {target.get()}",
-                                        "duration": 1000000000,
-                                    }
-                                ),
-                            )
+                            if calibration_target_field != "calibration_mode":
+                                top_window.pageflipglsink.set_property(
+                                    "latest-subtitle-data",
+                                    json.dumps(
+                                        {
+                                            "show_now": True,
+                                            "text": f"{calibration_target_field} {target.get()} {'connect emitter!' if emitter_or_display == 'emitter' and top_window.emitter_serial is None else ''}",
+                                            "duration": 1000000000,
+                                        }
+                                    ),
+                                )
 
                 if top_window.subtitle3dsink is not None:
                     latest_subtitle_data = top_window.subtitle3dsink.get_property(

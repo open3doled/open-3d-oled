@@ -152,6 +152,7 @@ class PageflipGLWindow(threading.Thread):
         self.__display_resolution = "1920x1080"
         self.__display_resolution_height = 1080
         self.__display_resolution_width = 1920
+        self.__display_zoom_factor = 100
         self.__display_size = "55"
         self.__pixel_pitch_y = self.__display_resolution_height / (
             int(self.__display_size) * 0.49 * 25.4
@@ -196,6 +197,8 @@ class PageflipGLWindow(threading.Thread):
         self.__latest_subtitle_data = ""
         self.__latest_overlay_timestamp = None
         self.__latest_overlay_timestamp_time_str = None
+        self.__video_duration = 0
+        self.__video_duration_str = ""
         self.__subtitle_font = "arial"
         self.__subtitle_size = 30
         self.__subtitle_depth = 0
@@ -731,11 +734,13 @@ class PageflipGLWindow(threading.Thread):
                         self.__latest_overlay_timestamp_time_str = (
                             new_overlay_timestamp_time_str
                         )
-                        self.__latest_overlay_timestamp = (
-                            self.__generate_text_surface_with_shadow(
-                                self.__subtitle_font_set,
-                                self.__latest_overlay_timestamp_time_str,
-                            )
+                        self.__latest_overlay_timestamp = self.__generate_text_surface_with_shadow(
+                            self.__subtitle_font_set,
+                            (
+                                f"{self.__latest_overlay_timestamp_time_str} of {self.__video_duration_str}"
+                                if self.__video_duration_str != ""
+                                else self.__latest_overlay_timestamp_time_str
+                            ),
                         )
                 else:
                     self.__latest_overlay_timestamp = None
@@ -751,7 +756,7 @@ class PageflipGLWindow(threading.Thread):
                 elif event.type == pg.VIDEORESIZE:
                     self.__window_width, self.__window_height = event.size
                     print(
-                        f"PageflipGLSink Resized window ({self.__window_width}x{self.__window_height} {event.size})"
+                        f"PageflipGLSink Resized window ({self.__window_width}x{self.__window_height})"
                     )
                     self.__update_window_scale_factor()
                 elif event.type == pg.KEYDOWN:
@@ -765,6 +770,14 @@ class PageflipGLWindow(threading.Thread):
                     elif event.key == pg.K_h:
                         self.__show_help_instruction_image = (
                             not self.__show_help_instruction_image
+                        )
+                    elif event.key == pg.K_c:
+                        self.calibration_mode = not self.calibration_mode
+                        self.__requests = ",".join(
+                            self.__requests.split(",")
+                            + [
+                                f"calibration-calibration_mode-set-{'true' if self.__calibration_mode else 'false'}"
+                            ]
                         )
                     elif event.key == pg.K_SPACE:
                         self.__requests = ",".join(
@@ -971,6 +984,7 @@ class PageflipGLWindow(threading.Thread):
                 video_scale_factor = self.__display_resolution_width / in_single_width
             else:  # side borders
                 video_scale_factor = self.__display_resolution_height / in_single_height
+            video_scale_factor = video_scale_factor * self.__display_zoom_factor / 100
             video_width = in_width * video_scale_factor
             video_height = in_height * video_scale_factor
             video_single_width = in_single_width * video_scale_factor
@@ -1085,21 +1099,29 @@ class PageflipGLWindow(threading.Thread):
                 if self.__left_or_bottom_page:
                     # white_box_offset = white_box_horizontal_offset_1
                     overlay_box = self.__overlay_boxes[0]
-                    subtitle_depth_shift = self.__subtitle_depth
+                    subtitle_depth_shift = (
+                        0 if self.__calibration_mode else self.__subtitle_depth
+                    )
                 else:
                     # white_box_offset = white_box_horizontal_offset_2
                     overlay_box = self.__overlay_boxes[1]
-                    subtitle_depth_shift = -self.__subtitle_depth
+                    subtitle_depth_shift = (
+                        0 if self.__calibration_mode else -self.__subtitle_depth
+                    )
             else:
                 assert self.__right_eye in ("left", "bottom")
                 if self.__left_or_bottom_page:
                     # white_box_offset = white_box_horizontal_offset_2
                     overlay_box = self.__overlay_boxes[1]
-                    subtitle_depth_shift = -self.__subtitle_depth
+                    subtitle_depth_shift = (
+                        0 if self.__calibration_mode else -self.__subtitle_depth
+                    )
                 else:
                     # white_box_offset = white_box_horizontal_offset_1
                     overlay_box = self.__overlay_boxes[0]
-                    subtitle_depth_shift = self.__subtitle_depth
+                    subtitle_depth_shift = (
+                        0 if self.__calibration_mode else self.__subtitle_depth
+                    )
 
             if self.__calibration_mode and self.__show_calibration_instruction_image:
                 (
@@ -1385,6 +1407,16 @@ class PageflipGLWindow(threading.Thread):
             )
 
     @property
+    def display_zoom_factor(self):
+        return f"{self.__display_zoom_factor}"
+
+    @display_zoom_factor.setter
+    def display_zoom_factor(self, value):
+        value = int(value)
+        if value != self.__display_zoom_factor:
+            self.__display_zoom_factor = value
+
+    @property
     def display_size(self):
         return f"{self.__display_size}"
 
@@ -1405,8 +1437,9 @@ class PageflipGLWindow(threading.Thread):
 
     @whitebox_brightness.setter
     def whitebox_brightness(self, value):
+        value = int(value)
         if value != self.__white_box_brightness:
-            self.__white_box_brightness = int(value)
+            self.__white_box_brightness = value
             if self.__started:
                 self.__update_overlay_boxes()
 
@@ -1427,8 +1460,9 @@ class PageflipGLWindow(threading.Thread):
 
     @whitebox_vertical_position.setter
     def whitebox_vertical_position(self, value):
+        value = int(value)
         if value != self.__white_box_vertical_position:
-            self.__white_box_vertical_position = int(value)
+            self.__white_box_vertical_position = value
             if self.__started:
                 self.__update_overlay_boxes()
 
@@ -1438,8 +1472,9 @@ class PageflipGLWindow(threading.Thread):
 
     @whitebox_horizontal_position.setter
     def whitebox_horizontal_position(self, value):
+        value = int(value)
         if value != self.__white_box_horizontal_position:
-            self.__white_box_horizontal_position = int(value)
+            self.__white_box_horizontal_position = value
             if self.__started:
                 self.__update_overlay_boxes()
 
@@ -1449,8 +1484,9 @@ class PageflipGLWindow(threading.Thread):
 
     @whitebox_size.setter
     def whitebox_size(self, value):
+        value = int(value)
         if value != self.__white_box_size:
-            self.__white_box_size = int(value)
+            self.__white_box_size = value
             if self.__started:
                 self.__update_overlay_boxes()
 
@@ -1460,8 +1496,9 @@ class PageflipGLWindow(threading.Thread):
 
     @whitebox_horizontal_spacing.setter
     def whitebox_horizontal_spacing(self, value):
+        value = int(value)
         if value != self.__white_box_horizontal_spacing:
-            self.__white_box_horizontal_spacing = int(value)
+            self.__white_box_horizontal_spacing = value
             if self.__started:
                 self.__update_overlay_boxes()
 
@@ -1495,7 +1532,7 @@ class PageflipGLWindow(threading.Thread):
                     parsed_data["start"] = self.__in_image_play_timestamp
                 parsed_data["end"] = parsed_data["start"] + parsed_data["duration"]
                 self.__latest_subtitles.append(parsed_data)
-                if len(self.__latest_subtitles) > 5 or (
+                while len(self.__latest_subtitles) > 5 or (
                     self.__calibration_mode
                     and len(self.__latest_subtitles)
                     > 1  # in calibration mode we only allow 1 subtitle to preven overlapping
@@ -1520,8 +1557,9 @@ class PageflipGLWindow(threading.Thread):
 
     @subtitle_size.setter
     def subtitle_size(self, value):
+        value = int(value)
         if value != self.__subtitle_size:
-            self.__subtitle_size = int(value)
+            self.__subtitle_size = value
             self.__update_subtitle_fonts()
 
     @property
@@ -1530,8 +1568,9 @@ class PageflipGLWindow(threading.Thread):
 
     @subtitle_depth.setter
     def subtitle_depth(self, value):
+        value = int(value)
         if value != self.__subtitle_depth:
-            self.__subtitle_depth = int(value)
+            self.__subtitle_depth = value
 
     @property
     def subtitle_vertical_offset(self):
@@ -1539,8 +1578,9 @@ class PageflipGLWindow(threading.Thread):
 
     @subtitle_vertical_offset.setter
     def subtitle_vertical_offset(self, value):
+        value = int(value)
         if value != self.__subtitle_vertical_offset:
-            self.__subtitle_vertical_offset = int(value)
+            self.__subtitle_vertical_offset = value
 
     @property
     def skip_n_page_flips(self):
@@ -1548,8 +1588,9 @@ class PageflipGLWindow(threading.Thread):
 
     @skip_n_page_flips.setter
     def skip_n_page_flips(self, value):
+        value = int(value)
         if value != self.__skip_n_page_flips:
-            self.__skip_n_page_flips = int(value)
+            self.__skip_n_page_flips = value
 
     @property
     def calibration_mode(self):
@@ -1561,6 +1602,21 @@ class PageflipGLWindow(threading.Thread):
             self.__calibration_mode = value
             if self.__started:
                 self.__update_overlay_boxes()
+                if not value:
+                    while self.__latest_subtitles:
+                        self.__latest_subtitles.popleft()
+
+    @property
+    def video_duration(self):
+        return str(self.__video_duration)
+
+    @video_duration.setter
+    def video_duration(self, value):
+        if value != self.__video_duration:
+            self.__video_duration = value
+            self.__video_duration_str = str(
+                datetime.timedelta(seconds=int(value) // 1000000000)
+            )
 
     def update_image(self, play_timestamp, in_image, in_image_width, in_image_height):
         self.__in_image = in_image
@@ -1627,6 +1683,13 @@ class GstPageflipGLSink(GstBase.BaseSink):
             GObject.TYPE_STRING,
             "Display Resolution",
             "Resolution of the display (eg 1920x1080)",
+            "1920x1080",  # default
+            GObject.ParamFlags.READWRITE,
+        ),
+        "display_zoom_factor": (
+            GObject.TYPE_STRING,
+            "Display Zoom Factor",
+            "Zoom factor to zoom out the video on displays with ghosting at top and/or bottom (integer 0 to 100)",
             "1920x1080",  # default
             GObject.ParamFlags.READWRITE,
         ),
@@ -1756,6 +1819,13 @@ class GstPageflipGLSink(GstBase.BaseSink):
             False,  # default
             GObject.ParamFlags.READWRITE,
         ),
+        "video_duration": (
+            GObject.TYPE_STRING,
+            "Video Duration",
+            "The duration for the video currently being streamed, when set faciliates showing the video duration in the help overlay",
+            "0",  # default
+            GObject.ParamFlags.READWRITE,
+        ),
     }
 
     def __init__(self):
@@ -1767,6 +1837,7 @@ class GstPageflipGLSink(GstBase.BaseSink):
             "right-eye": "right",
             "target-framerate": "0",
             "display-resolution": "1920x1080",
+            "display-zoom-factor": "100",
             "display-size": "55",
             "whitebox-brightness": "255",
             "whitebox-corner-position": "top_left",
@@ -1783,6 +1854,7 @@ class GstPageflipGLSink(GstBase.BaseSink):
             "subtitle-vertical-offset": "150",
             "skip-n-page-flips": "0",
             "calibration-mode": False,
+            "video-duration": "0",
         }
         self.__readonly_parameters = set(("started",))
 

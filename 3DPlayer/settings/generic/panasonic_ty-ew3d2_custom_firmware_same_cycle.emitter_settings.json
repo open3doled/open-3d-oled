@@ -3,7 +3,7 @@
   "ir_frame_delay": "500",
   "ir_frame_duration": "7000",
   "ir_signal_spacing": "30",
-  "opt101_block_signal_detection_delay": "1000",
+  "opt101_block_signal_detection_delay": "7500",
   "opt101_min_threshold_value_to_activate": "10",
   "opt101_detection_threshold": "128",
   "opt101_detection_threshold_repeated_high": "224",
@@ -12,5 +12,6 @@
   "opt101_enable_smart_duplicate_frame_handling": "0",
   "opt101_output_stats": "0",
   "opt101_enable_frequency_analysis_based_duplicate_frame_detection": "0",
-  "opt101_block_n_subsequent_duplicates_variable": "5"
+  "opt101_block_n_subsequent_duplicates_variable": "0",
+  "opt101_ignore_all_duplicates": "1"
 }
