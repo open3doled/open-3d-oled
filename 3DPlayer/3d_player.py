@@ -2972,6 +2972,7 @@ class TopWindow:
             map(int, display_resolution.split("x"))
         )
 
+        # self.player = Gst.ElementFactory.make("playbin", "Playbin")
         self.player = Gst.ElementFactory.make("playbin3", "Playbin")
 
         self.player.set_property("uri", video_file_path)
