@@ -112,15 +112,14 @@ Not Working (Untested)
  - LG C2/G2 OLED (Missing 120hz BFI)
  - LG C3/G3 OLED (Missing 120hz BFI)
 ```
-* If using a display that is not an OLED it is highly recommended that you use ""
-* If you are using a none OLED display or a display for which settings are not already available it is recommended that you set "OPT101 Ignore All Duplicates" to 1 under Emitter Settings. This will ensure the highest possibility the emitter can synchronize to your TV, at the cost of not being able to detect duplicate frames and inform the glasses to resynchornize immediately. It will typically result in a resynchronization delay of 1-2 frames on a duplicate frame, you may be able to get satisfactory results without using this by tuning "OPT101 Block Signal Detection Delay" and "OPT101 Block N Subsequent Duplicates" to match your display characteristics.
-* Performance is best on Linux (tested on Ubuntu 20.04 an 22.04) followed by Windows 10. Windows 11 has problems with excessively dropping frames, it needs to be looked into. I haven't tested on Windows 7.
+* If you are using a non OLED display or a display for which settings are not already available it is recommended that you set "OPT101 Ignore All Duplicates" to 1 under Emitter Settings. This will ensure the highest possibility the emitter can synchronize to your TV, at the cost of not being able to detect duplicate frames and inform the glasses to resynchornize immediately. It will typically result in a resynchronization delay of 1-2 frames on a duplicate frame, you may be able to get satisfactory results without using this by tuning "OPT101 Block Signal Detection Delay" and "OPT101 Block N Subsequent Duplicates" to match your display characteristics.
+* Performance is best on Linux (tested on Ubuntu 20.04 an 22.04) followed by Windows 10 then Windows 11. I haven't tested on Windows 7.
 * On Windows 11 when using a 4k display sometimes Windows decides to use "Active Signal Mode" resolution of 4k and have a "Display Resolution" of 1080p. This confuses the software so make sure your "Active signal mode" and "Display Resolution" match at either 1080P or 4K.
-* If during development you get the error "Unable to find/initialize GStreamer plugin GSTPageflipGLSink." it can sometimes be solved by removing the gstreamer registry cache (and/or rebooting).
+* HDMI bitstream audio passthrough may have issues on some computers, if you are having difficulty it is recommended to disable HDMI audio passthrough and confirm the audio works on your local PC.
+* For test videos beyond the calibration videos below are some recommendations
 ```
-   rm  ~/.cache/gstreamer-1.0/registry.x86_64.bin
-   rm "C:\Users\[USERNAME]\AppData\Local\Microsoft\Windows\INetCache\gstreamer-1.0\registry.x86_64-mingw.bin"
-```   
+   http://bbb3d.renderfarming.net/download.html
+```
 * GStreamer has difficulty processing matroska packed videos with multi-language audio streams that have 5.1 or 7.1 channel audio, removing all but the language you want from the file can solve playback issues. This can be performed with ffmpeg as follows.
 ```
    ffmpeg -i Movie.7xAudio.mkv -map 0:v:0 -map 0:a:0 -c copy Movie.7xAudio.EngOnly.mkv
@@ -130,14 +129,16 @@ Not Working (Untested)
    Goto GPU Registry Location: HKLM\System\CurrentControlSet\Control\Class{4d36e968-e325-11ce-bfc1-08002be10318}\0000 (or 0001/0002/..., check inside 0000 to verify that it is indeed your GPU)
    Add or Update the DalHdmiEnableALLM Entry as follows (Dword: DalHdmiEnableALLM, Value:0 for Disabled, 1 for Enabled)
 ```
-* For test videos beyond the calibration videos below are some recommendations
-```
-   http://bbb3d.renderfarming.net/download.html
-```
 * Emitter not working
 ```
    Sometimes when changing the glasses IR Protocol the emitter will enter an unresponsive state. If this happens save your settings to EEPROM and disconnect and reconnect it's power.
 ```
+
+* If during development you get the error "Unable to find/initialize GStreamer plugin GSTPageflipGLSink." it can sometimes be solved by removing the gstreamer registry cache (and/or rebooting).
+```
+   rm  ~/.cache/gstreamer-1.0/registry.x86_64.bin
+   rm "C:\Users\[USERNAME]\AppData\Local\Microsoft\Windows\INetCache\gstreamer-1.0\registry.x86_64-mingw.bin"
+```   
 
 ## Development Installation Instructions
 
