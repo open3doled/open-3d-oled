@@ -468,11 +468,9 @@ void opt101_sensor_CheckReadings(void)
                         bitSet(PORT_DEBUG_DUPLICATE_FRAME_D16, DEBUG_DUPLICATE_FRAME_D16);
                     }
                     #endif
-                    if (opt101_enable_duplicate_realtime_reporting && (opt101_duplicate_frames_in_a_row_counter % 2) == 1) 
+                    if (opt101_enable_duplicate_realtime_reporting && ((opt101_duplicate_frames_in_a_row_counter % 2) == 1)) 
                     {
-                        opt101_ignore_duplicate[c] = true;
-                        Serial.print("+d ");
-                        Serial.println(c);
+                        Serial.println("+d");
                     }
                     if (opt101_ignore_all_duplicates)
                     {

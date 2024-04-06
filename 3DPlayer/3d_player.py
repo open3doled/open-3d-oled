@@ -138,6 +138,7 @@ class EmitterSerialLineReader(serial.threaded.LineReader):
         self.alive = True
         self.total_left_frames = 0
         self.total_right_frames = 0
+        self.realtime_duplicate_counter = 0
         self.total_duplicate_frames = 0
         self.total_premature_frames = 0
         self.debug_stream_file = None
@@ -170,10 +171,22 @@ class EmitterSerialLineReader(serial.threaded.LineReader):
             self.responses.put(line)
 
     def handle_event(self, event):
-        if event.startswith("+d "):
+        if event.startswith("+d"):
+            self.realtime_duplicate_counter += 1
             if self.__pageflipglsink is not None:
-                print("skipped")
-                self.__pageflipglsink.set_property("skip-n-page-flips", "1")
+                # self.__pageflipglsink.set_property("skip-n-page-flips", "1")
+                if self.__pageflipglsink.get_property("calibration-mode"):
+                    print(self.__pageflipglsink.get_property("calibration-mode"))
+                    self.__pageflipglsink.set_property(
+                        "latest-subtitle-data",
+                        json.dumps(
+                            {
+                                "show_now": True,
+                                "text": f"duplicate frames {self.realtime_duplicate_counter}",
+                                "duration": 500000000,
+                            }
+                        ),
+                    )
         elif (
             event.startswith("+o ")
             and self.debug_opt101_enable_stream_readings_to_serial == 1
