@@ -181,22 +181,51 @@ class EmitterSerialLineReader(serial.threaded.LineReader):
             # self.debug_stream.file.write(f"{event.split(" ")[1]}\n")
             raw_bytes = event.split(" ")[1].encode("iso-8859-1")
             opt101_current_time = (
-                (raw_bytes[8] & 0x7F)
-                | ((raw_bytes[7] & 0x7F) << 7)
-                | ((raw_bytes[6] & 0x7F) << 14)
-                | ((raw_bytes[5] & 0x7F) << 21)
-                | ((raw_bytes[4] & 0x0F) << 28)
+                (raw_bytes[9] & 0x7F)
+                | ((raw_bytes[8] & 0x7F) << 7)
+                | ((raw_bytes[7] & 0x7F) << 14)
+                | ((raw_bytes[6] & 0x7F) << 21)
+                | ((raw_bytes[5] & 0x0F) << 28)
             )
-            left_sensor = ((raw_bytes[4] & 0x70) >> 4) | ((raw_bytes[3] & 0x1F) << 3)
-            right_sensor = ((raw_bytes[3] & 0x60) >> 5) | ((raw_bytes[2] & 0x3F) << 2)
-            duplicate_frames_in_a_row_counter = raw_bytes[1] & 0x7F
-            opt101_duplicate_frame = 1 if (raw_bytes[0] & 0x10) else 0
-            opt101_ignore_duplicate = 1 if (raw_bytes[0] & 0x08) else 0
-            opt101_detected_signal_start_eye = 1 if (raw_bytes[0] & 0x04) else 0
-            opt101_block_signal_detection_until = 1 if (raw_bytes[0] & 0x02) else 0
-            opt101_reading_above_threshold = 1 if (raw_bytes[0] & 0x01) else 0
+            left_sensor = ((raw_bytes[5] & 0x70) >> 4) | ((raw_bytes[4] & 0x1F) << 3)
+            right_sensor = ((raw_bytes[4] & 0x60) >> 5) | ((raw_bytes[3] & 0x3F) << 2)
+            duplicate_frames_in_a_row_counter = raw_bytes[2] & 0x7F
+
+            opt101_duplicate_frame_left = 1 if (raw_bytes[0] & 0x20) else 0
+            opt101_ignore_duplicate_left = 1 if (raw_bytes[0] & 0x10) else 0
+            opt101_reading_above_threshold_left = 1 if (raw_bytes[0] & 0x08) else 0
+            opt101_duplicate_frame_right = 1 if (raw_bytes[0] & 0x04) else 0
+            opt101_ignore_duplicate_right = 1 if (raw_bytes[0] & 0x02) else 0
+            opt101_reading_above_threshold_right = 1 if (raw_bytes[0] & 0x01) else 0
+            opt101_readings_active = 1 if (raw_bytes[1] & 0x08) else 0
+            opt101_detected_signal_start_eye = 1 if (raw_bytes[1] & 0x04) else 0
+            opt101_initiated_sending_ir_signal = 1 if (raw_bytes[1] & 0x02) else 0
+            opt101_block_signal_detection_until = 1 if (raw_bytes[1] & 0x01) else 0
+
+            left_sent_ir = 0
+            right_sent_ir = 0
+            if opt101_initiated_sending_ir_signal:
+                if opt101_detected_signal_start_eye:
+                    left_sent_ir = 1
+                else:
+                    right_sent_ir = 1
+            left_duplicate_detected = 0
+            left_duplicate_ignored = 0
+            if opt101_reading_above_threshold_left:
+                left_duplicate_detected = opt101_duplicate_frame_left
+                if left_duplicate_detected:
+                    left_duplicate_ignored = opt101_ignore_duplicate_left
+            right_duplicate_detected = 0
+            right_duplicate_ignored = 0
+            if opt101_reading_above_threshold_right:
+                right_duplicate_detected = opt101_duplicate_frame_right
+                if right_duplicate_detected:
+                    right_duplicate_ignored = opt101_ignore_duplicate_right
             self.debug_stream_file.write(
-                f"{opt101_current_time},{left_sensor},{right_sensor},{duplicate_frames_in_a_row_counter},{opt101_duplicate_frame},{opt101_ignore_duplicate},{opt101_detected_signal_start_eye},{opt101_block_signal_detection_until},{opt101_reading_above_threshold}\n"
+                f"{opt101_current_time},{left_sensor},{right_sensor},{duplicate_frames_in_a_row_counter},"
+                f"{opt101_block_signal_detection_until},{opt101_readings_active},"
+                f"{opt101_reading_above_threshold_left},{left_duplicate_detected},{left_duplicate_ignored},{left_sent_ir},"
+                f"{opt101_reading_above_threshold_right},{right_duplicate_detected},{right_duplicate_ignored},{right_sent_ir}\n"
             )
         else:
             print("event received:", event)
@@ -900,8 +929,43 @@ class EmitterSettingsDialog:
         )
         debug_row_count += 1
 
-        self.setting_opt101_enable_frequency_analysis_based_duplicate_frame_detection_frame = tkinter.Frame(
+        self.setting_opt101_output_stats_frame = tkinter.Frame(
             self.experimental_and_debug_frame
+        )
+        self.setting_opt101_output_stats_variable = tkinter.StringVar(top)
+        self.setting_opt101_output_stats_variable.set(DEFAULT_OPT101_OUTPUT_STATS)
+        self.setting_opt101_output_stats_label = tkinter.Label(
+            self.setting_opt101_output_stats_frame, text="OPT101 Output Stats: "
+        )
+        self.setting_opt101_output_stats_label.pack(padx=5, side=tkinter.LEFT)
+        self.setting_opt101_output_stats_entry = tkinter.Entry(
+            self.setting_opt101_output_stats_frame,
+            textvariable=self.setting_opt101_output_stats_variable,
+        )
+        self.setting_opt101_output_stats_entry.pack(padx=5, side=tkinter.LEFT)
+        self.setting_opt101_output_stats_tooltip = idlelib.tooltip.Hovertip(
+            self.setting_opt101_output_stats_entry,
+            '(0=Disable, 1=Enable) output statistics (if built with OPT101_ENABLE_STATS) relating to how the opt101 module is processing all lines start with \n"+stats " followed by specific statistics. Turn this off when not experimenting as it may degrade timing accuracy when serial communication occurs',
+            hover_delay=100,
+        )
+        self.setting_opt101_output_stats_frame.grid(
+            row=debug_row_count, column=0, sticky="w"
+        )
+        debug_row_count += 1
+
+        self.frequency_analysis_based_duplicate_frame_detection_frame_top_frame = (
+            tkinter.Frame(
+                self.experimental_and_debug_frame, relief="raised", borderwidth=1
+            )
+        )
+        self.frequency_analysis_based_duplicate_frame_detection_frame_top_frame.grid(
+            row=debug_row_count, column=0, sticky="w"
+        )
+        debug_row_count += 1
+
+        freq_debug_row_count = 0
+        self.setting_opt101_enable_frequency_analysis_based_duplicate_frame_detection_frame = tkinter.Frame(
+            self.frequency_analysis_based_duplicate_frame_detection_frame_top_frame
         )
         self.setting_opt101_enable_frequency_analysis_based_duplicate_frame_detection_variable = tkinter.StringVar(
             top
@@ -929,12 +993,12 @@ class EmitterSettingsDialog:
             hover_delay=100,
         )
         self.setting_opt101_enable_frequency_analysis_based_duplicate_frame_detection_frame.grid(
-            row=debug_row_count, column=0, sticky="w"
+            row=freq_debug_row_count, column=0, sticky="w"
         )
-        debug_row_count += 1
+        freq_debug_row_count += 1
 
         self.setting_opt101_detection_threshold_repeated_high_frame = tkinter.Frame(
-            self.experimental_and_debug_frame
+            self.frequency_analysis_based_duplicate_frame_detection_frame_top_frame
         )
         self.setting_opt101_detection_threshold_repeated_high_variable = (
             tkinter.StringVar(top)
@@ -962,12 +1026,12 @@ class EmitterSettingsDialog:
             hover_delay=100,
         )
         self.setting_opt101_detection_threshold_repeated_high_frame.grid(
-            row=debug_row_count, column=0, sticky="w"
+            row=freq_debug_row_count, column=0, sticky="w"
         )
-        debug_row_count += 1
+        freq_debug_row_count += 1
 
         self.setting_opt101_detection_threshold_repeated_low_frame = tkinter.Frame(
-            self.experimental_and_debug_frame
+            self.frequency_analysis_based_duplicate_frame_detection_frame_top_frame
         )
         self.setting_opt101_detection_threshold_repeated_low_variable = (
             tkinter.StringVar(top)
@@ -995,33 +1059,9 @@ class EmitterSettingsDialog:
             hover_delay=100,
         )
         self.setting_opt101_detection_threshold_repeated_low_frame.grid(
-            row=debug_row_count, column=0, sticky="w"
+            row=freq_debug_row_count, column=0, sticky="w"
         )
-        debug_row_count += 1
-
-        self.setting_opt101_output_stats_frame = tkinter.Frame(
-            self.experimental_and_debug_frame
-        )
-        self.setting_opt101_output_stats_variable = tkinter.StringVar(top)
-        self.setting_opt101_output_stats_variable.set(DEFAULT_OPT101_OUTPUT_STATS)
-        self.setting_opt101_output_stats_label = tkinter.Label(
-            self.setting_opt101_output_stats_frame, text="OPT101 Output Stats: "
-        )
-        self.setting_opt101_output_stats_label.pack(padx=5, side=tkinter.LEFT)
-        self.setting_opt101_output_stats_entry = tkinter.Entry(
-            self.setting_opt101_output_stats_frame,
-            textvariable=self.setting_opt101_output_stats_variable,
-        )
-        self.setting_opt101_output_stats_entry.pack(padx=5, side=tkinter.LEFT)
-        self.setting_opt101_output_stats_tooltip = idlelib.tooltip.Hovertip(
-            self.setting_opt101_output_stats_entry,
-            '(0=Disable, 1=Enable) output statistics (if built with OPT101_ENABLE_STATS) relating to how the opt101 module is processing all lines start with \n"+stats " followed by specific statistics. Turn this off when not experimenting as it may degrade timing accuracy when serial communication occurs',
-            hover_delay=100,
-        )
-        self.setting_opt101_output_stats_frame.grid(
-            row=debug_row_count, column=0, sticky="w"
-        )
-        debug_row_count += 1
+        freq_debug_row_count += 1
 
         self.setting_opt101_debug_frame = tkinter.Frame(
             self.experimental_and_debug_frame
@@ -1396,6 +1436,12 @@ class EmitterSettingsDialog:
                         f'{datetime.datetime.now().strftime("%Y-%m-%d_%H%M%S")}_debug_opt101_stream_readings.csv',
                     ),
                     "wt",
+                )
+                self.main_app.emitter_serial.line_reader.debug_stream_file.write(
+                    "opt101_current_time,left_sensor,right_sensor,duplicate_frames_in_a_row_counter,"
+                    "opt101_block_signal_detection_until,opt101_readings_active,"
+                    "opt101_reading_above_threshold_left,left_duplicate_detected,left_duplicate_ignored,left_sent_ir,"
+                    "opt101_reading_above_threshold_right,right_duplicate_detected,right_duplicate_ignored,right_sent_ir\n"
                 )
 
             self.main_app.emitter_serial.line_reader.debug_opt101_enable_stream_readings_to_serial = (
