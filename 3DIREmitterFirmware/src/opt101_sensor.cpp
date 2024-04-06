@@ -44,6 +44,7 @@ uint8_t opt101_detection_threshold_repeated_low = 32;
 uint32_t opt101_block_signal_detection_delay = OPT101_BLOCK_SIGNAL_DETECTION_DELAY;
 uint8_t opt101_block_n_subsequent_duplicates = 0;
 uint8_t opt101_ignore_all_duplicates = 0;
+uint8_t opt101_sensor_filter_mode = 0;
 uint8_t opt101_min_threshold_value_to_activate = OPT101_MIN_THRESHOLD_VALUE_TO_ACTIVATE;
 uint32_t opt101_block_signal_detection_until = 0;
 uint32_t opt101_disable_debug_detection_flag_after = 0;
@@ -133,6 +134,7 @@ void opt101_sensor_Init(void)
     opt101_block_signal_detection_delay = OPT101_BLOCK_SIGNAL_DETECTION_DELAY;
     opt101_block_n_subsequent_duplicates = 0;
     opt101_ignore_all_duplicates = 0;
+    opt101_sensor_filter_mode = 0;
     opt101_min_threshold_value_to_activate = OPT101_MIN_THRESHOLD_VALUE_TO_ACTIVATE;
     opt101_block_signal_detection_until = 0;
     opt101_disable_debug_detection_flag_after = 0;
@@ -663,12 +665,18 @@ ISR(ADC_vect)
 {
     uint8_t reading = ADCH;
     #ifdef OPT101_FILTER_ADC_SIGNAL
-    uint8_t filter = opt101_readings_realtime_filter[opt101_sensor_channel];
-    uint8_t reading_last = opt101_readings[opt101_sensor_channel];
-    if ((reading > filter && filter > reading_last) || (reading < filter && filter < reading_last)) {
-        opt101_readings[opt101_sensor_channel] = filter;
+    if (opt101_sensor_filter_mode == 1)
+    {
+        uint8_t filter = opt101_readings_realtime_filter[opt101_sensor_channel];
+        uint8_t reading_last = opt101_readings[opt101_sensor_channel];
+        if ((reading > filter && filter > reading_last) || (reading < filter && filter < reading_last)) {
+            opt101_readings[opt101_sensor_channel] = filter;
+        }
+        opt101_readings_realtime_filter[opt101_sensor_channel] = reading;
     }
-    opt101_readings_realtime_filter[opt101_sensor_channel] = reading;
+    else {
+        opt101_readings[opt101_sensor_channel] = reading;
+    }
     #else
     opt101_readings[opt101_sensor_channel] = reading;
     #endif

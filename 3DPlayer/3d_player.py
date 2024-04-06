@@ -49,6 +49,7 @@ DEFAULT_OPT101_ENABLE_FREQUENCY_ANALYSIS_BASED_DUPLICATE_FRAME_DETECTION = "0"
 DEFAULT_OPT101_DETECTION_THRESHOLD_REPEATED_HIGH = "224"
 DEFAULT_OPT101_DETECTION_THRESHOLD_REPEATED_LOW = "32"
 DEFAULT_OPT101_OUTPUT_STATS = "0"
+DEFAULT_OPT101_SENSOR_FILTER_MODE = "0"
 
 # Display Setting Defaults
 DEFAULT_TARGET_FRAMERATE = "0"
@@ -966,6 +967,34 @@ class EmitterSettingsDialog:
         )
         debug_row_count += 1
 
+        self.setting_opt101_sensor_filter_mode_frame = tkinter.Frame(
+            self.experimental_and_debug_frame
+        )
+        self.setting_opt101_sensor_filter_mode_variable = tkinter.StringVar(top)
+        self.setting_opt101_sensor_filter_mode_variable.set(
+            DEFAULT_OPT101_SENSOR_FILTER_MODE
+        )
+        self.setting_opt101_sensor_filter_mode_label = tkinter.Label(
+            self.setting_opt101_sensor_filter_mode_frame,
+            text="OPT101 Sensor Filter Mode: ",
+        )
+        self.setting_opt101_sensor_filter_mode_label.pack(padx=5, side=tkinter.LEFT)
+        self.setting_opt101_sensor_filter_mode_entry = tkinter.Entry(
+            self.setting_opt101_sensor_filter_mode_frame,
+            textvariable=self.setting_opt101_sensor_filter_mode_variable,
+        )
+        self.setting_opt101_sensor_filter_mode_entry.pack(padx=5, side=tkinter.LEFT)
+        self.setting_opt101_sensor_filter_mode_entry.config(state="disabled")
+        self.setting_opt101_sensor_filter_mode_tooltip = idlelib.tooltip.Hovertip(
+            self.setting_opt101_sensor_filter_mode_entry,
+            "(0=Disable (default), 1=Mode 1) (Mode 1: check that the last three readings are trending in the same direction) \n(this may be useful in helping to eliminate the effect of noise caused by IR leds or low signal to noise from the optical sensor.) \n(Only available from firmware version 13 onwards)",
+            hover_delay=100,
+        )
+        self.setting_opt101_sensor_filter_mode_frame.grid(
+            row=debug_row_count, column=0, sticky="w"
+        )
+        debug_row_count += 1
+
         self.frequency_analysis_based_duplicate_frame_detection_frame_top_frame = (
             tkinter.Frame(
                 self.experimental_and_debug_frame, relief="raised", borderwidth=1
@@ -1274,7 +1303,20 @@ class EmitterSettingsDialog:
                         state="normal"
                     )
                 else:
+                    self.setting_opt101_ignore_all_duplicates_variable.set(
+                        DEFAULT_OPT101_IGNORE_ALL_DUPLICATES
+                    )
                     self.setting_opt101_ignore_all_duplicates_entry.config(
+                        state="disabled"
+                    )
+                if self.emitter_firmware_version_int >= 13:
+                    self.setting_opt101_sensor_filter_mode_variable.set(parameters[16])
+                    self.setting_opt101_sensor_filter_mode_entry.config(state="normal")
+                else:
+                    self.setting_opt101_sensor_filter_mode_variable.set(
+                        DEFAULT_OPT101_SENSOR_FILTER_MODE
+                    )
+                    self.setting_opt101_sensor_filter_mode_entry.config(
                         state="disabled"
                     )
 
@@ -1330,6 +1372,8 @@ class EmitterSettingsDialog:
                 command += (
                     f",{self.setting_opt101_ignore_all_duplicates_variable.get()}"
                 )
+            if self.emitter_firmware_version_int >= 13:
+                command += f",{self.setting_opt101_sensor_filter_mode_variable.get()}"
             print(command)
             self.main_app.emitter_serial.line_reader.command(command)
 
@@ -1356,6 +1400,7 @@ class EmitterSettingsDialog:
                     "opt101_block_signal_detection_delay": self.setting_opt101_block_signal_detection_delay_variable.get(),
                     "opt101_block_n_subsequent_duplicates": self.setting_opt101_block_n_subsequent_duplicates_variable.get(),
                     "opt101_ignore_all_duplicates": self.setting_opt101_ignore_all_duplicates_variable.get(),
+                    "opt101_sensor_filter_mode_variable": self.setting_opt101_sensor_filter_mode_variable.get(),
                     "opt101_min_threshold_value_to_activate": self.setting_opt101_min_threshold_value_to_activate_variable.get(),
                     "opt101_detection_threshold": self.setting_opt101_detection_threshold_variable.get(),
                     "opt101_detection_threshold_repeated_high": self.setting_opt101_detection_threshold_repeated_high_variable.get(),
@@ -1422,6 +1467,12 @@ class EmitterSettingsDialog:
             self.setting_opt101_ignore_all_duplicates_variable.set(
                 settings.get(
                     "opt101_ignore_all_duplicates", DEFAULT_OPT101_IGNORE_ALL_DUPLICATES
+                )
+            )
+            self.setting_opt101_sensor_filter_mode_variable.set(
+                settings.get(
+                    "opt101_sensor_filter_mode_variable",
+                    DEFAULT_OPT101_SENSOR_FILTER_MODE,
                 )
             )
 

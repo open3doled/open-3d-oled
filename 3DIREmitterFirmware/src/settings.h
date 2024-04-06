@@ -8,15 +8,14 @@
 #define ENABLE_DEBUG_PIN_OUTPUTS
 #define ENABLE_LOOP_TOGGLE_DEBUG_PIN_D9 // will toggle on/off every time the loop goes round
 #define OPT101_ENABLE_STREAM_READINGS_TO_SERIAL // adds code for command "10" to stream the opt101 readings for the left and right eye over serial to the computer (this is a debug mode, don't use at the same time as show stats or you will get garbled output)
-#define OPT101_ENABLE_IGNORE_DURING_IR // ignore opt101 sensor readings when LED is triggering due to power/light distortions that may cause opt101 sensor reading inconsistencies.
+#define OPT101_ENABLE_IGNORE_DURING_IR // ignore opt101 sensor readings when LED is triggering due to power/light distortions that may cause opt101 sensor reading inconsistencies. (only applies when setting variable is set as well)
 //#define OPT101_ENABLE_IGNORE_DURING_IR_DEBUG_PIN_D2 // use the D2 pin to show when we disable opt101 reading because we are sending an active led token.
 #define OPT101_ENABLE_STATS // prints opt101 statistics every OPT101_UPDATE_STAT_PERIOD micros
 //#define OPT101_ENABLE_FREQUENCY_ANALYSIS_BASED_DUPLICATE_FRAME_DETECTION // enable display update frequency analysis and apply it to duplicate frame detection (this is to aid in support for display types that don't support BFI).
 //#define OPT101_ENABLE_FREQUENCY_ANALYSIS_BASED_DUPLICATE_FRAME_DETECTION_DEBUG_PIN_D2 // use the D2 pin to show when we have a duplicate frame detected using frequency analysis.
-
 #define OPT101_UPDATE_AVERAGE_PERIOD_FOR_FREQUENCY_ANALYSIS_BASED_DUPLICATE_FRAME_DETECTION 7 // this is 2^n so for 7 it will be 128 we do this because then we can do division for average computation with a bitshift.
 #define OPT101_UPDATE_STAT_PERIOD 5000000 // in micros (frequency to update and optionally display stats for the opt101 sensor module)
-//#define OPT101_FILTER_ADC_SIGNAL // This will adjust the code to function properly with the BPW34 photodiode which has no transimpedance amplifier and has an output voltage much closer to 150mV so it can be mistriggered by noise ir led triggering. (beta testers have reported this causes flickering on some pwm backlit displays (possibly because the flashing of the backlight is irratic, perhaps this needs to be a proper peramater disabling for now by default))
+#define OPT101_FILTER_ADC_SIGNAL // This will adjust the code to function properly with the BPW34 photodiode which has no transimpedance amplifier and has an output voltage much closer to 150mV so it can be mistriggered by noise ir led triggering. (beta testers have reported this causes flickering on some pwm backlit displays (possibly because the flashing of the backlight is irratic, perhaps this needs to be a proper peramater disabling for now by default)) (only applies when setting variable is set as well)
 #define NUMBER_OF_IR_PROTOCOLS 7
 
 // defaults LCD 2560x1080 60hz
@@ -154,6 +153,7 @@
 
 /*
 Version History
+13 - Improved sensor logging and added opt101_sensor_filter_mode
 12 - Added support for OPT101_IGNORE_ALL_DUPLICATES to help with displays with strange timings and PWM values
 11 - Added support for OPT101_ENABLE_STREAM_READINGS_TO_SERIAL to help debug timings on new displays
 10 - First official tracked version
@@ -177,6 +177,7 @@ struct EEPROMSettings {
   uint8_t opt101_enable_frequency_analysis_based_duplicate_frame_detection;
   uint8_t opt101_block_n_subsequent_duplicates;
   uint8_t opt101_ignore_all_duplicates;
+  uint8_t opt101_sensor_filter_mode;
 };
 
 #endif /* _SETTINGS_H_ */

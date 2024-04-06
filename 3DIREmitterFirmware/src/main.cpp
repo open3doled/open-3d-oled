@@ -89,6 +89,10 @@ void setup()
             {
                 opt101_ignore_all_duplicates = eeprom_settings.opt101_ignore_all_duplicates;
             }
+            if (eeprom_settings.version >= 13)
+            {
+                opt101_sensor_filter_mode = eeprom_settings.opt101_sensor_filter_mode;
+            }
         }
 
         Serial.println("eeprom read_settings");
@@ -152,6 +156,9 @@ void loop()
             *   the level (as a value between 1-255) above which an increasing light intensity is detected as the beggining of a new frame, 
             *   setting this lower will make the device aware of new frames earlier but also increase the likelihood of duplicate frame
             *   detection if the light intensity doesn't fall below this threshold before the opt101_block_signal_detection_delay completes.
+            * 16) opt101_sensor_filter_mode -
+            *   this is used to apply custom filtering to the ADC readings to try and eliminate spurious noise currently there are only two modes.
+            *   0 - off, 1 - check that the last three readings are trending in the same direction
             * 10) opt101_enable_ignore_during_ir - 
             *   disable the opt101 sensor detection during the time when ir signals are being emitted.
             *   this stops reflections of IR signals from triggering frame start signals.
@@ -170,7 +177,7 @@ void loop()
             *   as a duplicate frame.
             * 9) opt101_detection_threshold_repeated_low - see 5 above
             */
-            for (uint8_t p = 0; p < 17; p++) 
+            for (uint8_t p = 0; p < 18; p++) 
             {
                 end = input.indexOf(",", start);
                 if (end == 255) 
@@ -247,6 +254,10 @@ void loop()
                         {
                             opt101_ignore_all_duplicates = temp;
                         }
+                        else if (p == 16) 
+                        {
+                            opt101_sensor_filter_mode = temp;
+                        }
                     }
                     else if (command == 7 && p == 1 && temp >= 0 && temp < 3) // update glasses mode
                     {
@@ -281,7 +292,8 @@ void loop()
                             opt101_output_stats,
                             opt101_enable_frequency_analysis_based_duplicate_frame_detection,
                             opt101_block_n_subsequent_duplicates,
-                            opt101_ignore_all_duplicates
+                            opt101_ignore_all_duplicates,
+                            opt101_sensor_filter_mode
                         };
                         EEPROM.put(EEPROM_SETTING_ADDRESS, eeprom_settings);
                         Serial.println("OK");
@@ -331,7 +343,9 @@ void loop()
                 Serial.print(",");
                 Serial.print(opt101_block_n_subsequent_duplicates);
                 Serial.print(",");
-                Serial.println(opt101_ignore_all_duplicates);
+                Serial.print(opt101_ignore_all_duplicates);
+                Serial.print(",");
+                Serial.println(opt101_sensor_filter_mode);
                 Serial.println("OK");
             }
             input = String();
