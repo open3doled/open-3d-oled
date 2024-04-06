@@ -37,7 +37,7 @@ uint8_t opt101_enable_stream_readings_to_serial = 0;
 #endif
 uint8_t opt101_enable_frequency_analysis_based_duplicate_frame_detection = 0;
 uint8_t opt101_enable_ignore_during_ir = 0;
-uint8_t opt101_enable_smart_duplicate_frame_handling = 0;
+uint8_t opt101_enable_duplicate_realtime_reporting = 0;
 uint8_t opt101_output_stats = 0;
 uint8_t opt101_detection_threshold = 128;
 uint8_t opt101_detection_threshold_repeated_high = 224;
@@ -124,7 +124,7 @@ void opt101_sensor_Init(void)
     opt101_enable_stream_readings_to_serial = 0;
     #endif
     opt101_enable_frequency_analysis_based_duplicate_frame_detection = 0;
-    opt101_enable_smart_duplicate_frame_handling = 0;
+    opt101_enable_duplicate_realtime_reporting = 0;
     opt101_output_stats = 0;
     opt101_detection_threshold = 128;
     opt101_detection_threshold_repeated_high = 224;
@@ -187,139 +187,13 @@ void opt101_sensor_Init(void)
            // A normal conversion takes 13 ADC clock cycles. The first conversion after the ADC is switched on (ADEN in
            // ADCSRA is set) takes 25 ADC clock cycles in order to initialize the analog circuitry. 
 
-    #ifdef OPT101_ENABLE_PWM_ADC_MIRRORS_DEBUG_PIN_D6_D10
-    // OC4D -> PD7 -> D6 and OC4B -> PB6 -> D10
-    TCCR4A = 0;
-    TCCR4B = 0;
-    TCCR4C = 0;
-    TCCR4D = 0; // count up to OCR4C only
-    //TCCR4B |= (0 << CS43) | (0 << CS42) | (0 << CS41) | (1 << CS40); // 0 0 0 1 ... clkIO/1 (No prescaling)
-    TCCR4B |= (1 << CS43) | (0 << CS42) | (0 << CS41) | (0 << CS40); // 1 0 0 0 ... clkIO/2^8 clkIO/256 (No prescaling)
-    OCR4C = 255; // count up to 255
-    TCCR4A |= (1 << PWM4B) | (1 << COM4B1); // CLEAR at compare with OCR4B, SET at 0x00 
-    TCCR4C |= (1 << PWM4D) | (1 << COM4D1); // CLEAR at compare with OCR4D, SET at 0x00 
-    //TCCR4A |= (1 << PWM4B) | (1 << COM4B1) | (1 << COM4B0); // SET at compare with OCR4B, CLEAR at 0x00 
-    //TCCR4C |= (1 << PWM4D) | (1 << COM4D1) | (1 << COM4D0); // SET at compare with OCR4D, CLEAR at 0x00 
-    OCR4D = 0; // left
-    OCR4B = 0; // right
-    #endif
 
 }
 
-#ifdef OPT101_ENABLE_SPI8_ADC_OUTPUT_DEBUG_PIN_D6_D10
-void debug_output_spi_8_d6_d10(uint8_t data_value) {
-	uint8_t data_value_flipped = data_value;
-    /*
-	uint8_t p;
-	for (p = 0; p < 8; p++) {
-		if (data_value_flipped & 0x80) {
-			bitSet(PORT_DEBUG_PWM_READING_RIGHT_D10, DEBUG_PWM_READING_RIGHT_D10);
-		}
-		else {
-			bitClear(PORT_DEBUG_PWM_READING_RIGHT_D10, DEBUG_PWM_READING_RIGHT_D10);
-		}
-		bitSet(PORT_DEBUG_PWM_READING_LEFT_D6, DEBUG_PWM_READING_LEFT_D6);
-		data_value_flipped <<= 1;
-		bitClear(PORT_DEBUG_PWM_READING_LEFT_D6, DEBUG_PWM_READING_LEFT_D6);
-	}
-    */
-
-    if (data_value_flipped & 0x80) {
-        bitSet(PORT_DEBUG_PWM_READING_RIGHT_D10, DEBUG_PWM_READING_RIGHT_D10);
-    }
-    else {
-        bitClear(PORT_DEBUG_PWM_READING_RIGHT_D10, DEBUG_PWM_READING_RIGHT_D10);
-    }
-    bitSet(PORT_DEBUG_PWM_READING_LEFT_D6, DEBUG_PWM_READING_LEFT_D6);
-    data_value_flipped <<= 1;
-    bitClear(PORT_DEBUG_PWM_READING_LEFT_D6, DEBUG_PWM_READING_LEFT_D6);
-
-    if (data_value_flipped & 0x80) {
-        bitSet(PORT_DEBUG_PWM_READING_RIGHT_D10, DEBUG_PWM_READING_RIGHT_D10);
-    }
-    else {
-        bitClear(PORT_DEBUG_PWM_READING_RIGHT_D10, DEBUG_PWM_READING_RIGHT_D10);
-    }
-    bitSet(PORT_DEBUG_PWM_READING_LEFT_D6, DEBUG_PWM_READING_LEFT_D6);
-    data_value_flipped <<= 1;
-    bitClear(PORT_DEBUG_PWM_READING_LEFT_D6, DEBUG_PWM_READING_LEFT_D6);
-
-    if (data_value_flipped & 0x80) {
-        bitSet(PORT_DEBUG_PWM_READING_RIGHT_D10, DEBUG_PWM_READING_RIGHT_D10);
-    }
-    else {
-        bitClear(PORT_DEBUG_PWM_READING_RIGHT_D10, DEBUG_PWM_READING_RIGHT_D10);
-    }
-    bitSet(PORT_DEBUG_PWM_READING_LEFT_D6, DEBUG_PWM_READING_LEFT_D6);
-    data_value_flipped <<= 1;
-    bitClear(PORT_DEBUG_PWM_READING_LEFT_D6, DEBUG_PWM_READING_LEFT_D6);
-
-    if (data_value_flipped & 0x80) {
-        bitSet(PORT_DEBUG_PWM_READING_RIGHT_D10, DEBUG_PWM_READING_RIGHT_D10);
-    }
-    else {
-        bitClear(PORT_DEBUG_PWM_READING_RIGHT_D10, DEBUG_PWM_READING_RIGHT_D10);
-    }
-    bitSet(PORT_DEBUG_PWM_READING_LEFT_D6, DEBUG_PWM_READING_LEFT_D6);
-    data_value_flipped <<= 1;
-    bitClear(PORT_DEBUG_PWM_READING_LEFT_D6, DEBUG_PWM_READING_LEFT_D6);
-
-    if (data_value_flipped & 0x80) {
-        bitSet(PORT_DEBUG_PWM_READING_RIGHT_D10, DEBUG_PWM_READING_RIGHT_D10);
-    }
-    else {
-        bitClear(PORT_DEBUG_PWM_READING_RIGHT_D10, DEBUG_PWM_READING_RIGHT_D10);
-    }
-    bitSet(PORT_DEBUG_PWM_READING_LEFT_D6, DEBUG_PWM_READING_LEFT_D6);
-    data_value_flipped <<= 1;
-    bitClear(PORT_DEBUG_PWM_READING_LEFT_D6, DEBUG_PWM_READING_LEFT_D6);
-
-    if (data_value_flipped & 0x80) {
-        bitSet(PORT_DEBUG_PWM_READING_RIGHT_D10, DEBUG_PWM_READING_RIGHT_D10);
-    }
-    else {
-        bitClear(PORT_DEBUG_PWM_READING_RIGHT_D10, DEBUG_PWM_READING_RIGHT_D10);
-    }
-    bitSet(PORT_DEBUG_PWM_READING_LEFT_D6, DEBUG_PWM_READING_LEFT_D6);
-    data_value_flipped <<= 1;
-    bitClear(PORT_DEBUG_PWM_READING_LEFT_D6, DEBUG_PWM_READING_LEFT_D6);
-
-    if (data_value_flipped & 0x80) {
-        bitSet(PORT_DEBUG_PWM_READING_RIGHT_D10, DEBUG_PWM_READING_RIGHT_D10);
-    }
-    else {
-        bitClear(PORT_DEBUG_PWM_READING_RIGHT_D10, DEBUG_PWM_READING_RIGHT_D10);
-    }
-    bitSet(PORT_DEBUG_PWM_READING_LEFT_D6, DEBUG_PWM_READING_LEFT_D6);
-    data_value_flipped <<= 1;
-    bitClear(PORT_DEBUG_PWM_READING_LEFT_D6, DEBUG_PWM_READING_LEFT_D6);
-
-    if (data_value_flipped & 0x80) {
-        bitSet(PORT_DEBUG_PWM_READING_RIGHT_D10, DEBUG_PWM_READING_RIGHT_D10);
-    }
-    else {
-        bitClear(PORT_DEBUG_PWM_READING_RIGHT_D10, DEBUG_PWM_READING_RIGHT_D10);
-    }
-    bitSet(PORT_DEBUG_PWM_READING_LEFT_D6, DEBUG_PWM_READING_LEFT_D6);
-    data_value_flipped <<= 1;
-    bitClear(PORT_DEBUG_PWM_READING_LEFT_D6, DEBUG_PWM_READING_LEFT_D6);
-
-    __asm__ __volatile__ ("nop\n\t");
-	bitClear(PORT_DEBUG_PWM_READING_RIGHT_D10, DEBUG_PWM_READING_RIGHT_D10);
-    __asm__ __volatile__ ("nop\n\t");
-    __asm__ __volatile__ ("nop\n\t");
-    __asm__ __volatile__ ("nop\n\t");
-    __asm__ __volatile__ ("nop\n\t");
-    __asm__ __volatile__ ("nop\n\t");
-}
-#endif
 
 #ifdef OPT101_ENABLE_STATS
 void opt101_sensor_PrintStats(void) 
 {
-    #ifdef OPT101_STATS_TOGGLE_D15
-    bitSet(PORT_DEBUG_PORT_D15, DEBUG_PORT_D15);
-    #endif
     switch(opt101_stats_count)
     {
         case 0:
@@ -443,9 +317,6 @@ void opt101_sensor_PrintStats(void)
     #endif
     }
     opt101_stats_count++;
-    #ifdef OPT101_STATS_TOGGLE_D15
-    bitClear(PORT_DEBUG_PORT_D15, DEBUG_PORT_D15);
-    #endif
 }
 
 bool opt101_sensor_FinishPrintStats(void) 
@@ -479,15 +350,6 @@ void opt101_sensor_UpdateThresholds(void)
 void opt101_sensor_CheckReadings(void) 
 {
     uint8_t checked_readings[2]; 
-    #ifdef OPT101_ENABLE_PWM_ADC_MIRRORS_DEBUG_PIN_D6_D10
-    // OC4D -> PD7 -> D6 and OC4B -> PB6 -> D10
-    OCR4D = opt101_readings[1]; // left
-    OCR4B = opt101_readings[0]; // right
-    #endif
-    #ifdef OPT101_ENABLE_SPI8_ADC_OUTPUT_DEBUG_PIN_D6_D10
-    debug_output_spi_8_d6_d10(opt101_readings[1]); // left
-    debug_output_spi_8_d6_d10(opt101_readings[0]); // right
-    #endif
     #ifdef OPT101_ENABLE_IGNORE_DURING_IR
     if (opt101_enable_ignore_during_ir == 0 || (!ir_led_token_active && !ir_led_token_active_countdown))
     {
@@ -597,7 +459,7 @@ void opt101_sensor_CheckReadings(void)
                 {
                     opt101_duplicate_frames_counter++;
                     opt101_duplicate_frames_in_a_row_counter++;
-                    if (opt101_enable_smart_duplicate_frame_handling && (opt101_duplicate_frames_in_a_row_counter % 2) == 1) 
+                    if (opt101_enable_duplicate_realtime_reporting && (opt101_duplicate_frames_in_a_row_counter % 2) == 1) 
                     {
                         opt101_ignore_duplicate = true;
                         Serial.print("+d ");

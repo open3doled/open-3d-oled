@@ -15,13 +15,7 @@
 #include "ir_signal.h"
 #include "opt101_sensor.h"
 
-#ifdef EMITTER_TEST_MODE
-static uint8_t next_eye;
-static uint32_t next_swap_time;
-static uint8_t simulate_frame_skip = 0;
-#else
 static uint32_t next_print;
-#endif
 
 String input;
 uint32_t current_time;
@@ -36,7 +30,7 @@ void setup()
     Serial.println("+startup");
     bitSet(DDR_LED_IR_D3, LED_IR_D3);
     //#ifdef ENABLE_DEBUG_PIN_OUTPUTS
-    //#if EMITTER_TEST_MODE || (defined(OPT101_ENABLE_FREQUENCY_ANALYSIS_BASED_DUPLICATE_FRAME_DETECTION) && defined(OPT101_ENABLE_FREQUENCY_ANALYSIS_BASED_DUPLICATE_FRAME_DETECTION_DEBUG_PIN_D2)) || defined(OPT101_ENABLE_IGNORE_DURING_IR) && defined(OPT101_ENABLE_IGNORE_DURING_IR_DEBUG_PIN_D2) 
+    //#if (defined(OPT101_ENABLE_FREQUENCY_ANALYSIS_BASED_DUPLICATE_FRAME_DETECTION) && defined(OPT101_ENABLE_FREQUENCY_ANALYSIS_BASED_DUPLICATE_FRAME_DETECTION_DEBUG_PIN_D2)) || defined(OPT101_ENABLE_IGNORE_DURING_IR) && defined(OPT101_ENABLE_IGNORE_DURING_IR_DEBUG_PIN_D2) 
 	bitSet(DDR_DEBUG_PORT_D2, DEBUG_PORT_D2);
 	//#endif
 	bitSet(DDR_DEBUG_PORT_D9, DEBUG_PORT_D9);
@@ -51,9 +45,7 @@ void setup()
 	bitSet(DDR_DEBUG_PREMATURE_FRAME_D14, DEBUG_PREMATURE_FRAME_D14);
     //#endif
     ir_signal_init();
-    #ifndef EMITTER_TEST_MODE
     opt101_sensor_Init();
-    #endif
     EEPROMSettings eeprom_settings;
     EEPROM.get(EEPROM_SETTING_ADDRESS, eeprom_settings);
     if (eeprom_settings.check_value == EEPROM_SETTING_CHECKVALUE)
@@ -70,8 +62,8 @@ void setup()
             opt101_detection_threshold_repeated_high = eeprom_settings.opt101_detection_threshold_repeated_high;
             opt101_detection_threshold_repeated_low = eeprom_settings.opt101_detection_threshold_repeated_low;
             opt101_enable_ignore_during_ir = 0;
-            opt101_enable_smart_duplicate_frame_handling =  eeprom_settings.opt101_enable_ignore_during_ir;
-            opt101_output_stats = eeprom_settings.opt101_enable_smart_duplicate_frame_handling;
+            opt101_enable_duplicate_realtime_reporting =  eeprom_settings.opt101_enable_ignore_during_ir;
+            opt101_output_stats = eeprom_settings.opt101_enable_duplicate_realtime_reporting;
             opt101_enable_frequency_analysis_based_duplicate_frame_detection = eeprom_settings.opt101_output_stats;
         }
         else if (eeprom_settings.version > 3) 
@@ -86,7 +78,7 @@ void setup()
             opt101_detection_threshold_repeated_high = eeprom_settings.opt101_detection_threshold_repeated_high;
             opt101_detection_threshold_repeated_low = eeprom_settings.opt101_detection_threshold_repeated_low;
             opt101_enable_ignore_during_ir = eeprom_settings.opt101_enable_ignore_during_ir;
-            opt101_enable_smart_duplicate_frame_handling = eeprom_settings.opt101_enable_smart_duplicate_frame_handling;
+            opt101_enable_duplicate_realtime_reporting = eeprom_settings.opt101_enable_duplicate_realtime_reporting;
             opt101_output_stats = eeprom_settings.opt101_output_stats;
             opt101_enable_frequency_analysis_based_duplicate_frame_detection = eeprom_settings.opt101_enable_frequency_analysis_based_duplicate_frame_detection;
             if (eeprom_settings.version >= 10) 
@@ -163,7 +155,7 @@ void loop()
             * 10) opt101_enable_ignore_during_ir - 
             *   disable the opt101 sensor detection during the time when ir signals are being emitted.
             *   this stops reflections of IR signals from triggering frame start signals.
-            * 11) opt101_enable_smart_duplicate_frame_handling -
+            * 11) opt101_enable_duplicate_realtime_reporting -
             *   detect duplicate frames and pretend they aren't dupes (send no ir) then report the dupe to the host pc so it can skip a second frame immediately. duplicaes are reported to pc in the format "+d 0\n" (right duplicate) "+d 1\n" (left duplicate)
             * 12) opt101_output_stats -
             *   output statistics (if built with OPT101_ENABLE_STATS) relating to how the opt101 module is processing all lines start with "+stats " followed by specific statistics.
@@ -237,7 +229,7 @@ void loop()
                         }
                         else if (p == 11) 
                         {
-                            opt101_enable_smart_duplicate_frame_handling = temp;
+                            opt101_enable_duplicate_realtime_reporting = temp;
                         }
                         else if (p == 12) 
                         {
@@ -285,7 +277,7 @@ void loop()
                             opt101_detection_threshold_repeated_high,
                             opt101_detection_threshold_repeated_low,
                             opt101_enable_ignore_during_ir,
-                            opt101_enable_smart_duplicate_frame_handling,
+                            opt101_enable_duplicate_realtime_reporting,
                             opt101_output_stats,
                             opt101_enable_frequency_analysis_based_duplicate_frame_detection,
                             opt101_block_n_subsequent_duplicates,
@@ -295,15 +287,6 @@ void loop()
                         Serial.println("OK");
                         break;
                     }
-                    #ifdef EMITTER_TEST_MODE
-                    else if (command == 9) // simulate frame skip
-                    {
-                        simulate_frame_skip = 1;
-                        Serial.println("OK");
-                        //Serial.println("Simulate frame skip");
-                        break;
-                    }
-                    #endif
                     #ifdef OPT101_ENABLE_STREAM_READINGS_TO_SERIAL
                     else if (command == 10 && p == 1 && temp >= 0 && temp < 2) // toggle opt101 stream readings to serial
                     {
@@ -340,7 +323,7 @@ void loop()
                 Serial.print(",");
                 Serial.print(opt101_enable_ignore_during_ir);
                 Serial.print(",");
-                Serial.print(opt101_enable_smart_duplicate_frame_handling);
+                Serial.print(opt101_enable_duplicate_realtime_reporting);
                 Serial.print(",");
                 Serial.print(opt101_output_stats);
                 Serial.print(",");
@@ -354,25 +337,6 @@ void loop()
             input = String();
         }
     }
-    #ifdef EMITTER_TEST_MODE
-    if (current_time >= next_swap_time && current_time - next_swap_time < 60000000) 
-    {
-        if (simulate_frame_skip == 1)
-        {
-	        bitSet(PORT_DEBUG_PORT_D2, DEBUG_PORT_D2); // Frame start debug
-        }
-        // TODO: make sure we are doing the right thing here
-        ir_signal_schedule_send(next_eye ? SIGNAL_OPEN_LEFT : SIGNAL_OPEN_RIGHT);
-        next_swap_time = current_time + 8333; // 8333 was ~120 Hz (119.9041 to 120.1923)
-        next_eye = next_eye ? 0 : 1;
-        if (simulate_frame_skip == 1)
-        {
-            next_eye = next_eye ? 0 : 1;
-	        bitClear(PORT_DEBUG_PORT_D2, DEBUG_PORT_D2); // Frame end debug
-            simulate_frame_skip = 0;
-        }
-    }
-    #else
     opt101_sensor_CheckReadings();
     current_time = micros();
     if (current_time >= next_print && current_time - next_print < 60000000) 
@@ -396,5 +360,4 @@ void loop()
         }
         #endif
     }
-    #endif
 }

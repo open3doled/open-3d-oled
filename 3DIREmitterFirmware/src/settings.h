@@ -7,16 +7,12 @@
 
 #define ENABLE_DEBUG_PIN_OUTPUTS
 #define ENABLE_LOOP_TOGGLE_DEBUG_PIN_D9 // will toggle on/off every time the loop goes round
-//#define EMITTER_TEST_MODE // runs in 120 hz output mode locally without using opt101 sensors to test glasses. (also adds code for command "9" to simulate skipped frames)
 #define OPT101_ENABLE_STREAM_READINGS_TO_SERIAL // adds code for command "10" to stream the opt101 readings for the left and right eye over serial to the computer (this is a debug mode, don't use at the same time as show stats or you will get garbled output)
 #define OPT101_ENABLE_IGNORE_DURING_IR // ignore opt101 sensor readings when LED is triggering due to power/light distortions that may cause opt101 sensor reading inconsistencies.
 //#define OPT101_ENABLE_IGNORE_DURING_IR_DEBUG_PIN_D2 // use the D2 pin to show when we disable opt101 reading because we are sending an active led token.
 #define OPT101_ENABLE_STATS // prints opt101 statistics every OPT101_UPDATE_STAT_PERIOD micros
 //#define OPT101_ENABLE_FREQUENCY_ANALYSIS_BASED_DUPLICATE_FRAME_DETECTION // enable display update frequency analysis and apply it to duplicate frame detection (this is to aid in support for display types that don't support BFI).
 //#define OPT101_ENABLE_FREQUENCY_ANALYSIS_BASED_DUPLICATE_FRAME_DETECTION_DEBUG_PIN_D2 // use the D2 pin to show when we have a duplicate frame detected using frequency analysis.
-//#define OPT101_ENABLE_PWM_ADC_MIRRORS_DEBUG_PIN_D6_D10 // this isn't usable any longer because we are using timer 4 in the ir signal scheduler instead.
-//#define OPT101_STATS_TOGGLE_D15 // will toggle on/off every time the stats are printed
-//#define OPT101_ENABLE_SPI8_ADC_OUTPUT_DEBUG_PIN_D6_D10 // this outputs the adc value as an SPI8 value on each call to opt101_sensor_CheckReadings
 
 #define OPT101_UPDATE_AVERAGE_PERIOD_FOR_FREQUENCY_ANALYSIS_BASED_DUPLICATE_FRAME_DETECTION 7 // this is 2^n so for 7 it will be 128 we do this because then we can do division for average computation with a bitshift.
 #define OPT101_UPDATE_STAT_PERIOD 5000000 // in micros (frequency to update and optionally display stats for the opt101 sensor module)
@@ -176,7 +172,7 @@ struct EEPROMSettings {
   uint8_t opt101_detection_threshold_repeated_high;
   uint8_t opt101_detection_threshold_repeated_low;
   uint8_t opt101_enable_ignore_during_ir;
-  uint8_t opt101_enable_smart_duplicate_frame_handling;
+  uint8_t opt101_enable_duplicate_realtime_reporting;
   uint8_t opt101_output_stats;
   uint8_t opt101_enable_frequency_analysis_based_duplicate_frame_detection;
   uint8_t opt101_block_n_subsequent_duplicates;
