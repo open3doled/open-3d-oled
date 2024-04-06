@@ -2972,6 +2972,11 @@ class TopWindow:
             map(int, display_resolution.split("x"))
         )
 
+        # primary_decoder_element_factory = Gst.ElementFactory.find("nvdec")
+        # primary_decoder_element_factory = Gst.ElementFactory.find("vaapih264dec")
+        # if primary_decoder_element_factory:
+        #     primary_decoder_element_factory.set_rank(Gst.Rank.PRIMARY + 1)
+
         # self.player = Gst.ElementFactory.make("playbin", "Playbin")
         self.player = Gst.ElementFactory.make("playbin3", "Playbin")
 
@@ -3149,6 +3154,12 @@ class TopWindow:
         self.__forward_small_button.config(state="normal")
         self.__forward_big_button.config(state="normal")
 
+        Gst.debug_bin_to_dot_file(
+            self.player,
+            Gst.DebugGraphDetails.ALL,
+            "pipeline_" + datetime.datetime.now().strftime("%Y-%m-%d %H%M%S"),
+        )
+
     def click_stop_video_button(self, event=None):  # @UnusedVariable
         self.stop_player()
 
@@ -3160,7 +3171,17 @@ if __name__ == "__main__":
 
     # set base path
     internal_base_path = os.path.dirname(os.path.abspath(__file__))
+    split_base_path = os.path.split(internal_base_path)
+    if "_internal" == split_base_path[1]:
+        base_path = split_base_path[0]
+    else:
+        base_path = internal_base_path
+    os.environ["GST_DEBUG"] = "3"
     os.environ["GST_PLUGIN_PATH"] = internal_base_path
+    os.environ["GST_DEBUG_DUMP_DOT_DIR"] = os.path.join(base_path, "dot_files")
+    # os.environ["GST_VAAPI_ALL_DRIVERS"] = "1"
+    # os.environ["LIBVA_DRIVER_NAME"] = "i965"
+    # os.environ["GST_PLUGIN_FEATURE_RANK"] = "vaapih264dec:MAX"
 
     import gi
 
