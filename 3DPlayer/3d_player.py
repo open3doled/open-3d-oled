@@ -44,7 +44,7 @@ DEFAULT_OPT101_IGNORE_ALL_DUPLICATES = "0"
 DEFAULT_OPT101_MIN_THRESHOLD_VALUE_TO_ACTIVATE = "10"
 DEFAULT_OPT101_DETECTION_THRESHOLD = "128"
 DEFAULT_OPT101_ENABLE_IGNORE_DURING_IR = "0"
-DEFAULT_OPT101_ENABLE_SMART_DUPLICATE_FRAME_HANDLING = "0"
+DEFAULT_OPT101_ENABLE_DUPLICATE_REALTIME_REPORTING = "0"
 DEFAULT_OPT101_ENABLE_FREQUENCY_ANALYSIS_BASED_DUPLICATE_FRAME_DETECTION = "0"
 DEFAULT_OPT101_DETECTION_THRESHOLD_REPEATED_HIGH = "224"
 DEFAULT_OPT101_DETECTION_THRESHOLD_REPEATED_LOW = "32"
@@ -859,7 +859,7 @@ class EmitterSettingsDialog:
         )
         self.setting_opt101_enable_ignore_during_ir_tooltip = idlelib.tooltip.Hovertip(
             self.setting_opt101_enable_ignore_during_ir_entry,
-            "(experimental) disable the opt101 sensor detection during the time when ir signals are being emitted. \nthis stops reflections of IR signals from triggering frame start signals.",
+            "(experimental) disable the opt101 sensor detection during the time when ir signals are being emitted. \nthis stops reflections of IR signals OR voltage ripples on vcc from incorrectly triggering frame start signals.",
             hover_delay=100,
         )
         self.setting_opt101_enable_ignore_during_ir_frame.grid(
@@ -867,35 +867,35 @@ class EmitterSettingsDialog:
         )
         debug_row_count += 1
 
-        self.setting_opt101_enable_smart_duplicate_frame_handling_frame = tkinter.Frame(
+        self.setting_opt101_enable_duplicate_realtime_reporting_frame = tkinter.Frame(
             self.experimental_and_debug_frame
         )
-        self.setting_opt101_enable_smart_duplicate_frame_handling_variable = (
+        self.setting_opt101_enable_duplicate_realtime_reporting_variable = (
             tkinter.StringVar(top)
         )
-        self.setting_opt101_enable_smart_duplicate_frame_handling_variable.set(
-            DEFAULT_OPT101_ENABLE_SMART_DUPLICATE_FRAME_HANDLING
+        self.setting_opt101_enable_duplicate_realtime_reporting_variable.set(
+            DEFAULT_OPT101_ENABLE_DUPLICATE_REALTIME_REPORTING
         )
-        self.setting_opt101_enable_smart_duplicate_frame_handling_label = tkinter.Label(
-            self.setting_opt101_enable_smart_duplicate_frame_handling_frame,
-            text="Enable Smart Duplicate Frame Handling*: ",
+        self.setting_opt101_enable_duplicate_realtime_reporting_label = tkinter.Label(
+            self.setting_opt101_enable_duplicate_realtime_reporting_frame,
+            text="Enable Duplicate Realtime Reporting: ",
         )
-        self.setting_opt101_enable_smart_duplicate_frame_handling_label.pack(
+        self.setting_opt101_enable_duplicate_realtime_reporting_label.pack(
             padx=5, side=tkinter.LEFT
         )
-        self.setting_opt101_enable_smart_duplicate_frame_handling_entry = tkinter.Entry(
-            self.setting_opt101_enable_smart_duplicate_frame_handling_frame,
-            textvariable=self.setting_opt101_enable_smart_duplicate_frame_handling_variable,
+        self.setting_opt101_enable_duplicate_realtime_reporting_entry = tkinter.Entry(
+            self.setting_opt101_enable_duplicate_realtime_reporting_frame,
+            textvariable=self.setting_opt101_enable_duplicate_realtime_reporting_variable,
         )
-        self.setting_opt101_enable_smart_duplicate_frame_handling_entry.pack(
+        self.setting_opt101_enable_duplicate_realtime_reporting_entry.pack(
             padx=5, side=tkinter.LEFT
         )
-        self.setting_opt101_enable_smart_duplicate_frame_handling_tooltip = idlelib.tooltip.Hovertip(
-            self.setting_opt101_enable_smart_duplicate_frame_handling_entry,
-            '*experimental* *doesnt work - too much round trip latency* detect duplicate frames and pretend they arent dupes (send no ir) then report the dupe to the host pc so it can skip a second \nframe immediately. duplicaes are reported to pc in the format "+d 0" (right duplicate) "+d 1" (left duplicate)',
+        self.setting_opt101_enable_duplicate_realtime_reporting_tooltip = idlelib.tooltip.Hovertip(
+            self.setting_opt101_enable_duplicate_realtime_reporting_entry,
+            "When enabled (set to 1) the emitter will send a signal to the PC every time it detects a duplicate frame. This can be useful during calibration to see if the emitter thinks the pc is sending duplicate frames.",
             hover_delay=100,
         )
-        self.setting_opt101_enable_smart_duplicate_frame_handling_frame.grid(
+        self.setting_opt101_enable_duplicate_realtime_reporting_frame.grid(
             row=debug_row_count, column=0, sticky="w"
         )
         debug_row_count += 1
@@ -1160,7 +1160,7 @@ class EmitterSettingsDialog:
                     opt101_detection_threshold_repeated_high,
                     opt101_detection_threshold_repeated_low,
                     opt101_enable_ignore_during_ir,
-                    opt101_enable_smart_duplicate_frame_handling,
+                    opt101_enable_duplicate_realtime_reporting,
                     opt101_output_stats,
                     opt101_enable_frequency_analysis_based_duplicate_frame_detection,
                 ) = parameters[:14]
@@ -1191,8 +1191,8 @@ class EmitterSettingsDialog:
                 self.setting_opt101_enable_ignore_during_ir_variable.set(
                     opt101_enable_ignore_during_ir
                 )
-                self.setting_opt101_enable_smart_duplicate_frame_handling_variable.set(
-                    opt101_enable_smart_duplicate_frame_handling
+                self.setting_opt101_enable_duplicate_realtime_reporting_variable.set(
+                    opt101_enable_duplicate_realtime_reporting
                 )
                 self.setting_opt101_output_stats_variable.set(opt101_output_stats)
                 self.setting_opt101_enable_frequency_analysis_based_duplicate_frame_detection_variable.set(
@@ -1267,7 +1267,7 @@ class EmitterSettingsDialog:
                 f"{self.setting_opt101_detection_threshold_repeated_high_variable.get()},"
                 f"{self.setting_opt101_detection_threshold_repeated_low_variable.get()},"
                 f"{self.setting_opt101_enable_ignore_during_ir_variable.get()},"
-                f"{self.setting_opt101_enable_smart_duplicate_frame_handling_variable.get()},"
+                f"{self.setting_opt101_enable_duplicate_realtime_reporting_variable.get()},"
                 f"{self.setting_opt101_output_stats_variable.get()},"
                 f"{self.setting_opt101_enable_frequency_analysis_based_duplicate_frame_detection_variable.get()}"
             )
@@ -1308,7 +1308,7 @@ class EmitterSettingsDialog:
                     "opt101_detection_threshold_repeated_high": self.setting_opt101_detection_threshold_repeated_high_variable.get(),
                     "opt101_detection_threshold_repeated_low": self.setting_opt101_detection_threshold_repeated_low_variable.get(),
                     "opt101_enable_ignore_during_ir": self.setting_opt101_enable_ignore_during_ir_variable.get(),
-                    "opt101_enable_smart_duplicate_frame_handling": self.setting_opt101_enable_smart_duplicate_frame_handling_variable.get(),
+                    "opt101_enable_duplicate_realtime_reporting": self.setting_opt101_enable_duplicate_realtime_reporting_variable.get(),
                     "opt101_output_stats": self.setting_opt101_output_stats_variable.get(),
                     "opt101_enable_frequency_analysis_based_duplicate_frame_detection": self.setting_opt101_enable_frequency_analysis_based_duplicate_frame_detection_variable.get(),
                 },
@@ -1349,8 +1349,8 @@ class EmitterSettingsDialog:
             self.setting_opt101_enable_ignore_during_ir_variable.set(
                 settings["opt101_enable_ignore_during_ir"]
             )
-            self.setting_opt101_enable_smart_duplicate_frame_handling_variable.set(
-                settings["opt101_enable_smart_duplicate_frame_handling"]
+            self.setting_opt101_enable_duplicate_realtime_reporting_variable.set(
+                settings["opt101_enable_duplicate_realtime_reporting"]
             )
             self.setting_opt101_output_stats_variable.set(
                 settings["opt101_output_stats"]
