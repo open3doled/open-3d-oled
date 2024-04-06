@@ -1747,7 +1747,7 @@ class GstPageflipGLSink(GstBase.BaseSink):
             "Start",
             "Start the player (last action after configuration properties have been set)",
             False,  # default
-            GObject.ParamFlags.READWRITE,
+            GObject.ParamFlags.WRITABLE,
         ),
         "close": (
             GObject.TYPE_BOOLEAN,
