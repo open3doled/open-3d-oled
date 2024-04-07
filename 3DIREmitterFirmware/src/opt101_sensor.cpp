@@ -31,13 +31,12 @@ uint32_t opt101_stats_count = 0;
 #endif
 
 uint32_t opt101_current_time;
-bool opt101_reading_above_threshold;
 #ifdef OPT101_ENABLE_STREAM_READINGS_TO_SERIAL
 uint8_t opt101_enable_stream_readings_to_serial = 0;
 #endif
 uint8_t opt101_enable_frequency_analysis_based_duplicate_frame_detection = 0;
 uint8_t opt101_enable_ignore_during_ir = 0;
-uint8_t opt101_enable_smart_duplicate_frame_handling = 0;
+uint8_t opt101_enable_duplicate_realtime_reporting = 0;
 uint8_t opt101_output_stats = 0;
 uint8_t opt101_detection_threshold = 128;
 uint8_t opt101_detection_threshold_repeated_high = 224;
@@ -45,15 +44,18 @@ uint8_t opt101_detection_threshold_repeated_low = 32;
 uint32_t opt101_block_signal_detection_delay = OPT101_BLOCK_SIGNAL_DETECTION_DELAY;
 uint8_t opt101_block_n_subsequent_duplicates = 0;
 uint8_t opt101_ignore_all_duplicates = 0;
+uint8_t opt101_sensor_filter_mode = 0;
 uint8_t opt101_min_threshold_value_to_activate = OPT101_MIN_THRESHOLD_VALUE_TO_ACTIVATE;
 uint32_t opt101_block_signal_detection_until = 0;
 uint32_t opt101_disable_debug_detection_flag_after = 0;
 uint8_t opt101_detected_signal_start_eye = 0;
 bool opt101_detected_signal_start_eye_set = false;
+bool opt101_initiated_sending_ir_signal = false;
 volatile uint8_t opt101_sensor_channel = 0;
 bool opt101_readings_active = false;
-bool opt101_ignore_duplicate = false;
-bool opt101_duplicate_frame = false;
+bool opt101_reading_above_threshold[OPT101_CHANNELS];
+bool opt101_ignore_duplicate[OPT101_CHANNELS];
+bool opt101_duplicate_frame[OPT101_CHANNELS];
 uint16_t opt101_duplicate_frames_in_a_row_counter = 0;
 uint8_t other_channel = 0;
 uint8_t opt101_readings_last[OPT101_CHANNELS];
@@ -124,7 +126,7 @@ void opt101_sensor_Init(void)
     opt101_enable_stream_readings_to_serial = 0;
     #endif
     opt101_enable_frequency_analysis_based_duplicate_frame_detection = 0;
-    opt101_enable_smart_duplicate_frame_handling = 0;
+    opt101_enable_duplicate_realtime_reporting = 0;
     opt101_output_stats = 0;
     opt101_detection_threshold = 128;
     opt101_detection_threshold_repeated_high = 224;
@@ -132,15 +134,18 @@ void opt101_sensor_Init(void)
     opt101_block_signal_detection_delay = OPT101_BLOCK_SIGNAL_DETECTION_DELAY;
     opt101_block_n_subsequent_duplicates = 0;
     opt101_ignore_all_duplicates = 0;
+    opt101_sensor_filter_mode = 0;
     opt101_min_threshold_value_to_activate = OPT101_MIN_THRESHOLD_VALUE_TO_ACTIVATE;
     opt101_block_signal_detection_until = 0;
     opt101_disable_debug_detection_flag_after = 0;
     opt101_detected_signal_start_eye = 0;
     opt101_detected_signal_start_eye_set = false;
+    opt101_initiated_sending_ir_signal = false;
     opt101_sensor_channel = 0;
     opt101_readings_active = false;
-    opt101_ignore_duplicate = false;
-    opt101_duplicate_frame = false;
+    memset((void *)opt101_reading_above_threshold, 0, sizeof(opt101_reading_above_threshold));
+    memset((void *)opt101_ignore_duplicate, 0, sizeof(opt101_ignore_duplicate));
+    memset((void *)opt101_duplicate_frame, 0, sizeof(opt101_duplicate_frame));
     opt101_duplicate_frames_in_a_row_counter = 0;
     other_channel = 0;
 
@@ -187,139 +192,13 @@ void opt101_sensor_Init(void)
            // A normal conversion takes 13 ADC clock cycles. The first conversion after the ADC is switched on (ADEN in
            // ADCSRA is set) takes 25 ADC clock cycles in order to initialize the analog circuitry. 
 
-    #ifdef OPT101_ENABLE_PWM_ADC_MIRRORS_DEBUG_PIN_D6_D10
-    // OC4D -> PD7 -> D6 and OC4B -> PB6 -> D10
-    TCCR4A = 0;
-    TCCR4B = 0;
-    TCCR4C = 0;
-    TCCR4D = 0; // count up to OCR4C only
-    //TCCR4B |= (0 << CS43) | (0 << CS42) | (0 << CS41) | (1 << CS40); // 0 0 0 1 ... clkIO/1 (No prescaling)
-    TCCR4B |= (1 << CS43) | (0 << CS42) | (0 << CS41) | (0 << CS40); // 1 0 0 0 ... clkIO/2^8 clkIO/256 (No prescaling)
-    OCR4C = 255; // count up to 255
-    TCCR4A |= (1 << PWM4B) | (1 << COM4B1); // CLEAR at compare with OCR4B, SET at 0x00 
-    TCCR4C |= (1 << PWM4D) | (1 << COM4D1); // CLEAR at compare with OCR4D, SET at 0x00 
-    //TCCR4A |= (1 << PWM4B) | (1 << COM4B1) | (1 << COM4B0); // SET at compare with OCR4B, CLEAR at 0x00 
-    //TCCR4C |= (1 << PWM4D) | (1 << COM4D1) | (1 << COM4D0); // SET at compare with OCR4D, CLEAR at 0x00 
-    OCR4D = 0; // left
-    OCR4B = 0; // right
-    #endif
 
 }
 
-#ifdef OPT101_ENABLE_SPI8_ADC_OUTPUT_DEBUG_PIN_D6_D10
-void debug_output_spi_8_d6_d10(uint8_t data_value) {
-	uint8_t data_value_flipped = data_value;
-    /*
-	uint8_t p;
-	for (p = 0; p < 8; p++) {
-		if (data_value_flipped & 0x80) {
-			bitSet(PORT_DEBUG_PWM_READING_RIGHT_D10, DEBUG_PWM_READING_RIGHT_D10);
-		}
-		else {
-			bitClear(PORT_DEBUG_PWM_READING_RIGHT_D10, DEBUG_PWM_READING_RIGHT_D10);
-		}
-		bitSet(PORT_DEBUG_PWM_READING_LEFT_D6, DEBUG_PWM_READING_LEFT_D6);
-		data_value_flipped <<= 1;
-		bitClear(PORT_DEBUG_PWM_READING_LEFT_D6, DEBUG_PWM_READING_LEFT_D6);
-	}
-    */
-
-    if (data_value_flipped & 0x80) {
-        bitSet(PORT_DEBUG_PWM_READING_RIGHT_D10, DEBUG_PWM_READING_RIGHT_D10);
-    }
-    else {
-        bitClear(PORT_DEBUG_PWM_READING_RIGHT_D10, DEBUG_PWM_READING_RIGHT_D10);
-    }
-    bitSet(PORT_DEBUG_PWM_READING_LEFT_D6, DEBUG_PWM_READING_LEFT_D6);
-    data_value_flipped <<= 1;
-    bitClear(PORT_DEBUG_PWM_READING_LEFT_D6, DEBUG_PWM_READING_LEFT_D6);
-
-    if (data_value_flipped & 0x80) {
-        bitSet(PORT_DEBUG_PWM_READING_RIGHT_D10, DEBUG_PWM_READING_RIGHT_D10);
-    }
-    else {
-        bitClear(PORT_DEBUG_PWM_READING_RIGHT_D10, DEBUG_PWM_READING_RIGHT_D10);
-    }
-    bitSet(PORT_DEBUG_PWM_READING_LEFT_D6, DEBUG_PWM_READING_LEFT_D6);
-    data_value_flipped <<= 1;
-    bitClear(PORT_DEBUG_PWM_READING_LEFT_D6, DEBUG_PWM_READING_LEFT_D6);
-
-    if (data_value_flipped & 0x80) {
-        bitSet(PORT_DEBUG_PWM_READING_RIGHT_D10, DEBUG_PWM_READING_RIGHT_D10);
-    }
-    else {
-        bitClear(PORT_DEBUG_PWM_READING_RIGHT_D10, DEBUG_PWM_READING_RIGHT_D10);
-    }
-    bitSet(PORT_DEBUG_PWM_READING_LEFT_D6, DEBUG_PWM_READING_LEFT_D6);
-    data_value_flipped <<= 1;
-    bitClear(PORT_DEBUG_PWM_READING_LEFT_D6, DEBUG_PWM_READING_LEFT_D6);
-
-    if (data_value_flipped & 0x80) {
-        bitSet(PORT_DEBUG_PWM_READING_RIGHT_D10, DEBUG_PWM_READING_RIGHT_D10);
-    }
-    else {
-        bitClear(PORT_DEBUG_PWM_READING_RIGHT_D10, DEBUG_PWM_READING_RIGHT_D10);
-    }
-    bitSet(PORT_DEBUG_PWM_READING_LEFT_D6, DEBUG_PWM_READING_LEFT_D6);
-    data_value_flipped <<= 1;
-    bitClear(PORT_DEBUG_PWM_READING_LEFT_D6, DEBUG_PWM_READING_LEFT_D6);
-
-    if (data_value_flipped & 0x80) {
-        bitSet(PORT_DEBUG_PWM_READING_RIGHT_D10, DEBUG_PWM_READING_RIGHT_D10);
-    }
-    else {
-        bitClear(PORT_DEBUG_PWM_READING_RIGHT_D10, DEBUG_PWM_READING_RIGHT_D10);
-    }
-    bitSet(PORT_DEBUG_PWM_READING_LEFT_D6, DEBUG_PWM_READING_LEFT_D6);
-    data_value_flipped <<= 1;
-    bitClear(PORT_DEBUG_PWM_READING_LEFT_D6, DEBUG_PWM_READING_LEFT_D6);
-
-    if (data_value_flipped & 0x80) {
-        bitSet(PORT_DEBUG_PWM_READING_RIGHT_D10, DEBUG_PWM_READING_RIGHT_D10);
-    }
-    else {
-        bitClear(PORT_DEBUG_PWM_READING_RIGHT_D10, DEBUG_PWM_READING_RIGHT_D10);
-    }
-    bitSet(PORT_DEBUG_PWM_READING_LEFT_D6, DEBUG_PWM_READING_LEFT_D6);
-    data_value_flipped <<= 1;
-    bitClear(PORT_DEBUG_PWM_READING_LEFT_D6, DEBUG_PWM_READING_LEFT_D6);
-
-    if (data_value_flipped & 0x80) {
-        bitSet(PORT_DEBUG_PWM_READING_RIGHT_D10, DEBUG_PWM_READING_RIGHT_D10);
-    }
-    else {
-        bitClear(PORT_DEBUG_PWM_READING_RIGHT_D10, DEBUG_PWM_READING_RIGHT_D10);
-    }
-    bitSet(PORT_DEBUG_PWM_READING_LEFT_D6, DEBUG_PWM_READING_LEFT_D6);
-    data_value_flipped <<= 1;
-    bitClear(PORT_DEBUG_PWM_READING_LEFT_D6, DEBUG_PWM_READING_LEFT_D6);
-
-    if (data_value_flipped & 0x80) {
-        bitSet(PORT_DEBUG_PWM_READING_RIGHT_D10, DEBUG_PWM_READING_RIGHT_D10);
-    }
-    else {
-        bitClear(PORT_DEBUG_PWM_READING_RIGHT_D10, DEBUG_PWM_READING_RIGHT_D10);
-    }
-    bitSet(PORT_DEBUG_PWM_READING_LEFT_D6, DEBUG_PWM_READING_LEFT_D6);
-    data_value_flipped <<= 1;
-    bitClear(PORT_DEBUG_PWM_READING_LEFT_D6, DEBUG_PWM_READING_LEFT_D6);
-
-    __asm__ __volatile__ ("nop\n\t");
-	bitClear(PORT_DEBUG_PWM_READING_RIGHT_D10, DEBUG_PWM_READING_RIGHT_D10);
-    __asm__ __volatile__ ("nop\n\t");
-    __asm__ __volatile__ ("nop\n\t");
-    __asm__ __volatile__ ("nop\n\t");
-    __asm__ __volatile__ ("nop\n\t");
-    __asm__ __volatile__ ("nop\n\t");
-}
-#endif
 
 #ifdef OPT101_ENABLE_STATS
 void opt101_sensor_PrintStats(void) 
 {
-    #ifdef OPT101_STATS_TOGGLE_D15
-    bitSet(PORT_DEBUG_PORT_D15, DEBUG_PORT_D15);
-    #endif
     switch(opt101_stats_count)
     {
         case 0:
@@ -443,9 +322,6 @@ void opt101_sensor_PrintStats(void)
     #endif
     }
     opt101_stats_count++;
-    #ifdef OPT101_STATS_TOGGLE_D15
-    bitClear(PORT_DEBUG_PORT_D15, DEBUG_PORT_D15);
-    #endif
 }
 
 bool opt101_sensor_FinishPrintStats(void) 
@@ -479,15 +355,6 @@ void opt101_sensor_UpdateThresholds(void)
 void opt101_sensor_CheckReadings(void) 
 {
     uint8_t checked_readings[2]; 
-    #ifdef OPT101_ENABLE_PWM_ADC_MIRRORS_DEBUG_PIN_D6_D10
-    // OC4D -> PD7 -> D6 and OC4B -> PB6 -> D10
-    OCR4D = opt101_readings[1]; // left
-    OCR4B = opt101_readings[0]; // right
-    #endif
-    #ifdef OPT101_ENABLE_SPI8_ADC_OUTPUT_DEBUG_PIN_D6_D10
-    debug_output_spi_8_d6_d10(opt101_readings[1]); // left
-    debug_output_spi_8_d6_d10(opt101_readings[0]); // right
-    #endif
     #ifdef OPT101_ENABLE_IGNORE_DURING_IR
     if (opt101_enable_ignore_during_ir == 0 || (!ir_led_token_active && !ir_led_token_active_countdown))
     {
@@ -506,7 +373,7 @@ void opt101_sensor_CheckReadings(void)
             #ifdef OPT101_ENABLE_FREQUENCY_ANALYSIS_BASED_DUPLICATE_FRAME_DETECTION
             other_channel = (c == 1 ? 0 : 1);
             #endif
-            opt101_reading_above_threshold = false;
+            opt101_reading_above_threshold[c] = false;
             if (opt101_readings_active)
             {
                 /*
@@ -516,7 +383,7 @@ void opt101_sensor_CheckReadings(void)
                 if (last_reading < checked_readings[c] && 
                     checked_readings[c] >= opt101_readings_threshold[c])
                 {
-                    opt101_reading_above_threshold = true;
+                    opt101_reading_above_threshold[c] = true;
                     // This is logic to ensure on LCD's where there may be pixel persistence with PWM backlight displays.
                     // If the current eye signal is the same as the last detected one then if the other eyes signal is 
                     // increasing and the number of duplicates on this eye less than opt101_block_n_subsequent_duplicates and
@@ -527,7 +394,7 @@ void opt101_sensor_CheckReadings(void)
                         other_channel = (c == 1 ? 0 : 1);
                         if (checked_readings[other_channel] >= last_reading && 
                             checked_readings[other_channel] >= ((opt101_readings_threshold[other_channel] >> 4) + (opt101_readings_threshold[other_channel] >> 2))) {
-                            opt101_reading_above_threshold = false;
+                            opt101_reading_above_threshold[c] = false;
                         }
                     }
                 }
@@ -548,7 +415,7 @@ void opt101_sensor_CheckReadings(void)
                         opt101_contiguous_non_decreasing_readings_above_threshold[c] += 1;
                         if (opt101_contiguous_non_decreasing_readings_above_threshold[c] > OPT101_TARGET_CONTIGUOUS_NON_DECREASING_READINGS_ABOVE_THRESHOLD)
                         {
-                            opt101_reading_above_threshold = true;
+                            opt101_reading_above_threshold[c] = true;
                             #ifdef ENABLE_DEBUG_PIN_OUTPUTS
                             #ifdef OPT101_ENABLE_FREQUENCY_ANALYSIS_BASED_DUPLICATE_FRAME_DETECTION_DEBUG_PIN_D2
                             bitSet(PORT_DEBUG_PORT_D2, DEBUG_PORT_D2);
@@ -562,7 +429,7 @@ void opt101_sensor_CheckReadings(void)
                 }
             #endif
             }
-            if (opt101_reading_above_threshold)
+            if (opt101_reading_above_threshold[c])
             {
                 if (opt101_current_time == 0)
                 {
@@ -591,27 +458,31 @@ void opt101_sensor_CheckReadings(void)
                 opt101_last_detection_time = opt101_current_time;
                 opt101_last_detection_time_initialized = true;
                 #endif
-                opt101_ignore_duplicate = false;
-                opt101_duplicate_frame = (opt101_detected_signal_start_eye == c && opt101_detected_signal_start_eye_set);
-                if (opt101_duplicate_frame) 
+                opt101_ignore_duplicate[c] = false;
+                opt101_duplicate_frame[c] = (opt101_detected_signal_start_eye == c && opt101_detected_signal_start_eye_set);
+                if (opt101_duplicate_frame[c]) 
                 {
                     opt101_duplicate_frames_counter++;
                     opt101_duplicate_frames_in_a_row_counter++;
-                    if (opt101_enable_smart_duplicate_frame_handling && (opt101_duplicate_frames_in_a_row_counter % 2) == 1) 
+                    #ifdef ENABLE_DEBUG_PIN_OUTPUTS
+                    if (opt101_duplicate_frame[c])
                     {
-                        opt101_ignore_duplicate = true;
-                        Serial.print("+d ");
-                        Serial.println(c);
+                        bitSet(PORT_DEBUG_DUPLICATE_FRAME_D16, DEBUG_DUPLICATE_FRAME_D16);
+                    }
+                    #endif
+                    if (opt101_enable_duplicate_realtime_reporting && ((opt101_duplicate_frames_in_a_row_counter % 2) == 1)) 
+                    {
+                        Serial.println("+d");
                     }
                     if (opt101_ignore_all_duplicates)
                     {
-                        opt101_ignore_duplicate = true;
+                        opt101_ignore_duplicate[c] = true;
                     }
                     else if (opt101_block_n_subsequent_duplicates) 
                     {
                         if (opt101_duplicate_frames_in_a_row_counter < opt101_block_n_subsequent_duplicates) 
                         {
-                            opt101_ignore_duplicate = true;
+                            opt101_ignore_duplicate[c] = true;
                         }
                         else {
                             /*
@@ -628,7 +499,7 @@ void opt101_sensor_CheckReadings(void)
                 {
                     opt101_duplicate_frames_in_a_row_counter = 0;
                 }
-                if (!opt101_ignore_duplicate)
+                if (!opt101_ignore_duplicate[c])
                 {
                     opt101_block_signal_detection_until = opt101_current_time + opt101_block_signal_detection_delay;
                     #ifdef ENABLE_DEBUG_PIN_OUTPUTS
@@ -641,20 +512,17 @@ void opt101_sensor_CheckReadings(void)
                     {
                         bitSet(PORT_DEBUG_DETECTED_RIGHT_D5, DEBUG_DETECTED_RIGHT_D5);
                     }
-                    if (opt101_duplicate_frame)
-                    {
-                        bitSet(PORT_DEBUG_DUPLICATE_FRAME_D16, DEBUG_DUPLICATE_FRAME_D16);
-                    }
                     #endif
                     opt101_detected_signal_start_eye = c;
                     opt101_detected_signal_start_eye_set = true;
-                    if (opt101_duplicate_frame) {
+                    if (opt101_duplicate_frame[c]) {
                         ir_signal_process_opt101(opt101_detected_signal_start_eye, true);
                     }
                     else {
                         ir_signal_process_opt101(opt101_detected_signal_start_eye, false);
                     }
                     opt101_channel_frequency_detection_counter[opt101_detected_signal_start_eye] += 1;
+                    opt101_initiated_sending_ir_signal = true;
                     break;
                 }
             }
@@ -675,7 +543,7 @@ void opt101_sensor_CheckReadings(void)
     #ifdef OPT101_ENABLE_STREAM_READINGS_TO_SERIAL
     if (opt101_enable_stream_readings_to_serial)
     {
-        uint8_t buffer[3+9+2] = {'+', 'o', ' ', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, '\r', '\n'};
+        uint8_t buffer[3+10+2] = {'+', 'o', ' ', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, '\r', '\n'};
         if (opt101_current_time == 0)
         {
             opt101_current_time = micros();
@@ -688,23 +556,40 @@ void opt101_sensor_CheckReadings(void)
         Serial.print(",");
         Serial.println(checked_readings[1]);
         */
+       
         buffer[3] = (
             0x80 | 
-            (opt101_duplicate_frame ? 0x10 : 0x00) | 
-            (opt101_ignore_duplicate ? 0x08 : 0x00) | 
-            (opt101_detected_signal_start_eye == 1 ? 0x04 : 0x00) | 
-            (opt101_block_signal_detection_until > 0 ? 0x02 : 0x00) | 
-            (opt101_reading_above_threshold ? 0x01 : 0x00)
+            (opt101_duplicate_frame[1] == true ? 0x20 : 0x00) | 
+            (opt101_ignore_duplicate[1] == true ? 0x10 : 0x00) | 
+            (opt101_reading_above_threshold[1] == true ? 0x08 : 0x00) |
+            (opt101_duplicate_frame[0] == true ? 0x04 : 0x00) | 
+            (opt101_ignore_duplicate[0] == true ? 0x02 : 0x00) | 
+            (opt101_reading_above_threshold[0] == true ? 0x01 : 0x00)
         );
-        buffer[4] = 0x80 | ((opt101_duplicate_frames_in_a_row_counter) & 0x7f);
-        buffer[5] = 0x80 | ((checked_readings[0] >> 2) & 0x3f);
-        buffer[6] = 0x80 | ((checked_readings[1] >> 3) & 0x1f) | ((checked_readings[0] << 5) & 0x60);
-        buffer[7] = 0x80 | ((opt101_current_time >> 28) & 0x0f) | ((checked_readings[1] << 4) & 0x70);
-        buffer[8] = 0x80 | ((opt101_current_time >> 21) & 0x7f);
-        buffer[9] = 0x80 | ((opt101_current_time >> 14) & 0x7f);
-        buffer[10] = 0x80 | ((opt101_current_time >> 7) & 0x7f);
-        buffer[11] = 0x80 | ((opt101_current_time >> 0) & 0x7f);
-        Serial.write(buffer, 14);
+        buffer[4] = (
+            0x80 | 
+            (opt101_readings_active == true ? 0x08 : 0x00) |
+            (opt101_detected_signal_start_eye == 1 ? 0x04 : 0x00) | 
+            (opt101_initiated_sending_ir_signal ? 0x02 : 0x00) |
+            (opt101_block_signal_detection_until > 0 ? 0x01 : 0x00)
+        );
+        buffer[5] = 0x80 | ((opt101_duplicate_frames_in_a_row_counter) & 0x7f);
+        buffer[6] = 0x80 | ((checked_readings[0] >> 2) & 0x3f);
+        buffer[7] = 0x80 | ((checked_readings[1] >> 3) & 0x1f) | ((checked_readings[0] << 5) & 0x60);
+        buffer[8] = 0x80 | ((opt101_current_time >> 28) & 0x0f) | ((checked_readings[1] << 4) & 0x70);
+        buffer[9] = 0x80 | ((opt101_current_time >> 21) & 0x7f);
+        buffer[10] = 0x80 | ((opt101_current_time >> 14) & 0x7f);
+        buffer[11] = 0x80 | ((opt101_current_time >> 7) & 0x7f);
+        buffer[12] = 0x80 | ((opt101_current_time >> 0) & 0x7f);
+        Serial.write(buffer, 15);
+        // We only really need to clear these here, as tehre values aren't used in between loops except for sensor logging.
+        opt101_initiated_sending_ir_signal = false;
+        opt101_duplicate_frame[1] = false;
+        opt101_ignore_duplicate[1] = false;
+        opt101_reading_above_threshold[1] = false;
+        opt101_duplicate_frame[0] = false;
+        opt101_ignore_duplicate[0] = false;
+        opt101_reading_above_threshold[0] = false;
     }
     #endif
     for (uint8_t c = 0; c < OPT101_CHANNELS; c++)
@@ -780,12 +665,18 @@ ISR(ADC_vect)
 {
     uint8_t reading = ADCH;
     #ifdef OPT101_FILTER_ADC_SIGNAL
-    uint8_t filter = opt101_readings_realtime_filter[opt101_sensor_channel];
-    uint8_t reading_last = opt101_readings[opt101_sensor_channel];
-    if ((reading > filter && filter > reading_last) || (reading < filter && filter < reading_last)) {
-        opt101_readings[opt101_sensor_channel] = filter;
+    if (opt101_sensor_filter_mode == 1)
+    {
+        uint8_t filter = opt101_readings_realtime_filter[opt101_sensor_channel];
+        uint8_t reading_last = opt101_readings[opt101_sensor_channel];
+        if ((reading > filter && filter > reading_last) || (reading < filter && filter < reading_last)) {
+            opt101_readings[opt101_sensor_channel] = filter;
+        }
+        opt101_readings_realtime_filter[opt101_sensor_channel] = reading;
     }
-    opt101_readings_realtime_filter[opt101_sensor_channel] = reading;
+    else {
+        opt101_readings[opt101_sensor_channel] = reading;
+    }
     #else
     opt101_readings[opt101_sensor_channel] = reading;
     #endif
