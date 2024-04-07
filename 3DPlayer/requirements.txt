@@ -7,7 +7,6 @@ pysrt
 pyserial
 psutil
 pygame
-pygobject
 line-profiler
 pyopengl
 pyopengl-accelerate

@@ -5,7 +5,6 @@ debug/*
 installation/*
 old/*
 dot_files/*
-gstreamer_plugins/*
 videos/Big.Buck.Bunny
 settings/last_display_settings.json
 releases/

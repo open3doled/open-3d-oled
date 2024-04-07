@@ -3082,10 +3082,30 @@ class TopWindow:
             map(int, display_resolution.split("x"))
         )
 
-        # primary_decoder_element_factory = Gst.ElementFactory.find("nvdec")
-        # primary_decoder_element_factory = Gst.ElementFactory.find("vaapih264dec")
-        # if primary_decoder_element_factory:
-        #     primary_decoder_element_factory.set_rank(Gst.Rank.PRIMARY + 1)
+        filters_to_prioritize = [
+            "nvjpegdec",
+            "nvmpeg2videodec",
+            "nvmpeg4videodec",
+            "nvmpegvideodec",
+            "nvh264dec",
+            "nvh265dec",
+            "nvvp9dec",
+        ]
+        # filters_to_prioritize = []
+        for filter_to_prioritize in filters_to_prioritize:
+            primary_decoder_element_factory = Gst.ElementFactory.find(
+                filter_to_prioritize
+            )
+            if primary_decoder_element_factory:
+                primary_decoder_element_factory.set_rank(Gst.Rank.PRIMARY + 1)
+        filters_to_deprioritize = ["vaapidecodebin"]
+        # filters_to_deprioritize = []
+        for filter_to_deprioritize in filters_to_deprioritize:
+            primary_decoder_element_factory = Gst.ElementFactory.find(
+                filter_to_deprioritize
+            )
+            if primary_decoder_element_factory:
+                primary_decoder_element_factory.set_rank(Gst.Rank.NONE)
 
         # self.player = Gst.ElementFactory.make("playbin", "Playbin")
         self.player = Gst.ElementFactory.make("playbin3", "Playbin")
@@ -3281,16 +3301,24 @@ if __name__ == "__main__":
 
     # set base path
     internal_base_path = os.path.dirname(os.path.abspath(__file__))
+    gstreamer_plugins_active = os.path.join(
+        internal_base_path, "gstreamer_plugins_active"
+    )
     split_base_path = os.path.split(internal_base_path)
     if "_internal" == split_base_path[1]:
         base_path = split_base_path[0]
     else:
         base_path = internal_base_path
     os.environ["GST_DEBUG"] = "3"
-    os.environ["GST_PLUGIN_PATH"] = internal_base_path
+    os.environ["GST_PLUGIN_PATH"] = (
+        f"{gstreamer_plugins_active}:{internal_base_path}:{os.environ.get('GST_PLUGIN_PATH', '')}"
+    )
     os.environ["GST_DEBUG_DUMP_DOT_DIR"] = os.path.join(base_path, "dot_files")
-    # os.environ["GST_VAAPI_ALL_DRIVERS"] = "1"
-    # os.environ["LIBVA_DRIVER_NAME"] = "i965"
+    # LIBVA_DRIVER_NAME=i965 vainfo --display drm --device /dev/dri/renderD128
+    # os.environ["GST_VAAPI_ALL_DRIVERS"] = "1" # This environment variable can be set, independently of its value, to disable the drivers white list. By default only intel and mesa va drivers are loaded if they are available. The rest are ignored. With this environment variable defined, all the available va drivers are loaded, even if they are deprecated.
+    # os.environ["LIBVA_DRIVER_NAME"] = "i965" # This environment variable can be set with the drivers name to load. For example, intel's driver is i965, meanwhile mesa is gallium.
+    # os.environ["LIBVA_DRIVERS_PATH"] = "" # This environment variable can be set to a colon-separated list of paths (or a semicolon-separated list on Windows). libva will scan these paths for va drivers.
+    # os.environ["GST_VAAPI_DRM_DEVICE"] = "/dev/dri/renderD128" # This environment variable can be set to a specified DRM device when DRM display is used, it is ignored when other types of displays are used. By default /dev/dri/renderD128 is used for DRM display.
     # os.environ["GST_PLUGIN_FEATURE_RANK"] = "vaapih264dec:MAX"
 
     import gi
