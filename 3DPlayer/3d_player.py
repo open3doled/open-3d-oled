@@ -3552,6 +3552,40 @@ class TopWindow:
 
 if __name__ == "__main__":
 
+    # parse commandline arguments
+    parser = argparse.ArgumentParser(
+        prog="Open3DOLED 3DPlayer",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        description=textwrap.dedent(
+            """\
+        Plays 3D videos for use with Open3DOLED emitter unit. 
+        This commandline interface is used for launching videos directly, unless a video is specified all other parameters will be ignored.
+        """
+        ),
+        epilog="Uses default display settings and video settings set in app to play specified file unless overriden on command-line.",
+    )
+    parser.add_argument("--video-path")
+    parser.add_argument("--subtitle-path")
+    parser.add_argument(
+        "--frame-packing",
+        choices=[
+            "side-by-side-full",
+            "side-by-side-half",
+            "over-and-under-full",
+            "over-and-under-half",
+        ],
+    )
+    parser.add_argument("--right-eye", choices=["right", "left", "top", "bottom"])
+    parser.add_argument(
+        "--display-resolution",
+        choices=[
+            "3840x2160",
+            "2560x1080",
+            "1920x1080",
+            "1280x720",
+        ],
+    )
+
     if os.name == "nt":
         os.system("chcp.com 65001")
 
@@ -3601,40 +3635,6 @@ if __name__ == "__main__":
 
     # GObject.threads_init()
     Gst.init(None)
-
-    # parse commandline arguments
-    parser = argparse.ArgumentParser(
-        prog="Open3DOLED 3DPlayer",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        description=textwrap.dedent(
-            """\
-        Plays 3D videos for use with Open3DOLED emitter unit. 
-        This commandline interface is used for launching videos directly, unless a video is specified all other parameters will be ignored.
-        """
-        ),
-        epilog="Uses default display settings and video settings set in app to play specified file unless overriden on command-line.",
-    )
-    parser.add_argument("--video-path")
-    parser.add_argument("--subtitle-path")
-    parser.add_argument(
-        "--frame-packing",
-        choices=[
-            "side-by-side-full",
-            "side-by-side-half",
-            "over-and-under-full",
-            "over-and-under-half",
-        ],
-    )
-    parser.add_argument("--right-eye", choices=["right", "left", "top", "bottom"])
-    parser.add_argument(
-        "--display-resolution",
-        choices=[
-            "3840x2160",
-            "2560x1080",
-            "1920x1080",
-            "1280x720",
-        ],
-    )
 
     top_window = TopWindow(parser.parse_args())
 
