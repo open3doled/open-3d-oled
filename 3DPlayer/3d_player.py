@@ -80,6 +80,7 @@ DEFAULT_FRAME_PACKING = "side-by-side-half"
 DEFAULT_RIGHT_EYE = "right"
 DEFAULT_DECODER_PREFERENCE = DECODER_PREFERENCE_DEFAULT
 DEFAULT_GENERATE_DOT_GRAPH_FILE = False
+DEFAULT_AUDIO_FORMAT_FILTER = ""
 
 
 # The following class is extracted from tkinter.
@@ -2265,13 +2266,34 @@ class StartVideoDialog:
             variable=self.generate_dot_graph_file_variable,
         )
         self.generate_dot_graph_file_check_button.pack(padx=5, side=tkinter.LEFT)
+        # self.generate_dot_graph_file_frame.pack()
         self.generate_dot_graph_file_tooltip = idlelib.tooltip.Hovertip(
             self.generate_dot_graph_file_frame,
             "Generate a gstreamer dot graph file showing the gstreamer pipeline flow and elements. The file will be saved in the dot-graph folder. The graph can be viewed by copying the text into the text box at https://graphview.net/ and clicking view.",
             hover_delay=100,
         )
-        # self.generate_dot_graph_file_frame.pack()
         self.generate_dot_graph_file_frame.grid(row=row_count, column=0, sticky="w")
+        row_count += 1
+
+        self.audio_format_filter_frame = tkinter.Frame(top)
+        self.audio_format_filter_variable = tkinter.StringVar(top)
+        self.audio_format_filter_variable.set(DEFAULT_AUDIO_FORMAT_FILTER)
+        self.audio_format_filter_label = tkinter.Label(
+            self.audio_format_filter_frame, text="Audio Format Filter: "
+        )
+        self.audio_format_filter_label.pack(padx=5, side=tkinter.LEFT)
+        self.audio_format_filter_entry = tkinter.Entry(
+            self.audio_format_filter_frame,
+            textvariable=self.audio_format_filter_variable,
+        )
+        self.audio_format_filter_entry.pack(padx=5, side=tkinter.LEFT)
+        # self.audio_format_filter_frame.pack()
+        self.audio_format_filter_tooltip = idlelib.tooltip.Hovertip(
+            self.audio_format_filter_frame,
+            "(leave this blank unless you are experiencing audio issues) \nAdds an audio format filter to the gstreamer pipeline at the beginning of the 'playsink' element after 'uridecodebin3' element \nIt attempts to force 'uridecodebin3' to either decode to a specific format or preserve a specific digital audio format for passthrough. \nValid values take the form of gstreamer caps filter strings like 'audio/x-dts', 'audio/x-ac3', 'audio/mpeg', 'audio/x-raw' \nOne can also include format, channel, layout, and rate information like 'audio/x-raw,format=S16LE,channels=2,layout=interleaved,rate=48000'",
+            hover_delay=100,
+        )
+        self.audio_format_filter_frame.grid(row=row_count, column=0, sticky="w")
         row_count += 1
 
         self.action_button_frame_1 = tkinter.Frame(top)
@@ -2310,8 +2332,10 @@ class StartVideoDialog:
         frame_packing = self.frame_packing_variable.get()
         if frame_packing.startswith("side-by-side"):
             new_menu_options = ["right", "left"]
+            default_selection = 0
         elif frame_packing.startswith("over-and-under"):
             new_menu_options = ["top", "bottom"]
+            default_selection = 1
         else:
             return
         menu = self.right_eye_option_menu["menu"]
@@ -2321,7 +2345,7 @@ class StartVideoDialog:
                 label=menu_option,
                 command=_setit(self.right_eye_variable, menu_option),
             )
-        new_selection = new_menu_options[0]
+        new_selection = new_menu_options[default_selection]
         if "select" in kwargs:
             new_desired_selection = kwargs["select"]
             if new_desired_selection in new_menu_options:
@@ -2414,6 +2438,11 @@ class StartVideoDialog:
                 "generate_dot_graph_file", DEFAULT_GENERATE_DOT_GRAPH_FILE
             )
         )
+        self.audio_format_filter_variable.set(
+            selected_video_history.get(
+                "audio_format_filter", DEFAULT_AUDIO_FORMAT_FILTER
+            )
+        )
 
     def load_video_profile_from_history(self, *args):  # @UnusedVariable
         if (
@@ -2493,6 +2522,7 @@ class StartVideoDialog:
             "right_eye": self.right_eye_variable.get(),
             "decoder_preference": self.decoder_preference_variable.get(),
             "generate_dot_graph_file": self.generate_dot_graph_file_variable.get(),
+            "audio_format_filter": self.audio_format_filter_variable.get(),
         }
 
     def save_defaults(self):
@@ -2620,6 +2650,7 @@ class StartVideoDialog:
             "right_eye": DEFAULT_RIGHT_EYE,
             "decoder_preference": DEFAULT_DECODER_PREFERENCE,
             "generate_dot_graph_file": DEFAULT_GENERATE_DOT_GRAPH_FILE,
+            "audio_format_filter": DEFAULT_AUDIO_FORMAT_FILTER,
         }
 
 
@@ -2980,6 +3011,9 @@ class TopWindow:
 
         if self.player is not None:
             self.player.set_state(Gst.State.NULL)
+            self.player.run_dispose()
+            del self.player
+            self.player = None
         self.video_open = False
         if self.emitter_serial is not None:
             self.emitter_serial.pageflipglsink = None
@@ -3080,7 +3114,7 @@ class TopWindow:
                 playback_parameters["right_eye"] = args.right_eye
             else:
                 playback_parameters["right_eye"] = (
-                    "right" if frame_packing.startswith("side-by-side") else "top"
+                    "right" if frame_packing.startswith("side-by-side") else "bottom"
                 )
             if args.display_resolution:
                 playback_parameters["display_resolution"] = args.display_resolution
@@ -3115,6 +3149,7 @@ class TopWindow:
             "right_eye": start_video_dialog.right_eye_variable.get(),
             "decoder_preference": start_video_dialog.decoder_preference_variable.get(),
             "generate_dot_graph_file": start_video_dialog.generate_dot_graph_file_variable.get(),
+            "audio_format_filter": start_video_dialog.audio_format_filter_variable.get(),
         }
 
         self.start_video(playback_parameters)
@@ -3132,6 +3167,7 @@ class TopWindow:
         right_eye = playback_parameters["right_eye"]
         decoder_preference = playback_parameters["decoder_preference"]
         generate_dot_graph_file = playback_parameters["generate_dot_graph_file"]
+        audio_format_filter = playback_parameters["audio_format_filter"]
 
         target_framerate = self.display_settings_dialog.target_framerate_variable.get()
         display_resolution = playback_parameters.get(
@@ -3241,7 +3277,13 @@ class TopWindow:
         ]
 
         filters_to_prioritize = []
-        filters_to_deprioritize = set(nvcodec_filters + vaapi_filters + msdk_filters + d3d11_filters + software_filters)
+        filters_to_deprioritize = set(
+            nvcodec_filters
+            + vaapi_filters
+            + msdk_filters
+            + d3d11_filters
+            + software_filters
+        )
         if decoder_preference == DECODER_PREFERENCE_NVCODEC:
             filters_to_prioritize.extend(nvcodec_filters)
         elif decoder_preference == DECODER_PREFERENCE_VAAPI:
@@ -3252,7 +3294,7 @@ class TopWindow:
             filters_to_prioritize.extend(d3d11_filters)
         elif decoder_preference == DECODER_PREFERENCE_SOFTWARE:
             filters_to_prioritize.extend(software_filters)
-        else: # default
+        else:  # default
             filters_to_deprioritize = set()
         filters_to_deprioritize.difference_update(filters_to_prioritize)
         for filter_to_prioritize in filters_to_prioritize:
@@ -3380,22 +3422,20 @@ class TopWindow:
         audio_sink_pad = None
         audio_src_pad = None
 
-        """
-        if audio_filters is None:
-            audio_filters = Gst.Bin("audio_filters")
+        if audio_format_filter != "":
+            if audio_filters is None:
+                audio_filters = Gst.Bin("audio_filters")
 
-        previous_audio_filter = audio_capsfilter = Gst.ElementFactory.make(
-            "capsfilter", "AudioCapsFilter"
-        )
-        audio_sink_pad = audio_capsfilter.sinkpad
-        audio_src_pad = audio_capsfilter.srcpad
-        audio_capsfilter.set_property(
-            "caps",
-            Gst.caps_from_string(f"audio/x-raw"),
-            #Gst.caps_from_string(f"audio/x-dts"),
-        )
-        audio_filters.add(audio_capsfilter)
-        """
+            previous_audio_filter = audio_capsfilter = (  # @UnusedVariable
+                Gst.ElementFactory.make("capsfilter", "AudioCapsFilter")
+            )
+            audio_sink_pad = audio_capsfilter.sinkpad
+            audio_src_pad = audio_capsfilter.srcpad
+            audio_capsfilter.set_property(
+                "caps",
+                Gst.caps_from_string(audio_format_filter),
+            )
+            audio_filters.add(audio_capsfilter)
 
         if audio_filters is not None:
             ghostpad_audio_sink = Gst.GhostPad.new("sink", audio_sink_pad)
@@ -3467,31 +3507,33 @@ class TopWindow:
         self.video_open = True
 
         # setting fullscreen prematurely has no effect until video playback has full started
+        failed_to_start = False
         for _ in range(75):
             if self.pageflipglsink.get_property("started"):
                 break
             time.sleep(0.2)
         else:
             # if it didn't start after 15 seconds just stop as it probably means there was a gstreamer decoding error
-            self.stop_player()
+            failed_to_start = True
 
-        duration = self.player.query_duration(Gst.Format.TIME).duration
-        self.pageflipglsink.set_property("video-duration", duration)
+        if not failed_to_start:
+            duration = self.player.query_duration(Gst.Format.TIME).duration
+            self.pageflipglsink.set_property("video-duration", duration)
 
-        # even after playback started it can still take 1-2 second until all the renderers are ready
-        for _ in range(10):
-            time.sleep(0.2)
-            self.pageflipglsink.set_property("fullscreen", True)
+            # even after playback started it can still take 1-2 second until all the renderers are ready
+            for _ in range(10):
+                time.sleep(0.2)
+                self.pageflipglsink.set_property("fullscreen", True)
 
-        self.__open_video_file_button.config(state="disabled")
-        self.__flip_right_and_left_button.config(state="normal")
-        self.__fullscreen_button.config(state="normal")
-        self.__backward_big_button.config(state="normal")
-        self.__backward_small_button.config(state="normal")
-        self.__stop_video_button.config(state="normal")
-        self.__play_pause_button.config(state="normal")
-        self.__forward_small_button.config(state="normal")
-        self.__forward_big_button.config(state="normal")
+            self.__open_video_file_button.config(state="disabled")
+            self.__flip_right_and_left_button.config(state="normal")
+            self.__fullscreen_button.config(state="normal")
+            self.__backward_big_button.config(state="normal")
+            self.__backward_small_button.config(state="normal")
+            self.__stop_video_button.config(state="normal")
+            self.__play_pause_button.config(state="normal")
+            self.__forward_small_button.config(state="normal")
+            self.__forward_big_button.config(state="normal")
 
         if generate_dot_graph_file:
             Gst.debug_bin_to_dot_file(
@@ -3499,6 +3541,9 @@ class TopWindow:
                 Gst.DebugGraphDetails.ALL,
                 "pipeline_" + datetime.datetime.now().strftime("%Y-%m-%d %H%M%S"),
             )
+
+        if failed_to_start:
+            self.stop_player()
 
     def click_stop_video_button(self, event=None):  # @UnusedVariable
         self.stop_player()

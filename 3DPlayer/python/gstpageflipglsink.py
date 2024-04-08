@@ -285,8 +285,9 @@ class PageflipGLWindow(threading.Thread):
 
     def __stop(self):
 
-        # self.__destroy_pbos()
-        self.__destroy_video_texture()
+        if self.__started:
+            # self.__destroy_pbos()
+            self.__destroy_video_texture()
 
         self.__pg_window = None
         self.__sdl2_window = None
@@ -1321,9 +1322,11 @@ class PageflipGLWindow(threading.Thread):
 
     @line_profiler_obj
     def run(self):
-        while not self.__do_start:
+        while not self.__do_start and not self.__do_stop:
+            time.sleep(0.01)
             pass
-        self.__start()
+        if not self.__do_stop:
+            self.__start()
         while not self.__do_stop:
             if self.__started:
                 self.__update()
