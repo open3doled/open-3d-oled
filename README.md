@@ -21,7 +21,7 @@ apt install git git-gui
 cd ~
 git clone https://github.com/open3doled/open-3d-oled.git
 cd open-3d-oled/3DPlayer
-sudo apt install gobject-introspection gstreamer1.0-tools gstreamer1.0-plugins-base gstreamer1.0-gtk3 gstreamer1.0-plugins-bad libgstreamer-plugins-bad1.0-0 gstreamer1.0-plugins-good gstreamer1.0-plugins-ugly python3-gst-1.0 mingw-w64-ucrt-x86_64-gst-libav
+sudo apt install gobject-introspection gstreamer1.0-tools gstreamer1.0-plugins-base gstreamer1.0-gtk3 gstreamer1.0-plugins-bad libgstreamer-plugins-bad1.0-0 gstreamer1.0-plugins-good gstreamer1.0-plugins-ugly python3-gst-1.0 gstreamer1.0-libav
 sudo apt install python3 python3-pip python3-virtualenv python3-virtualenvwrapper python3-tk python3-pil.imagetk idle3 gstreamer1.0-python3-plugin-loader
 sudo apt install python3-gi
 echo "export WORKON_HOME=$HOME/.virtualenvs" >> ~/.bashrc
@@ -223,6 +223,7 @@ Not Working (Untested)
     cp -R videos dist/3d_player/videos
     cp -R settings dist/3d_player/settings      
     cp -R firmwares dist/3d_player/firmwares
+    cp -R gstreamer_plugins_active /c/3D/3DPlayerWindowsLatest/gstreamer_plugins_active
     cp -R licenses dist/3d_player/licenses
     cp LICENSE dist/3d_player
     cd dist

@@ -35,7 +35,8 @@ DECODER_PREFERENCE_DEFAULT = "default (GStreamers first choice)"
 DECODER_PREFERENCE_NVCODEC = "nvcodec (NVidia Codec)"
 DECODER_PREFERENCE_VAAPI = "vaapi (Video Acceleration API)"
 DECODER_PREFERENCE_MSDK = "msdk (Intel Media SDK)"
-DECODER_PREFERENCE_SOFTWARE = "software (This will deprioritize nvcodec and vaapi)"
+DECODER_PREFERENCE_D3D11 = "d3d11 (Direct 3D 11)"
+DECODER_PREFERENCE_SOFTWARE = "software (No HW Acceleration)"
 
 # Default IR Settings
 DEFAULT_IR_PROTOCOL = "6"
@@ -2239,6 +2240,7 @@ class StartVideoDialog:
             DECODER_PREFERENCE_NVCODEC,
             DECODER_PREFERENCE_VAAPI,
             DECODER_PREFERENCE_MSDK,
+            DECODER_PREFERENCE_D3D11,
             DECODER_PREFERENCE_SOFTWARE,
         )
         self.decoder_preference_option_menu.pack(padx=5, side=tkinter.LEFT)
@@ -2563,17 +2565,17 @@ class StartVideoDialog:
     @staticmethod
     def get_frame_packing_from_filename(filename):
         if re.match(".*[_\-\.](((half)|(h))[_\-\.]?)sbs[_\-\.].*", filename, re.I):
-            return "half-side-by-side"
+            return "side-by-side-half"
         if re.match(".*[_\-\.](((full)|(f))[_\-\.]?)sbs[_\-\.].*", filename, re.I):
-            return "full-side-by-side"
+            return "side-by-side-full"
         if re.match(
             ".*[_\-\.](((half)|(h))[_\-\.]?)((ou)|(tab))[_\-\.].*", filename, re.I
         ):
-            return "half-over-and-under"
+            return "over-and-under-half"
         if re.match(
             ".*[_\-\.](((full)|(f))[_\-\.]?)((ou)|(tab))[_\-\.].*", filename, re.I
         ):
-            return "full-over-and-under"
+            return "over-and-under-full"
         half_or_not = True
         if re.match(".*[_\-\.]((full)|f)[_\-\.].*", filename):
             half_or_not = False
@@ -3216,6 +3218,17 @@ class TopWindow:
             "msdkh265dec",
             "msdkvp9dec",
         ]
+        d3d11_filters = [
+            "d3d11h264dec",
+            "d3d11h264device1dec",
+            "d3d11h265dec",
+            "d3d11h265device1dec",
+            "d3d11mpeg2dec",
+            "d3d11mpeg2device1dec",
+            "d3d11vp8dec",
+            "d3d11vp9dec",
+            "d3d11vp9device1dec",
+        ]
         software_filters = [
             "openh264",
             "avdec_h264",
@@ -3228,27 +3241,20 @@ class TopWindow:
         ]
 
         filters_to_prioritize = []
-        filters_to_deprioritize = []
+        filters_to_deprioritize = set(nvcodec_filters + vaapi_filters + msdk_filters + d3d11_filters + software_filters)
         if decoder_preference == DECODER_PREFERENCE_NVCODEC:
             filters_to_prioritize.extend(nvcodec_filters)
-            filters_to_deprioritize.extend(
-                vaapi_filters + msdk_filters + software_filters
-            )
         elif decoder_preference == DECODER_PREFERENCE_VAAPI:
             filters_to_prioritize.extend(vaapi_filters)
-            filters_to_deprioritize.extend(
-                nvcodec_filters + msdk_filters + software_filters
-            )
         elif decoder_preference == DECODER_PREFERENCE_MSDK:
             filters_to_prioritize.extend(msdk_filters)
-            filters_to_deprioritize.extend(
-                nvcodec_filters + vaapi_filters + software_filters
-            )
+        elif decoder_preference == DECODER_PREFERENCE_D3D11:
+            filters_to_prioritize.extend(d3d11_filters)
         elif decoder_preference == DECODER_PREFERENCE_SOFTWARE:
             filters_to_prioritize.extend(software_filters)
-            filters_to_deprioritize.extend(
-                nvcodec_filters + vaapi_filters + msdk_filters
-            )
+        else: # default
+            filters_to_deprioritize = set()
+        filters_to_deprioritize.difference_update(filters_to_prioritize)
         for filter_to_prioritize in filters_to_prioritize:
             primary_decoder_element_factory = Gst.ElementFactory.find(
                 filter_to_prioritize
@@ -3386,7 +3392,7 @@ class TopWindow:
         audio_capsfilter.set_property(
             "caps",
             Gst.caps_from_string(f"audio/x-raw"),
-            # Gst.caps_from_string(f"audio/x-dts"),
+            #Gst.caps_from_string(f"audio/x-dts"),
         )
         audio_filters.add(audio_capsfilter)
         """
@@ -3514,10 +3520,18 @@ if __name__ == "__main__":
     else:
         base_path = internal_base_path
     # os.environ["GST_DEBUG"] = "3"
-    os.environ["GST_PLUGIN_PATH"] = (
-        f"{gstreamer_plugins_active}:{internal_base_path}:{os.environ.get('GST_PLUGIN_PATH', '')}"
-    )
-    os.environ["GST_DEBUG_DUMP_DOT_DIR"] = os.path.join(base_path, "dot_graph_files")
+    if os.name == "nt":
+        os.environ["GST_PLUGIN_PATH"] = (
+            f"{gstreamer_plugins_active};{internal_base_path};{os.environ.get('GST_PLUGIN_PATH', '')}"
+        )
+    else:
+        os.environ["GST_PLUGIN_PATH"] = (
+            f"{gstreamer_plugins_active}:{internal_base_path}:{os.environ.get('GST_PLUGIN_PATH', '')}"
+        )
+    dot_graph_files_path = os.path.join(base_path, "dot_graph_files")
+    if not os.path.exists(dot_graph_files_path):
+        os.mkdir(dot_graph_files_path)
+    os.environ["GST_DEBUG_DUMP_DOT_DIR"] = dot_graph_files_path
     # LIBVA_DRIVER_NAME=i965 vainfo --display drm --device /dev/dri/renderD128
     # os.environ["GST_VAAPI_ALL_DRIVERS"] = "1" # This environment variable can be set, independently of its value, to disable the drivers white list. By default only intel and mesa va drivers are loaded if they are available. The rest are ignored. With this environment variable defined, all the available va drivers are loaded, even if they are deprecated.
     # os.environ["LIBVA_DRIVER_NAME"] = "i965" # This environment variable can be set with the drivers name to load. For example, intel's driver is i965, meanwhile mesa is gallium.
