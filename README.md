@@ -194,6 +194,8 @@ Not Working (Untested)
   
 ### Windows Standalone Application Build Instructions:
 ```
+  - The official build system used ot build releases is Windows 10 22H2 with Intel HD Graphics and NVidia Drivers 552.12 (It shouldn't effect anything but it also has Windows WSL2 with all related packages installed)
+
   - pip install pyinstaller
   
   - build the 3d_player.spec file (be sure to do this if you update anything as the format may have changed)
