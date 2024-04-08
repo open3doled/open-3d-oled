@@ -4,7 +4,7 @@ dist/*
 debug/*
 installation/*
 old/*
-dot_files/*
+dot_graph_files/*
 videos/Big.Buck.Bunny
 settings/last_display_settings.json
 releases/

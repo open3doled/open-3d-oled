@@ -31,6 +31,11 @@ import pathlib
 import textwrap
 import re
 
+DECODER_PREFERENCE_DEFAULT = "default (GStreamers first choice)"
+DECODER_PREFERENCE_NVCODEC = "nvcodec (NVidia Codec)"
+DECODER_PREFERENCE_VAAPI = "vaapi (Video Acceleration API)"
+DECODER_PREFERENCE_MSDK = "msdk (Intel Media SDK)"
+DECODER_PREFERENCE_SOFTWARE = "software (This will deprioritize nvcodec and vaapi)"
 
 # Default IR Settings
 DEFAULT_IR_PROTOCOL = "6"
@@ -72,6 +77,8 @@ DEFAULT_SUBTITLE_VERTICAL_OFFSET = "150"
 DEFAULT_SUBTITLE_OFFSET = "0"
 DEFAULT_FRAME_PACKING = "side-by-side-half"
 DEFAULT_RIGHT_EYE = "right"
+DEFAULT_DECODER_PREFERENCE = DECODER_PREFERENCE_DEFAULT
+DEFAULT_GENERATE_DOT_GRAPH_FILE = False
 
 
 # The following class is extracted from tkinter.
@@ -1998,7 +2005,7 @@ class StartVideoDialog:
     LOAD_VIDEO_PROFILE_FROM_HISTORY_OPTION = "Load Video Profile From History"
     LOAD_VIDEO_DEFAULTS_HISTORY_OPTION = "Load Defaults"
     LOAD_VIDEO_DEFAULTS_HISTORY_SAVE_NAME = "Defaults"
-    VIDEO_HISTORY_MAX_SIZE = 30
+    VIDEO_HISTORY_MAX_SIZE = 70
 
     def __init__(self, parent, main_app):
         self.parent = parent
@@ -2218,17 +2225,80 @@ class StartVideoDialog:
         self.right_eye_frame.grid(row=row_count, column=0, sticky="w")
         row_count += 1
 
+        self.decoder_preference_frame = tkinter.Frame(top)
+        self.decoder_preference_variable = tkinter.StringVar(top)
+        self.decoder_preference_variable.set(DEFAULT_DECODER_PREFERENCE)
+        self.decoder_preference_label = tkinter.Label(
+            self.decoder_preference_frame, text="Decoder Preference: "
+        )
+        self.decoder_preference_label.pack(padx=5, side=tkinter.LEFT)
+        self.decoder_preference_option_menu = tkinter.OptionMenu(
+            self.decoder_preference_frame,
+            self.decoder_preference_variable,
+            DECODER_PREFERENCE_DEFAULT,
+            DECODER_PREFERENCE_NVCODEC,
+            DECODER_PREFERENCE_VAAPI,
+            DECODER_PREFERENCE_MSDK,
+            DECODER_PREFERENCE_SOFTWARE,
+        )
+        self.decoder_preference_option_menu.pack(padx=5, side=tkinter.LEFT)
+        # self.decoder_preference_frame.pack()
+        self.generate_dot_graph_file_tooltip = idlelib.tooltip.Hovertip(
+            self.decoder_preference_frame,
+            "Sets a decoder preference which will be used to instruct gstreamer about which decoder to use. \nThis will only have an effect if the approriate hardware accelerated decoders are available on your system and compatible with the media file you are playing. \nYou can check available decoders using 'gst-inspect-1.0 | grep 'nvcodec\|vaapi\|264\|265\|vp9'",
+            hover_delay=100,
+        )
+        self.decoder_preference_frame.grid(row=row_count, column=0, sticky="w")
+        row_count += 1
+
+        self.generate_dot_graph_file_variable = tkinter.BooleanVar(parent)
+        self.generate_dot_graph_file_variable.set(DEFAULT_GENERATE_DOT_GRAPH_FILE)
+        self.generate_dot_graph_file_frame = tkinter.Frame(top)
+        self.generate_dot_graph_file_label = tkinter.Label(
+            self.generate_dot_graph_file_frame, text="Generate Dot Graph File: "
+        )
+        self.generate_dot_graph_file_label.pack(padx=5, side=tkinter.LEFT)
+        self.generate_dot_graph_file_check_button = tkinter.Checkbutton(
+            self.generate_dot_graph_file_frame,
+            variable=self.generate_dot_graph_file_variable,
+        )
+        self.generate_dot_graph_file_check_button.pack(padx=5, side=tkinter.LEFT)
+        self.generate_dot_graph_file_tooltip = idlelib.tooltip.Hovertip(
+            self.generate_dot_graph_file_frame,
+            "Generate a gstreamer dot graph file showing the gstreamer pipeline flow and elements. The file will be saved in the dot-graph folder. The graph can be viewed by copying the text into the text box at https://graphview.net/ and clicking view.",
+            hover_delay=100,
+        )
+        # self.generate_dot_graph_file_frame.pack()
+        self.generate_dot_graph_file_frame.grid(row=row_count, column=0, sticky="w")
+        row_count += 1
+
         self.action_button_frame_1 = tkinter.Frame(top)
         self.open_button = tkinter.Button(
-            self.action_button_frame_1, text="Open", command=self.open_video
+            self.action_button_frame_1,
+            text="Open (Skip History)",
+            command=functools.partial(self.open_video, False, False),
         )
         self.open_button.pack(padx=5, side=tkinter.LEFT)
+
+        self.open_button_new_history = tkinter.Button(
+            self.action_button_frame_1,
+            text="Open (Save New History Entry)",
+            command=functools.partial(self.open_video, True, False),
+        )
+        self.open_button_new_history.pack(padx=5, side=tkinter.LEFT)
+
+        self.open_button_update_history = tkinter.Button(
+            self.action_button_frame_1,
+            text="Open (Update History Entry)",
+            command=functools.partial(self.open_video, False, True),
+        )
+        self.open_button_update_history.pack(padx=5, side=tkinter.LEFT)
 
         self.save_defaults_button = tkinter.Button(
             self.action_button_frame_1, text="Save Defaults", command=self.save_defaults
         )
         self.save_defaults_button.pack(padx=5, side=tkinter.LEFT)
-        self.action_button_frame_1.grid(row=row_count, column=1)
+        self.action_button_frame_1.grid(row=row_count, column=0)
         row_count += 1
 
         if self.video_history_default_index is not None:
@@ -2306,18 +2376,42 @@ class StartVideoDialog:
             target_video_file_name
             != StartVideoDialog.LOAD_VIDEO_DEFAULTS_HISTORY_SAVE_NAME
         ):
-            self.subtitle_file_name = selected_video_history["subtitle_file_name"]
+            self.subtitle_file_name = selected_video_history.get(
+                "subtitle_file_name", ""
+            )
         self.subtitle_file_location_label.config(text=self.subtitle_file_name)
-        self.subtitle_font_variable.set(selected_video_history["subtitle_font"])
-        self.subtitle_size_variable.set(selected_video_history["subtitle_size"])
-        self.subtitle_depth_variable.set(selected_video_history["subtitle_depth"])
-        self.subtitle_vertical_offset_variable.set(
-            selected_video_history["subtitle_vertical_offset"]
+        self.subtitle_font_variable.set(
+            selected_video_history.get("subtitle_font", DEFAULT_SUBTITLE_FONT)
         )
-        self.subtitle_offset_variable.set(selected_video_history["subtitle_offset"])
-        self.frame_packing_variable.set(selected_video_history["frame_packing"])
-        self.__update_right_eye_options(select=selected_video_history["right_eye"])
+        self.subtitle_size_variable.set(
+            selected_video_history.get("subtitle_size", DEFAULT_SUBTITLE_SIZE)
+        )
+        self.subtitle_depth_variable.set(
+            selected_video_history.get("subtitle_depth", DEFAULT_SUBTITLE_DEPTH)
+        )
+        self.subtitle_vertical_offset_variable.set(
+            selected_video_history.get(
+                "subtitle_vertical_offset", DEFAULT_SUBTITLE_VERTICAL_OFFSET
+            )
+        )
+        self.subtitle_offset_variable.set(
+            selected_video_history.get("subtitle_offset", DEFAULT_SUBTITLE_OFFSET)
+        )
+        self.frame_packing_variable.set(
+            selected_video_history.get("frame_packing", DEFAULT_FRAME_PACKING)
+        )
+        self.__update_right_eye_options(
+            select=selected_video_history.get("right_eye", DEFAULT_RIGHT_EYE)
+        )
         # self.right_eye_variable.set(selected_video_history["right_eye"])
+        self.decoder_preference_variable.set(
+            selected_video_history.get("decoder_preference", DEFAULT_DECODER_PREFERENCE)
+        )
+        self.generate_dot_graph_file_variable.set(
+            selected_video_history.get(
+                "generate_dot_graph_file", DEFAULT_GENERATE_DOT_GRAPH_FILE
+            )
+        )
 
     def load_video_profile_from_history(self, *args):  # @UnusedVariable
         if (
@@ -2395,6 +2489,8 @@ class StartVideoDialog:
             "subtitle_offset": self.subtitle_offset_variable.get(),
             "frame_packing": self.frame_packing_variable.get(),
             "right_eye": self.right_eye_variable.get(),
+            "decoder_preference": self.decoder_preference_variable.get(),
+            "generate_dot_graph_file": self.generate_dot_graph_file_variable.get(),
         }
 
     def save_defaults(self):
@@ -2414,7 +2510,7 @@ class StartVideoDialog:
         f.close()
         self.__update_video_history_options(update_menu=True)
 
-    def open_video(self):
+    def open_video(self, save_new_history, update_existing_history):
         if (
             not self.video_file_name
             or self.video_file_name
@@ -2424,7 +2520,7 @@ class StartVideoDialog:
 
         new_video_history_entry = self.__build_video_history_entry()
         new_video_history_entry["video_file_name"] = self.video_file_name
-        save_history = True
+        save_history = save_new_history
         if (
             self.video_history_clicked.get()
             != StartVideoDialog.LOAD_VIDEO_PROFILE_FROM_HISTORY_OPTION
@@ -2438,6 +2534,11 @@ class StartVideoDialog:
             ]
             if new_video_history_entry == selected_video_history:
                 save_history = False
+            elif update_existing_history:
+                selected_video_history.update(new_video_history_entry)
+                f = open(self.history_file_path, "w")
+                json.dump(self.video_history, f, indent=2)
+                f.close()
         if save_history:
             new_video_history_entry["history_datetime"] = (
                 datetime.datetime.now().strftime("%Y-%m-%d %H%M%S")
@@ -2515,6 +2616,8 @@ class StartVideoDialog:
             "subtitle_offset": DEFAULT_SUBTITLE_OFFSET,
             "frame_packing": DEFAULT_FRAME_PACKING,
             "right_eye": DEFAULT_RIGHT_EYE,
+            "decoder_preference": DEFAULT_DECODER_PREFERENCE,
+            "generate_dot_graph_file": DEFAULT_GENERATE_DOT_GRAPH_FILE,
         }
 
 
@@ -3008,6 +3111,8 @@ class TopWindow:
             "subtitle_offset": start_video_dialog.subtitle_offset_variable.get(),
             "frame_packing": start_video_dialog.frame_packing_variable.get(),
             "right_eye": start_video_dialog.right_eye_variable.get(),
+            "decoder_preference": start_video_dialog.decoder_preference_variable.get(),
+            "generate_dot_graph_file": start_video_dialog.generate_dot_graph_file_variable.get(),
         }
 
         self.start_video(playback_parameters)
@@ -3023,6 +3128,8 @@ class TopWindow:
         subtitle_offset = playback_parameters["subtitle_offset"]
         frame_packing = playback_parameters["frame_packing"]
         right_eye = playback_parameters["right_eye"]
+        decoder_preference = playback_parameters["decoder_preference"]
+        generate_dot_graph_file = playback_parameters["generate_dot_graph_file"]
 
         target_framerate = self.display_settings_dialog.target_framerate_variable.get()
         display_resolution = playback_parameters.get(
@@ -3082,7 +3189,7 @@ class TopWindow:
             map(int, display_resolution.split("x"))
         )
 
-        filters_to_prioritize = [
+        nvcodec_filters = [
             "nvjpegdec",
             "nvmpeg2videodec",
             "nvmpeg4videodec",
@@ -3091,21 +3198,70 @@ class TopWindow:
             "nvh265dec",
             "nvvp9dec",
         ]
-        # filters_to_prioritize = []
+        vaapi_filters = [
+            "vaapidecodebin",
+            "vaapih264dec",
+            "vaapih264enc",
+            "vaapih265dec",
+            "vaapijpegdec",
+            "vaapijpegenc",
+            "vaapimpeg2dec",
+            "vaapipostproc",
+            "vaapisink",
+            "vaapivp8dec",
+            "vaapivp9dec",
+        ]
+        msdk_filters = [
+            "msdkh264dec",
+            "msdkh265dec",
+            "msdkvp9dec",
+        ]
+        software_filters = [
+            "openh264",
+            "avdec_h264",
+            "vah264dec",
+            "vah265dec",
+            "libde265dec" "avdec_h265",
+            "vavp9dec",
+            "vp9dec",
+            "avdec_vp9",
+        ]
+
+        filters_to_prioritize = []
+        filters_to_deprioritize = []
+        if decoder_preference == DECODER_PREFERENCE_NVCODEC:
+            filters_to_prioritize.extend(nvcodec_filters)
+            filters_to_deprioritize.extend(
+                vaapi_filters + msdk_filters + software_filters
+            )
+        elif decoder_preference == DECODER_PREFERENCE_VAAPI:
+            filters_to_prioritize.extend(vaapi_filters)
+            filters_to_deprioritize.extend(
+                nvcodec_filters + msdk_filters + software_filters
+            )
+        elif decoder_preference == DECODER_PREFERENCE_MSDK:
+            filters_to_prioritize.extend(msdk_filters)
+            filters_to_deprioritize.extend(
+                nvcodec_filters + vaapi_filters + software_filters
+            )
+        elif decoder_preference == DECODER_PREFERENCE_SOFTWARE:
+            filters_to_prioritize.extend(software_filters)
+            filters_to_deprioritize.extend(
+                nvcodec_filters + vaapi_filters + msdk_filters
+            )
         for filter_to_prioritize in filters_to_prioritize:
             primary_decoder_element_factory = Gst.ElementFactory.find(
                 filter_to_prioritize
             )
             if primary_decoder_element_factory:
                 primary_decoder_element_factory.set_rank(Gst.Rank.PRIMARY + 1)
-        filters_to_deprioritize = ["vaapidecodebin"]
-        # filters_to_deprioritize = []
         for filter_to_deprioritize in filters_to_deprioritize:
             primary_decoder_element_factory = Gst.ElementFactory.find(
                 filter_to_deprioritize
             )
             if primary_decoder_element_factory:
-                primary_decoder_element_factory.set_rank(Gst.Rank.NONE)
+                primary_decoder_element_factory.set_rank(Gst.Rank.MARGINAL)
+                # primary_decoder_element_factory.set_rank(Gst.Rank.NONE)
 
         # self.player = Gst.ElementFactory.make("playbin", "Playbin")
         self.player = Gst.ElementFactory.make("playbin3", "Playbin")
@@ -3284,11 +3440,12 @@ class TopWindow:
         self.__forward_small_button.config(state="normal")
         self.__forward_big_button.config(state="normal")
 
-        Gst.debug_bin_to_dot_file(
-            self.player,
-            Gst.DebugGraphDetails.ALL,
-            "pipeline_" + datetime.datetime.now().strftime("%Y-%m-%d %H%M%S"),
-        )
+        if generate_dot_graph_file:
+            Gst.debug_bin_to_dot_file(
+                self.player,
+                Gst.DebugGraphDetails.ALL,
+                "pipeline_" + datetime.datetime.now().strftime("%Y-%m-%d %H%M%S"),
+            )
 
     def click_stop_video_button(self, event=None):  # @UnusedVariable
         self.stop_player()
@@ -3309,11 +3466,11 @@ if __name__ == "__main__":
         base_path = split_base_path[0]
     else:
         base_path = internal_base_path
-    os.environ["GST_DEBUG"] = "3"
+    # os.environ["GST_DEBUG"] = "3"
     os.environ["GST_PLUGIN_PATH"] = (
         f"{gstreamer_plugins_active}:{internal_base_path}:{os.environ.get('GST_PLUGIN_PATH', '')}"
     )
-    os.environ["GST_DEBUG_DUMP_DOT_DIR"] = os.path.join(base_path, "dot_files")
+    os.environ["GST_DEBUG_DUMP_DOT_DIR"] = os.path.join(base_path, "dot_graph_files")
     # LIBVA_DRIVER_NAME=i965 vainfo --display drm --device /dev/dri/renderD128
     # os.environ["GST_VAAPI_ALL_DRIVERS"] = "1" # This environment variable can be set, independently of its value, to disable the drivers white list. By default only intel and mesa va drivers are loaded if they are available. The rest are ignored. With this environment variable defined, all the available va drivers are loaded, even if they are deprecated.
     # os.environ["LIBVA_DRIVER_NAME"] = "i965" # This environment variable can be set with the drivers name to load. For example, intel's driver is i965, meanwhile mesa is gallium.
