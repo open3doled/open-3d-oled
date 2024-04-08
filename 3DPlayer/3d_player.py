@@ -3280,72 +3280,126 @@ class TopWindow:
             self.emitter_serial.pageflipglsink = self.pageflipglsink
 
         """
-      soft-colorbalance+deinterlace+soft-volume+text+audio+video 
-      
-      0x00000400 | 0x00000200 | 0x00000010 | 0x00000004 | 0x00000002 | 0x00000001
-      
-      https://gstreamer.freedesktop.org/documentation/playback/playsink.html?gi-language=python#GstPlayFlags
-      video (0x00000001) – Render the video stream
-      audio (0x00000002) – Render the audio stream
-      text (0x00000004) – Render subtitles
-      vis (0x00000008) – Render visualisation when no video is present
-      soft-volume (0x00000010) – Use software volume
-      native-audio (0x00000020) – Only use native audio formats
-      native-video (0x00000040) – Only use native video formats
-      download (0x00000080) – Attempt progressive download buffering
-      buffering (0x00000100) – Buffer demuxed/parsed data
-      deinterlace (0x00000200) – Deinterlace video if necessary
-      soft-colorbalance (0x00000400) – Use software color balance
-      force-filters (0x00000800) – Force audio/video filter(s) to be applied
-      force-sw-decoders (0x00001000) – Force only software-based decoders (no effect for playbin3) 
-    """
+          soft-colorbalance+deinterlace+soft-volume+text+audio+video 
+          
+          0x00000400 | 0x00000200 | 0x00000010 | 0x00000004 | 0x00000002 | 0x00000001
+          
+          https://gstreamer.freedesktop.org/documentation/playback/playsink.html?gi-language=python#GstPlayFlags
+          video (0x00000001) – Render the video stream
+          audio (0x00000002) – Render the audio stream
+          text (0x00000004) – Render subtitles
+          vis (0x00000008) – Render visualisation when no video is present
+          soft-volume (0x00000010) – Use software volume
+          native-audio (0x00000020) – Only use native audio formats
+          native-video (0x00000040) – Only use native video formats
+          download (0x00000080) – Attempt progressive download buffering
+          buffering (0x00000100) – Buffer demuxed/parsed data
+          deinterlace (0x00000200) – Deinterlace video if necessary
+          soft-colorbalance (0x00000400) – Use software color balance
+          force-filters (0x00000800) – Force audio/video filter(s) to be applied
+          force-sw-decoders (0x00001000) – Force only software-based decoders (no effect for playbin3) 
+        """
         play_flags = 0x00000400 | 0x00000200 | 0x00000010 | 0x00000002 | 0x00000001
 
+        # Sample of adding video filters to pipeline
         video_filters = None
         previous_video_filter = None  # @UnusedVariable
-        sink_pad = None
-        src_pad = None
+        video_sink_pad = None
+        video_src_pad = None
+
+        """
+        if video_filters is None:
+            video_filters = Gst.Bin("video_filters")
+
+        subtitle_filesrc = Gst.ElementFactory.make("filesrc", "FileSrc")
+        subtitle_filesrc.set_property("location", subtitle_file_path)
+        video_filters.add(subtitle_filesrc)
+
+        subtitle_subparse = Gst.ElementFactory.make("subparse", "SubParse")
+        video_filters.add(subtitle_subparse)
+        subtitle_filesrc.link(subtitle_subparse)
+
+        if frame_packing == "side-by-side-half":
+            frame_packing = "side-by-side-full"
+
+            videoscale = Gst.ElementFactory.make("videoscale", "VideoScale")
+            video_sink_pad = videoscale.sinkpad
+            videoscale.set_property("method", 0)
+            videoscale.set_property("add-borders", False)
+            video_filters.add(videoscale)
+
+            video_resolution_width = 1920
+            video_resolution_height = 1080
+            previous_video_filter = videoscale_capsfilter = Gst.ElementFactory.make(
+                "capsfilter", "VideoScaleCapsFilter"
+            )
+            video_src_pad = videoscale_capsfilter.srcpad
+            videoscale_capsfilter.set_property(
+                "caps",
+                Gst.caps_from_string(
+                    f"video/x-raw,width={2*video_resolution_width},height={video_resolution_height},pixel-aspect-ratio=1/1"
+                ),
+            )
+            video_filters.add(videoscale_capsfilter)
+            videoscale.link(videoscale_capsfilter)
+
+        subtitle_textoverlay = Gst.ElementFactory.make(
+            "subtitleoverlay", "SubtitleOverlay"
+        )
+        if previous_video_filter is None:
+            video_sink_pad = subtitle_textoverlay.sinkpads[0]
+        video_src_pad = subtitle_textoverlay.srcpads[0]
+        subtitle_textoverlay.set_property(
+            "font-desc", f"{subtitle_font}, {subtitle_size}"
+        )  # subtitle font we need a mono spacing font for the subtitle reformatter to work because it duplicates text and inserts whitespace to force the correct depth position
+        subtitle_textoverlay.set_property(
+            "subtitle-ts-offset", float(subtitle_offset)
+        )  # The synchronisation offset between text and video in nanoseconds
+        video_filters.add(subtitle_textoverlay)
+        if previous_video_filter is not None:
+            previous_video_filter.link(subtitle_textoverlay)
+        subtitle_subparse.link(subtitle_textoverlay)
+        """
+
+        if video_filters is not None:
+            ghostpad_video_sink = Gst.GhostPad.new("sink", video_sink_pad)
+            ghostpad_video_source = Gst.GhostPad.new("src", video_src_pad)
+            video_filters.add_pad(ghostpad_video_sink)
+            video_filters.add_pad(ghostpad_video_source)
+            self.player.set_property("video-filter", video_filters)
+
+        # Sample of adding audio filters to pipeline
+        audio_filters = None
+        previous_audio_filter = None  # @UnusedVariable
+        audio_sink_pad = None
+        audio_src_pad = None
+
+        """
+        if audio_filters is None:
+            audio_filters = Gst.Bin("audio_filters")
+
+        previous_audio_filter = audio_capsfilter = Gst.ElementFactory.make(
+            "capsfilter", "AudioCapsFilter"
+        )
+        audio_sink_pad = audio_capsfilter.sinkpad
+        audio_src_pad = audio_capsfilter.srcpad
+        audio_capsfilter.set_property(
+            "caps",
+            # Gst.caps_from_string(f"audio/x-raw"),
+            Gst.caps_from_string(f"audio/x-dts"),
+        )
+        audio_filters.add(audio_capsfilter)
+        """
+
+        if audio_filters is not None:
+            ghostpad_audio_sink = Gst.GhostPad.new("sink", audio_sink_pad)
+            ghostpad_audio_source = Gst.GhostPad.new("src", audio_src_pad)
+            audio_filters.add_pad(ghostpad_audio_sink)
+            audio_filters.add_pad(ghostpad_audio_source)
+            self.player.set_property("audio-filter", audio_filters)
 
         if show_subtitles and subtitle_file_path:
             play_flags |= 0x00000004  # add subtitles
-            """
-      if video_filters is None:
-        video_filters = Gst.Bin("video_filters")
-        
-      subtitle_filesrc = Gst.ElementFactory.make('filesrc', 'FileSrc')
-      subtitle_filesrc.set_property('location', subtitle_file_path)
-      video_filters.add(subtitle_filesrc)
-      
-      subtitle_subparse = Gst.ElementFactory.make('subparse', 'SubParse')
-      video_filters.add(subtitle_subparse)
-      subtitle_filesrc.link(subtitle_subparse)
-      
-      if frame_packing == 'side-by-side-half':
-        frame_packing = 'side-by-side-full'
-          
-        videoscale = Gst.ElementFactory.make('videoscale', 'VideoScale')
-        sink_pad = videoscale.sinkpad
-        videoscale.set_property('method', 0)
-        videoscale.set_property('add-borders', False)
-        video_filters.add(videoscale)
-
-        previous_video_filter = videoscale_capsfilter = Gst.ElementFactory.make('capsfilter', 'VideoScaleCapsFilter')
-        src_pad = videoscale_capsfilter.srcpad
-        videoscale_capsfilter.set_property('caps', Gst.caps_from_string(f'video/x-raw,width={2*video_resolution_width},height={video_resolution_height},pixel-aspect-ratio=1/1'))
-        video_filters.add(videoscale_capsfilter)
-        videoscale.link(videoscale_capsfilter)
-      
-      subtitle_textoverlay = Gst.ElementFactory.make('subtitleoverlay', 'SubtitleOverlay')
-      if previous_video_filter is None:
-        sink_pad = subtitle_textoverlay.sinkpads[0]
-      src_pad = subtitle_textoverlay.srcpads[0]
-      subtitle_textoverlay.set_property('font-desc', f'{subtitle_font}, {subtitle_size}') # subtitle font we need a mono spacing font for the subtitle reformatter to work because it duplicates text and inserts whitespace to force the correct depth position
-      subtitle_textoverlay.set_property('subtitle-ts-offset', float(subtitle_offset)) # The synchronisation offset between text and video in nanoseconds
-      video_filters.add(subtitle_textoverlay)
-      if previous_video_filter is not None:
-        previous_video_filter.link(subtitle_textoverlay)
-      subtitle_subparse.link(subtitle_textoverlay)
-      """
 
             self.subtitle3dsink = Gst.ElementFactory.make(
                 "gstsubtitle3dsink", "Subtitle3DSink"
@@ -3366,13 +3420,6 @@ class TopWindow:
             self.player.set_property(
                 "text-sink", self.subtitle3dsink
             )  # https://gstreamer.freedesktop.org/documentation/playback/playbin.html?gi-language=python
-
-        if video_filters is not None:
-            ghostpad_sink = Gst.GhostPad.new("sink", sink_pad)
-            ghostpad_source = Gst.GhostPad.new("src", src_pad)
-            video_filters.add_pad(ghostpad_sink)
-            video_filters.add_pad(ghostpad_source)
-            self.player.set_property("video-filter", video_filters)
 
         self.pageflipglsink.set_property("calibration-mode", calibration_mode)
         self.pageflipglsink.set_property("fullscreen", False)
