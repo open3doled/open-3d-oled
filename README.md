@@ -44,6 +44,7 @@ OR
 ### Windows Release Install:
 Download the latest release version from the Releases page.
 Unzip and run 3d_player.exe
+The first time you run the program it can take a while to load all required libraries, please be patient.
 
 If running windows 11 or 10 with DPI scaling be sure to disable it as follows.
 1) Right click properties on 3d_player.exe in the 3DPlayer folder
@@ -89,7 +90,11 @@ If running windows 11 or 10 with DPI scaling be sure to disable it as follows.
 If the "video-path" command line argument is supplied it will auto launch playback of that video using the default settings you have stored from prior usage.
 Defaults can be overriden using additionally avaiable command line arguments to support videos with different formats and subtitle files.
 ```
-python3 3d_player.py --video-path ./videos/ghosting_test_video_1080p_red_left_blue_right_side_by_side_full.mp4 --frame-packing side-by-side-full --right-eye right --display-resolution 2560x1080
+Linux (in terminal):
+python3 3d_player.py --video-path ./videos/ghosting_test_video_1080p_red_left_blue_right_side_by_side_full.mp4 --frame-packing side-by-side-full --right-eye right --display-resolution 1920x1080
+Windows (in command prompt):
+3d_player.exe --video-path ./videos/ghosting_test_video_1080p_red_left_blue_right_side_by_side_full.mp4 --frame-packing side-by-side-full --right-eye right --display-resolution 1920x1080
+3d_player.exe --video-path "C:\open-3d-oled\3DPlayer\videos\ghosting_test_video_1080p_red_left_blue_right_side_by_side_full.mp4" --frame-packing side-by-side-full --right-eye right --display-resolution 1920x1080
 ```
     
 ## FAQ, Useful Commands and Tips
@@ -120,6 +125,7 @@ Not Working (Untested)
 ```
    http://bbb3d.renderfarming.net/download.html
 ```
+* If gstreamer cannot initiate playback on a playback pipeline it will timeout after 15 seconds.
 * GStreamer has difficulty processing matroska packed videos with multi-language audio streams that have 5.1 or 7.1 channel audio, removing all but the language you want from the file can solve playback issues. This can be performed with ffmpeg as follows.
 ```
    ffmpeg -i Movie.7xAudio.mkv -map 0:v:0 -map 0:a:0 -c copy Movie.7xAudio.EngOnly.mkv
