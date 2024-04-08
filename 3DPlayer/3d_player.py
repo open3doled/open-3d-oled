@@ -3585,6 +3585,7 @@ if __name__ == "__main__":
             "1280x720",
         ],
     )
+    parsed_arguments = parser.parse_args()
 
     if os.name == "nt":
         os.system("chcp.com 65001")
@@ -3636,7 +3637,7 @@ if __name__ == "__main__":
     # GObject.threads_init()
     Gst.init(None)
 
-    top_window = TopWindow(parser.parse_args())
+    top_window = TopWindow(parsed_arguments)
 
     try:
 
