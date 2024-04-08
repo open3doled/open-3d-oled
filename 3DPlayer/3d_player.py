@@ -2625,20 +2625,7 @@ class StartVideoDialog:
 
     @staticmethod
     def get_video_history_default_settings():
-        history_file_path = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), "video_history.json"
-        )
-        if os.path.exists(history_file_path):
-            f = open(history_file_path, "r")
-            video_history = json.load(f)
-            f.close()
-            for vh in video_history:
-                if (
-                    vh["video_file_name"]
-                    == StartVideoDialog.LOAD_VIDEO_DEFAULTS_HISTORY_SAVE_NAME
-                ):
-                    return vh
-        return {
+        video_defaults = {
             "video_file_name": "Defaults",
             "subtitle_file_name": "",
             "subtitle_font": (DEFAULT_SUBTITLE_FONT),
@@ -2652,6 +2639,20 @@ class StartVideoDialog:
             "generate_dot_graph_file": DEFAULT_GENERATE_DOT_GRAPH_FILE,
             "audio_format_filter": DEFAULT_AUDIO_FORMAT_FILTER,
         }
+        history_file_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "video_history.json"
+        )
+        if os.path.exists(history_file_path):
+            f = open(history_file_path, "r")
+            video_history = json.load(f)
+            f.close()
+            for vh in video_history:
+                if (
+                    vh["video_file_name"]
+                    == StartVideoDialog.LOAD_VIDEO_DEFAULTS_HISTORY_SAVE_NAME
+                ):
+                    video_defaults.update(vh)
+        return video_defaults
 
 
 class TopWindow:
