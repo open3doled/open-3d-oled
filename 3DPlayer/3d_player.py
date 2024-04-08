@@ -183,18 +183,18 @@ class EmitterSerialLineReader(serial.threaded.LineReader):
             self.realtime_duplicate_counter += 1
             if self.__pageflipglsink is not None:
                 # self.__pageflipglsink.set_property("skip-n-page-flips", "1")
-                if self.__pageflipglsink.get_property("calibration-mode"):
-                    print(self.__pageflipglsink.get_property("calibration-mode"))
-                    self.__pageflipglsink.set_property(
-                        "latest-subtitle-data",
-                        json.dumps(
-                            {
-                                "show_now": True,
-                                "text": f"duplicate frames {self.realtime_duplicate_counter}",
-                                "duration": 500000000,
-                            }
-                        ),
-                    )
+                # if self.__pageflipglsink.get_property("calibration-mode"):
+                self.__pageflipglsink.set_property(
+                    "latest-subtitle-data",
+                    json.dumps(
+                        {
+                            "show_now": True,
+                            "text": f"\nduplicate frames {self.realtime_duplicate_counter}",
+                            "duration": 500000000,
+                            "special_type": "duplicate",
+                        }
+                    ),
+                )
         elif (
             event.startswith("+o ")
             and self.debug_opt101_enable_stream_readings_to_serial == 1
@@ -2275,21 +2275,21 @@ class StartVideoDialog:
         self.action_button_frame_1 = tkinter.Frame(top)
         self.open_button = tkinter.Button(
             self.action_button_frame_1,
-            text="Open (Skip History)",
+            text="Just Open (No History)",
             command=functools.partial(self.open_video, False, False),
         )
         self.open_button.pack(padx=5, side=tkinter.LEFT)
 
         self.open_button_new_history = tkinter.Button(
             self.action_button_frame_1,
-            text="Open (Save New History Entry)",
+            text="Open and Save (New History Entry)",
             command=functools.partial(self.open_video, True, False),
         )
         self.open_button_new_history.pack(padx=5, side=tkinter.LEFT)
 
         self.open_button_update_history = tkinter.Button(
             self.action_button_frame_1,
-            text="Open (Update History Entry)",
+            text="Open and Update (Existing History Entry)",
             command=functools.partial(self.open_video, False, True),
         )
         self.open_button_update_history.pack(padx=5, side=tkinter.LEFT)
@@ -3385,8 +3385,8 @@ class TopWindow:
         audio_src_pad = audio_capsfilter.srcpad
         audio_capsfilter.set_property(
             "caps",
-            # Gst.caps_from_string(f"audio/x-raw"),
-            Gst.caps_from_string(f"audio/x-dts"),
+            Gst.caps_from_string(f"audio/x-raw"),
+            # Gst.caps_from_string(f"audio/x-dts"),
         )
         audio_filters.add(audio_capsfilter)
         """
@@ -3698,6 +3698,7 @@ if __name__ == "__main__":
                                             "show_now": True,
                                             "text": f"{calibration_target_field} {target.get()} {'connect emitter!' if emitter_or_display == 'emitter' and top_window.emitter_serial is None else ''}",
                                             "duration": 1000000000,
+                                            "special_type": "setting",
                                         }
                                     ),
                                 )

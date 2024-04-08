@@ -1531,12 +1531,22 @@ class PageflipGLWindow(threading.Thread):
                 if "show_now" in parsed_data:
                     parsed_data["start"] = self.__in_image_play_timestamp
                 parsed_data["end"] = parsed_data["start"] + parsed_data["duration"]
+                if parsed_data["special_type"].startswith("duplicate"):
+                    self.__latest_subtitles = list(
+                        filter(
+                            lambda d: not d["special_type"].startswith("duplicate"),
+                            self.__latest_subtitles,
+                        )
+                    )
+                if parsed_data["special_type"].startswith("setting"):
+                    self.__latest_subtitles = list(
+                        filter(
+                            lambda d: not d["special_type"].startswith("setting"),
+                            self.__latest_subtitles,
+                        )
+                    )
                 self.__latest_subtitles.append(parsed_data)
-                while len(self.__latest_subtitles) > 5 or (
-                    self.__calibration_mode
-                    and len(self.__latest_subtitles)
-                    > 1  # in calibration mode we only allow 1 subtitle to preven overlapping
-                ):
+                while len(self.__latest_subtitles) > 5:
                     self.__latest_subtitles.popleft()
                 self.__update_subtitle_surface_and_data()
             # print(f"pts:{self.__in_image_play_timestamp} b:{self.__latest_subtitles[-1]['start']} e:{self.__latest_subtitles[-1]['end']} {self.__latest_subtitles[-1]['text']}")
