@@ -529,6 +529,7 @@ class EmitterSettingsDialog:
         top.protocol("WM_DELETE_WINDOW", self.click_close)
 
         self.emitter_firmware_update_dialog = None
+        self.emitter_firmware_version_int = 0
 
         row_count = 0
         pro_micro_ports = [

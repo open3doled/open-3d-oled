@@ -125,6 +125,10 @@ FRAME_PACKING_SIDE_BY_SIDE_FULL = "side-by-side-full"
 FRAME_PACKING_OVER_AND_UNDER_HALF = "over-and-under-half"
 FRAME_PACKING_OVER_AND_UNDER_FULL = "over-and-under-full"
 
+DISPLAY_DUPLICATE_FRAME_MODE_OFF = 0
+DISPLAY_DUPLICATE_FRAME_MODE_ON = 1
+DISPLAY_DUPLICATE_FRAME_MODE_ON_WITH_COUNTER = 2
+
 WINDOW_NAME = "FlipGLPlayer"
 FINISH_BUFFER_COPY_EVENT_TIMEOUT = 1 / 30
 
@@ -195,6 +199,8 @@ class PageflipGLWindow(threading.Thread):
         self.__latest_subtitles = collections.deque()
         self.__latest_subtitles_event = threading.Event()
         self.__latest_subtitle_data = ""
+        self.__subtitle_surface_cache = dict()
+        self.__display_duplicate_frame_mode = DISPLAY_DUPLICATE_FRAME_MODE_OFF
         self.__latest_overlay_timestamp = None
         self.__latest_overlay_timestamp_time_str = None
         self.__video_duration = 0
@@ -216,6 +222,7 @@ class PageflipGLWindow(threading.Thread):
         )
 
         self.__help_text = None
+        self.__show_help_text = False
         self.__show_help_instruction_image = False
         self.__help_instruction_image = self.__get_local_image_with_alpha(
             "help_message.png"
@@ -631,16 +638,28 @@ class PageflipGLWindow(threading.Thread):
     def __update_subtitle_surface_and_data(self):
         if self.__latest_subtitle_data:
             for latest_subtitle in self.__latest_subtitles:
-                subtitle_lines = []
-                latest_subtitle_text_lines = latest_subtitle["text"].splitlines()
-                for latest_subtitle_text_line in latest_subtitle_text_lines:
-                    subtitle_lines.append(
-                        self.__generate_text_surface_with_shadow(
-                            self.__subtitle_font_set, latest_subtitle_text_line
-                        )
-                    )
-                # TODO: these should be in a mutex to ensure we aren't trying to read these as they are changing
-                latest_subtitle["lines"] = subtitle_lines
+                if "lines" not in latest_subtitle:
+                    cache_key = latest_subtitle.get("use_surface_cache_key", None)
+                    if (
+                        cache_key is not None
+                        and cache_key in self.__subtitle_surface_cache
+                    ):
+                        subtitle_lines = self.__subtitle_surface_cache[cache_key]
+                    else:
+                        subtitle_lines = []
+                        latest_subtitle_text_lines = latest_subtitle[
+                            "text"
+                        ].splitlines()
+                        for latest_subtitle_text_line in latest_subtitle_text_lines:
+                            subtitle_lines.append(
+                                self.__generate_text_surface_with_shadow(
+                                    self.__subtitle_font_set, latest_subtitle_text_line
+                                )
+                            )
+                        if cache_key is not None:
+                            self.__subtitle_surface_cache[cache_key] = subtitle_lines
+                    # TODO: these should be in a mutex to ensure we aren't trying to read these as they are changing
+                    latest_subtitle["lines"] = subtitle_lines
 
     def __update_osd_texts(self):
         self.__help_text = self.__generate_text_surface_with_shadow(
@@ -655,6 +674,7 @@ class PageflipGLWindow(threading.Thread):
             int(self.__subtitle_size * self.__window_size_scale_factor),
         )
         self.__update_subtitle_surface_and_data()
+        self.__subtitle_surface_cache = dict()
 
     def __update_window_scale_factor(self):
         if self.fullscreen:
@@ -723,6 +743,7 @@ class PageflipGLWindow(threading.Thread):
 
                 # Overlay timestamp
                 if time.time() - self.__last_mouse_moved_at < 2.0:
+                    self.__show_help_text = True
                     new_overlay_timestamp_time_str = str(
                         datetime.timedelta(
                             seconds=self.__in_image_play_timestamp // 1000000000
@@ -744,6 +765,7 @@ class PageflipGLWindow(threading.Thread):
                             ),
                         )
                 else:
+                    self.__show_help_text = False
                     self.__latest_overlay_timestamp = None
                     self.__latest_overlay_timestamp_time_str = None
 
@@ -780,6 +802,28 @@ class PageflipGLWindow(threading.Thread):
                                 f"calibration-calibration_mode-set-{'true' if self.__calibration_mode else 'false'}"
                             ]
                         )
+                    elif event.key == pg.K_v:
+                        if (
+                            self.__display_duplicate_frame_mode
+                            == DISPLAY_DUPLICATE_FRAME_MODE_OFF
+                        ):
+                            self.__display_duplicate_frame_mode = (
+                                DISPLAY_DUPLICATE_FRAME_MODE_ON
+                            )
+                        elif (
+                            self.__display_duplicate_frame_mode
+                            == DISPLAY_DUPLICATE_FRAME_MODE_ON
+                        ):
+                            self.__display_duplicate_frame_mode = (
+                                DISPLAY_DUPLICATE_FRAME_MODE_ON_WITH_COUNTER
+                            )
+                        elif (
+                            self.__display_duplicate_frame_mode
+                            == DISPLAY_DUPLICATE_FRAME_MODE_ON_WITH_COUNTER
+                        ):
+                            self.__display_duplicate_frame_mode = (
+                                DISPLAY_DUPLICATE_FRAME_MODE_OFF
+                            )
                     elif event.key == pg.K_SPACE:
                         self.__requests = ",".join(
                             self.__requests.split(",") + ["toggle_paused"]
@@ -1178,21 +1222,31 @@ class PageflipGLWindow(threading.Thread):
                     float(self.__target_framerate)
                 )  # uses lots of cpu but is accurate at delaying for framerate
 
-            if self.__latest_overlay_timestamp and self.__subtitle_font_set:
-                self.__draw_centered_osd_text(
-                    (self.__display_resolution_height * self.__window_size_scale_factor)
-                    - overlay_timestamp_vertical_offset
-                    - self.__latest_overlay_timestamp["rendered_surface"].get_height(),
-                    self.__latest_overlay_timestamp,
-                    0,
-                )
-                self.__draw_centered_osd_text(
-                    (self.__display_resolution_height * self.__window_size_scale_factor)
-                    - overlay_timestamp_vertical_offset
-                    - 2 * self.__help_text["rendered_surface"].get_height(),
-                    self.__help_text,
-                    0,
-                )
+            if self.__subtitle_font_set:
+                if self.__show_help_text:
+                    self.__draw_centered_osd_text(
+                        (
+                            self.__display_resolution_height
+                            * self.__window_size_scale_factor
+                        )
+                        - overlay_timestamp_vertical_offset
+                        - 2 * self.__help_text["rendered_surface"].get_height(),
+                        self.__help_text,
+                        0,
+                    )
+                if self.__latest_overlay_timestamp:
+                    self.__draw_centered_osd_text(
+                        (
+                            self.__display_resolution_height
+                            * self.__window_size_scale_factor
+                        )
+                        - overlay_timestamp_vertical_offset
+                        - self.__latest_overlay_timestamp[
+                            "rendered_surface"
+                        ].get_height(),
+                        self.__latest_overlay_timestamp,
+                        0,
+                    )
 
             if self.__latest_subtitle_data:
                 self.__latest_subtitles_event.clear()
@@ -1534,17 +1588,29 @@ class PageflipGLWindow(threading.Thread):
                 if "show_now" in parsed_data:
                     parsed_data["start"] = self.__in_image_play_timestamp
                 parsed_data["end"] = parsed_data["start"] + parsed_data["duration"]
-                if parsed_data["special_type"].startswith("duplicate"):
-                    self.__latest_subtitles = list(
-                        filter(
-                            lambda d: not d["special_type"].startswith("duplicate"),
-                            self.__latest_subtitles,
+                if parsed_data["special_type"] == "duplicate":
+                    if (
+                        self.__display_duplicate_frame_mode
+                        == DISPLAY_DUPLICATE_FRAME_MODE_OFF
+                    ):
+                        return
+                    else:
+                        self.__latest_subtitles = list(
+                            filter(
+                                lambda d: not d["special_type"] == "duplicate",
+                                self.__latest_subtitles,
+                            )
                         )
-                    )
-                if parsed_data["special_type"].startswith("setting"):
+                        if (
+                            self.__display_duplicate_frame_mode
+                            == DISPLAY_DUPLICATE_FRAME_MODE_ON
+                        ):
+                            parsed_data["text"] = "\nduplicate frame"
+                            parsed_data["use_surface_cache_key"] = "duplicate"
+                if parsed_data["special_type"] == "setting":
                     self.__latest_subtitles = list(
                         filter(
-                            lambda d: not d["special_type"].startswith("setting"),
+                            lambda d: not d["special_type"] == "setting",
                             self.__latest_subtitles,
                         )
                     )
@@ -1616,7 +1682,7 @@ class PageflipGLWindow(threading.Thread):
             if self.__started:
                 self.__update_overlay_boxes()
                 if not value:
-                    while self.__latest_subtitles:
+                    while len(self.__latest_subtitles) > 0:
                         self.__latest_subtitles.popleft()
 
     @property
