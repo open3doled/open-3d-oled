@@ -1595,7 +1595,7 @@ class PageflipGLWindow(threading.Thread):
                     ):
                         return
                     else:
-                        self.__latest_subtitles = list(
+                        self.__latest_subtitles = collections.deque(
                             filter(
                                 lambda d: not d["special_type"] == "duplicate",
                                 self.__latest_subtitles,
@@ -1608,7 +1608,7 @@ class PageflipGLWindow(threading.Thread):
                             parsed_data["text"] = "\nduplicate frame"
                             parsed_data["use_surface_cache_key"] = "duplicate"
                 if parsed_data["special_type"] == "setting":
-                    self.__latest_subtitles = list(
+                    self.__latest_subtitles = collections.deque(
                         filter(
                             lambda d: not d["special_type"] == "setting",
                             self.__latest_subtitles,
@@ -1682,7 +1682,7 @@ class PageflipGLWindow(threading.Thread):
             if self.__started:
                 self.__update_overlay_boxes()
                 if not value:
-                    while len(self.__latest_subtitles) > 0:
+                    while self.__latest_subtitles:
                         self.__latest_subtitles.popleft()
 
     @property
