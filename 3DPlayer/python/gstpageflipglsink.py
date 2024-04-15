@@ -714,17 +714,23 @@ class PageflipGLWindow(threading.Thread):
                             WS_POPUP = 0x80000000
 
                             # https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-findwindoww
-                            _FindWindow = ctypes.windll.user32.FindWindowW
+                            _FindWindow = (
+                                ctypes.windll.user32.FindWindowW  # @UndefinedVariable
+                            )
                             _FindWindow.argtypes = [ctypes.c_wchar_p, ctypes.c_wchar_p]
                             _FindWindow.restype = ctypes.c_void_p
 
                             # https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getwindowlongw
-                            _GetWindowLong = ctypes.windll.user32.GetWindowLongW
+                            _GetWindowLong = (
+                                ctypes.windll.user32.GetWindowLongW  # @UndefinedVariable
+                            )
                             _GetWindowLong.argtypes = [ctypes.c_long, ctypes.c_long]
                             _GetWindowLong.restype = ctypes.c_long
 
                             # https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowlongw
-                            _SetWindowLong = ctypes.windll.user32.SetWindowLongW
+                            _SetWindowLong = (
+                                ctypes.windll.user32.SetWindowLongW  # @UndefinedVariable
+                            )
                             _SetWindowLong.argtypes = [
                                 ctypes.c_long,
                                 ctypes.c_long,
@@ -733,21 +739,35 @@ class PageflipGLWindow(threading.Thread):
                             _SetWindowLong.restype = ctypes.c_void_p
 
                             opengl_video_window_handle = _FindWindow(
-                                ctypes.POINTER(ctypes.c_wchar_p)(), WINDOW_NAME
+                                # ctypes.POINTER(ctypes.c_wchar_p)(), WINDOW_NAME
+                                None,
+                                WINDOW_NAME,
                             )
 
                             current_styles = _GetWindowLong(
                                 ctypes.c_int(opengl_video_window_handle),
                                 ctypes.c_int(GWL_STYLE),
                             )
-                            current_styles = current_styles.value & ~(WS_POPUP)
-                            print("Last Error: {0}".format(str(ctypes.GetLastError())))
+                            current_styles = current_styles & ~(WS_POPUP)
+                            error_state_before = (
+                                ctypes.GetLastError()  # @UndefinedVariable
+                            )
+                            print("Last Error: {0}".format(str()))
                             _SetWindowLong(
                                 ctypes.c_int(opengl_video_window_handle),
                                 ctypes.c_int(GWL_STYLE),
                                 ctypes.c_int(current_styles),
                             )
-                            print("Last Error: {0}".format(str(ctypes.GetLastError())))
+                            error_state_after = (
+                                ctypes.GetLastError()  # @UndefinedVariable
+                            )
+                            if (
+                                error_state_before != error_state_after
+                                and error_state_after != 0
+                            ):
+                                print(
+                                    f"Unable to remove WS_POPUP style from OpenGLWindow due to error {error_state_after}."
+                                )
                     else:
                         if self.__fullscreen:
                             self.__sdl2_window.focus()
