@@ -1,0 +1,459 @@
+import os
+import json
+import tkinter  # @UnusedImport
+import tkinter.filedialog
+import idlelib.tooltip
+
+# Display Setting Defaults
+DEFAULT_TARGET_FRAMERATE = "0"
+DEFAULT_DISPLAY_RESOLUTION = "1920x1080"
+DEFAULT_DISPLAY_ZOOM_FACTOR = "100"
+DEFAULT_DISPLAY_SIZE = "55"
+DEFAULT_WHITEBOX_BRIGHTNESS = "255"
+DEFAULT_WHITEBOX_CORNER_POSITION = "top_left"
+DEFAULT_WHITEBOX_VERTICAL_POSITION = "0"
+DEFAULT_WHITEBOX_HORIZONTAL_POSITION = "0"
+DEFAULT_WHITEBOX_SIZE = "13"
+DEFAULT_WHITEBOX_HORIZONTAL_SPACING = "23"
+DEFAULT_CALIBRATION_MODE = False
+
+
+class DisplaySettingsDialog:
+    def __init__(self, parent, main_app):
+        self.parent = parent
+        self.main_app = main_app
+        self.top = None
+
+        self.target_framerate_variable = tkinter.StringVar(parent)
+        self.target_framerate_variable.set(DEFAULT_TARGET_FRAMERATE)
+        self.display_resolution_variable = tkinter.StringVar(parent)
+        self.display_resolution_variable.set(DEFAULT_DISPLAY_RESOLUTION)
+        self.display_zoom_factor_variable = tkinter.StringVar(parent)
+        self.display_zoom_factor_variable.set(DEFAULT_DISPLAY_ZOOM_FACTOR)
+        self.display_size_variable = tkinter.StringVar(parent)
+        self.display_size_variable.set(DEFAULT_DISPLAY_SIZE)
+        self.whitebox_brightness_variable = tkinter.StringVar(parent)
+        self.whitebox_brightness_variable.set(DEFAULT_WHITEBOX_BRIGHTNESS)
+        self.whitebox_corner_position_variable = tkinter.StringVar(parent)
+        self.whitebox_corner_position_variable.set(DEFAULT_WHITEBOX_CORNER_POSITION)
+        self.whitebox_vertical_position_variable = tkinter.StringVar(parent)
+        self.whitebox_vertical_position_variable.set(DEFAULT_WHITEBOX_VERTICAL_POSITION)
+        self.whitebox_horizontal_position_variable = tkinter.StringVar(parent)
+        self.whitebox_horizontal_position_variable.set(
+            DEFAULT_WHITEBOX_HORIZONTAL_POSITION
+        )
+        self.whitebox_size_variable = tkinter.StringVar(parent)
+        self.whitebox_size_variable.set(DEFAULT_WHITEBOX_SIZE)
+        self.whitebox_horizontal_spacing_variable = tkinter.StringVar(parent)
+        self.whitebox_horizontal_spacing_variable.set(
+            DEFAULT_WHITEBOX_HORIZONTAL_SPACING
+        )
+        self.calibration_mode_variable = tkinter.BooleanVar(parent)
+        self.calibration_mode_variable.set(False)
+
+        file_name = os.path.join(
+            self.main_app.base_path, "settings", "last_display_settings.json"
+        )
+        if os.path.exists(file_name):
+            self.load_settings_from_file(file_name)
+
+    def show(self):
+        top = self.top = tkinter.Toplevel(self.parent)
+        top.title("Display Settings")
+        top.protocol("WM_DELETE_WINDOW", self.click_close)
+
+        row_count = 0
+
+        self.target_framerate_frame = tkinter.Frame(top)
+        self.target_framerate_label = tkinter.Label(
+            self.target_framerate_frame, text="Target Framerate: "
+        )
+        self.target_framerate_label.pack(padx=5, side=tkinter.LEFT)
+        self.target_framerate_option_menu = tkinter.OptionMenu(
+            self.target_framerate_frame,
+            self.target_framerate_variable,
+            "0",
+            "50",
+            "59.98",
+            "60",
+            "74.99",
+            "75",
+            "90",
+            "120",
+        )
+        self.target_framerate_option_menu.pack(padx=5, side=tkinter.LEFT)
+        # self.target_framerate_frame.pack()
+        self.target_framerate_option_menu_tooltip = idlelib.tooltip.Hovertip(
+            self.target_framerate_option_menu,
+            "If set to a value other than 0 this will force pygame to use a frame delay with tick_busy_loop instead of relying on vsync, this should not normally need to be set and is for experimental purposes only.",
+            hover_delay=100,
+        )
+        self.target_framerate_frame.grid(row=row_count, column=0, sticky="w")
+        row_count += 1
+
+        self.display_resolution_frame = tkinter.Frame(top)
+        self.display_resolution_label = tkinter.Label(
+            self.display_resolution_frame, text="Display Resolution: "
+        )
+        self.display_resolution_label.pack(padx=5, side=tkinter.LEFT)
+        self.display_resolution_option_menu = tkinter.OptionMenu(
+            self.display_resolution_frame,
+            self.display_resolution_variable,
+            "3840x2160",
+            "2560x1080",
+            "1920x1080",
+            "1280x720",
+        )
+        self.display_resolution_option_menu.pack(padx=5, side=tkinter.LEFT)
+        # self.display_resolution_frame.pack()
+        self.display_resolution_frame.grid(row=row_count, column=0, sticky="w")
+        row_count += 1
+
+        self.display_zoom_factor_frame = tkinter.Frame(top)
+        self.display_zoom_factor_label = tkinter.Label(
+            self.display_zoom_factor_frame, text="Display Zoom Factor: "
+        )
+        self.display_zoom_factor_label.pack(padx=5, side=tkinter.LEFT)
+        self.display_zoom_factor_entry = tkinter.Entry(
+            self.display_zoom_factor_frame,
+            textvariable=self.display_zoom_factor_variable,
+        )
+        self.display_zoom_factor_entry.pack(padx=5, side=tkinter.LEFT)
+        # self.display_zoom_factor_frame.pack()
+        self.display_zoom_factor_tooltip = idlelib.tooltip.Hovertip(
+            self.display_zoom_factor_frame,
+            "(integer 0 to 100) Zooms out the video by the percent specified. This is to shrink videos on displays which have ghosting at the top and bottom of screen.",
+            hover_delay=100,
+        )
+        self.display_zoom_factor_frame.grid(row=row_count, column=0, sticky="w")
+        row_count += 1
+
+        self.display_size_frame = tkinter.Frame(top)
+        self.display_size_label = tkinter.Label(
+            self.display_size_frame, text="Display Size (in inches): "
+        )
+        self.display_size_label.pack(padx=5, side=tkinter.LEFT)
+        self.display_size_entry = tkinter.Entry(
+            self.display_size_frame, textvariable=self.display_size_variable
+        )
+        self.display_size_entry.pack(padx=5, side=tkinter.LEFT)
+        self.display_size_tooltip = idlelib.tooltip.Hovertip(
+            self.display_size_frame,
+            "Specifying the correct display size (provided in inches), allows the screen specific scaling of the on screen trigger boxes to match the sensors unit.",
+            hover_delay=100,
+        )
+        # self.display_size_frame.pack()
+        self.display_size_frame.grid(row=row_count, column=0, sticky="w")
+        row_count += 1
+
+        self.whitebox_brightness_frame = tkinter.Frame(top)
+        self.whitebox_brightness_label = tkinter.Label(
+            self.whitebox_brightness_frame, text="Whitebox Brightness: "
+        )
+        self.whitebox_brightness_label.pack(padx=5, side=tkinter.LEFT)
+        self.whitebox_brightness_entry = tkinter.Entry(
+            self.whitebox_brightness_frame,
+            textvariable=self.whitebox_brightness_variable,
+        )
+        self.whitebox_brightness_entry.pack(padx=5, side=tkinter.LEFT)
+        self.whitebox_brightness_tooltip = idlelib.tooltip.Hovertip(
+            self.whitebox_brightness_frame,
+            f"The whitebox brightness setting (0 black to 255 white) lets users lower the brightness of the white boxes to help aleviate concerns of OLED burn in. (default {DEFAULT_WHITEBOX_BRIGHTNESS})",
+            hover_delay=100,
+        )
+        # self.whitebox_brightness_frame.pack()
+        self.whitebox_brightness_frame.grid(row=row_count, column=0, sticky="w")
+        row_count += 1
+
+        self.whitebox_corner_position_frame = tkinter.Frame(top)
+        self.whitebox_corner_position_label = tkinter.Label(
+            self.whitebox_corner_position_frame, text="Whitebox Corner Position: "
+        )
+        self.whitebox_corner_position_label.pack(padx=5, side=tkinter.LEFT)
+        self.whitebox_corner_position_option_menu = tkinter.OptionMenu(
+            self.whitebox_corner_position_frame,
+            self.whitebox_corner_position_variable,
+            "top_left",
+            "top_right",
+            "bottom_left",
+            "bottom_right",
+        )
+        self.whitebox_corner_position_option_menu.pack(padx=5, side=tkinter.LEFT)
+        self.whitebox_corner_position_tooltip = idlelib.tooltip.Hovertip(
+            self.whitebox_corner_position_frame,
+            f"The whitebox corner position lets the user specify where the whitebox should be positioned, for best performance and duplicate frame (dropped frame) handling on OLED displays (or other displays which update from the top of the screen first) top_left or top_right are recommended. (default {DEFAULT_WHITEBOX_CORNER_POSITION})",
+            hover_delay=100,
+        )
+        # self.whitebox_corner_position_frame.pack()
+        self.whitebox_corner_position_frame.grid(row=row_count, column=0, sticky="w")
+        row_count += 1
+
+        self.whitebox_vertical_position_frame = tkinter.Frame(top)
+        self.whitebox_vertical_position_label = tkinter.Label(
+            self.whitebox_vertical_position_frame, text="Whitebox Vertical Position: "
+        )
+        self.whitebox_vertical_position_label.pack(padx=5, side=tkinter.LEFT)
+        self.whitebox_vertical_position_entry = tkinter.Entry(
+            self.whitebox_vertical_position_frame,
+            textvariable=self.whitebox_vertical_position_variable,
+        )
+        self.whitebox_vertical_position_entry.pack(padx=5, side=tkinter.LEFT)
+        self.whitebox_vertical_position_tooltip = idlelib.tooltip.Hovertip(
+            self.whitebox_vertical_position_frame,
+            f"The whitebox vertical position lets the user move the screen based whitebox down to better align with the 3d emitter tv mount they have. It is roughly equivalent to mm when display size is correctly configured. (default {DEFAULT_WHITEBOX_VERTICAL_POSITION})",
+            hover_delay=100,
+        )
+        # self.whitebox_vertical_position_frame.pack()
+        self.whitebox_vertical_position_frame.grid(row=row_count, column=0, sticky="w")
+        row_count += 1
+
+        self.whitebox_horizontal_position_frame = tkinter.Frame(top)
+        self.whitebox_horizontal_position_label = tkinter.Label(
+            self.whitebox_horizontal_position_frame,
+            text="Whitebox Horizontal Position: ",
+        )
+        self.whitebox_horizontal_position_label.pack(padx=5, side=tkinter.LEFT)
+        self.whitebox_horizontal_position_entry = tkinter.Entry(
+            self.whitebox_horizontal_position_frame,
+            textvariable=self.whitebox_horizontal_position_variable,
+        )
+        self.whitebox_horizontal_position_entry.pack(padx=5, side=tkinter.LEFT)
+        self.whitebox_horizontal_position_tooltip = idlelib.tooltip.Hovertip(
+            self.whitebox_horizontal_position_frame,
+            f"The whitebox horizontal position lets the user move the screen based whitebox sideways towards the center of the screen. It is roughly equivalent to mm when display size is correctly configured. (default {DEFAULT_WHITEBOX_HORIZONTAL_POSITION})",
+            hover_delay=100,
+        )
+        # self.whitebox_horizontal_position_frame.pack()
+        self.whitebox_horizontal_position_frame.grid(
+            row=row_count, column=0, sticky="w"
+        )
+        row_count += 1
+
+        self.whitebox_horizontal_spacing_frame = tkinter.Frame(top)
+        self.whitebox_horizontal_spacing_label = tkinter.Label(
+            self.whitebox_horizontal_spacing_frame, text="Whitebox Horozontal Spacing: "
+        )
+        self.whitebox_horizontal_spacing_label.pack(padx=5, side=tkinter.LEFT)
+        self.whitebox_horizontal_spacing_entry = tkinter.Entry(
+            self.whitebox_horizontal_spacing_frame,
+            textvariable=self.whitebox_horizontal_spacing_variable,
+        )
+        self.whitebox_horizontal_spacing_entry.pack(padx=5, side=tkinter.LEFT)
+        self.whitebox_horizontal_spacing_tooltip = idlelib.tooltip.Hovertip(
+            self.whitebox_horizontal_spacing_frame,
+            f"The whitebox horizontal spacing lets the user increase/decrease the separation between white boxes to better align with the 3d emitter and tv pixel pitch they have. It is roughly equivalent to mm when display size is correctly configured. (default {DEFAULT_WHITEBOX_HORIZONTAL_SPACING})",
+            hover_delay=100,
+        )
+        # self.whitebox_horizontal_spacing_frame.pack()
+        self.whitebox_horizontal_spacing_frame.grid(row=row_count, column=0, sticky="w")
+        row_count += 1
+
+        self.whitebox_size_frame = tkinter.Frame(top)
+        self.whitebox_size_label = tkinter.Label(
+            self.whitebox_size_frame,
+            text="Whitebox Size: ",
+        )
+        self.whitebox_size_label.pack(padx=5, side=tkinter.LEFT)
+        self.whitebox_size_entry = tkinter.Entry(
+            self.whitebox_size_frame,
+            textvariable=self.whitebox_size_variable,
+        )
+        self.whitebox_size_entry.pack(padx=5, side=tkinter.LEFT)
+        self.whitebox_size_tooltip = idlelib.tooltip.Hovertip(
+            self.whitebox_size_frame,
+            f"The whitebox size lets the user increase or decrease the size of the whitebox. Setting the value too high will lead to cross talk and miss triggering, setting it too low will cause a low signal to noise and also miss triggering. (default {DEFAULT_WHITEBOX_SIZE})",
+            hover_delay=100,
+        )
+        # self.whitebox_size_frame.pack()
+        self.whitebox_size_frame.grid(row=row_count, column=0, sticky="w")
+        row_count += 1
+
+        self.calibration_mode_frame = tkinter.Frame(top)
+        self.calibration_mode_label = tkinter.Label(
+            self.calibration_mode_frame, text="Calibration Mode: "
+        )
+        self.calibration_mode_label.pack(padx=5, side=tkinter.LEFT)
+        self.calibration_mode_check_button = tkinter.Checkbutton(
+            self.calibration_mode_frame, variable=self.calibration_mode_variable
+        )
+        self.calibration_mode_check_button.pack(padx=5, side=tkinter.LEFT)
+        self.calibration_mode_tooltip = idlelib.tooltip.Hovertip(
+            self.calibration_mode_frame,
+            "Calibration mode shows a reticule to help with alignment of the sensor bar \nand also allows for adjustment of emitter frame_delay and frame_duration using hotkeys as instructed on the OSD. \nTo adjust emitter timing parameters you will need to ensure the emitter settings dialog is also open and connected to the emitter. \nTo optimize emitter settings adjustment it is recommended to use the red/blue or black/white test videos.",
+            hover_delay=100,
+        )
+        # self.calibration_mode_frame.pack()
+        self.calibration_mode_frame.grid(row=row_count, column=0, sticky="w")
+        row_count += 1
+
+        self.action_button_frame_2 = tkinter.Frame(top)
+        self.save_settings_to_disk_button = tkinter.Button(
+            self.action_button_frame_2,
+            text="Save Settings to Disk",
+            command=self.click_save_visible_settings_to_disk,
+        )
+        self.save_settings_to_disk_button.pack(padx=5, side=tkinter.LEFT)
+        self.save_settings_to_disk_button_tooltip = idlelib.tooltip.Hovertip(
+            self.save_settings_to_disk_button,
+            "Saves the display settings shown currently in the UI to the JSON file specified.",
+            hover_delay=100,
+        )
+        self.load_settings_from_disk_button = tkinter.Button(
+            self.action_button_frame_2,
+            text="Load Settings from Disk",
+            command=self.click_load_visisble_settings_from_disk,
+        )
+        self.load_settings_from_disk_button.pack(padx=5, side=tkinter.LEFT)
+        self.load_settings_from_disk_button_tooltip = idlelib.tooltip.Hovertip(
+            self.load_settings_from_disk_button,
+            "Loads the display settings from the JSON file specified to the UI.",
+            hover_delay=100,
+        )
+        self.apply_settings_to_active_video_button = tkinter.Button(
+            self.action_button_frame_2,
+            text="Apply Settings to Active Video",
+            command=self.click_apply_settings_to_active_video,
+        )
+        self.apply_settings_to_active_video_button.pack(padx=5, side=tkinter.LEFT)
+        self.apply_settings_to_active_video_button_tooltip = idlelib.tooltip.Hovertip(
+            self.load_settings_from_disk_button,
+            "Apply settings to an active video if there is one running.",
+            hover_delay=100,
+        )
+        self.close_button = tkinter.Button(
+            self.action_button_frame_2, text="Close", command=self.click_close
+        )
+        self.close_button.pack(padx=5, side=tkinter.LEFT)
+        self.close_button_tooltip = idlelib.tooltip.Hovertip(
+            self.close_button,
+            "Closes this window.",
+            hover_delay=100,
+        )
+        self.action_button_frame_2.grid(row=row_count, column=0, sticky="w")
+        row_count += 1
+
+    def save_settings_to_file(self, file_name):
+        f = open(file_name, "w")
+        json.dump(
+            {
+                "target_framerate": self.target_framerate_variable.get(),
+                "display_resolution": self.display_resolution_variable.get(),
+                "display_zoom_factor": self.display_zoom_factor_variable.get(),
+                "display_size": self.display_size_variable.get(),
+                "whitebox_brightness": self.whitebox_brightness_variable.get(),
+                "whitebox_corner_position": self.whitebox_corner_position_variable.get(),
+                "whitebox_vertical_position": self.whitebox_vertical_position_variable.get(),
+                "whitebox_horizontal_position": self.whitebox_horizontal_position_variable.get(),
+                "whitebox_size": self.whitebox_size_variable.get(),
+                "whitebox_horizontal_spacing": self.whitebox_horizontal_spacing_variable.get(),
+                "calibration_mode": self.calibration_mode_variable.get(),
+            },
+            f,
+            indent=2,
+        )
+        f.close()
+
+    def click_save_visible_settings_to_disk(self):
+        file_name = tkinter.filedialog.asksaveasfilename(
+            title="Save Display Settings to Disk",
+            initialdir=os.path.join(self.main_app.base_path, "settings"),
+            filetypes=[("Display Settings FIle", "*.display_settings.json")],
+            defaultextension=".display_settings.json",
+        )
+        if file_name:
+            self.save_settings_to_file(file_name)
+
+    def load_settings_from_file(self, file_name):
+        f = open(file_name, "r")
+        settings = json.load(f)
+        f.close()
+        self.target_framerate_variable.set(
+            settings.get("target_framerate", DEFAULT_TARGET_FRAMERATE)
+        )
+        self.display_resolution_variable.set(
+            settings.get("display_resolution", DEFAULT_DISPLAY_RESOLUTION)
+        )
+        self.display_zoom_factor_variable.set(
+            settings.get("display_zoom_factor", DEFAULT_DISPLAY_ZOOM_FACTOR)
+        )
+        self.display_size_variable.set(
+            settings.get("display_size", DEFAULT_DISPLAY_SIZE)
+        )
+        self.whitebox_brightness_variable.set(
+            settings.get("whitebox_brightness", DEFAULT_WHITEBOX_BRIGHTNESS)
+        )
+        self.whitebox_corner_position_variable.set(
+            settings.get("whitebox_corner_position", DEFAULT_WHITEBOX_CORNER_POSITION)
+        )
+        self.whitebox_vertical_position_variable.set(
+            settings.get(
+                "whitebox_vertical_position", DEFAULT_WHITEBOX_VERTICAL_POSITION
+            )
+        )
+        self.whitebox_horizontal_position_variable.set(
+            settings.get(
+                "whitebox_horizontal_position", DEFAULT_WHITEBOX_HORIZONTAL_POSITION
+            )
+        )
+        self.whitebox_size_variable.set(
+            settings.get("whitebox_size", DEFAULT_WHITEBOX_SIZE)
+        )
+        self.whitebox_horizontal_spacing_variable.set(
+            settings.get(
+                "whitebox_horizontal_spacing", DEFAULT_WHITEBOX_HORIZONTAL_SPACING
+            )
+        )
+        self.calibration_mode_variable.set(
+            settings.get("calibration_mode", DEFAULT_CALIBRATION_MODE)
+        )
+
+    def click_load_visisble_settings_from_disk(self):
+        file_name = tkinter.filedialog.askopenfilename(
+            title="Load Display Settings from Disk",
+            initialdir=os.path.join(self.main_app.base_path, "settings"),
+            filetypes=[("Display Settings FIle", "*.display_settings.json")],
+        )
+        if file_name:
+            self.load_settings_from_file(file_name)
+
+    def click_apply_settings_to_active_video(self):
+        if self.main_app.pageflipglsink is not None:
+            self.main_app.pageflipglsink.set_property(
+                "calibration-mode", self.calibration_mode_variable.get()
+            )
+            self.main_app.pageflipglsink.set_property(
+                "display-zoom-factor", self.display_zoom_factor_variable.get()
+            )
+            self.main_app.pageflipglsink.set_property(
+                "whitebox-brightness", self.whitebox_brightness_variable.get()
+            )
+            self.main_app.pageflipglsink.set_property(
+                "whitebox-corner-position", self.whitebox_corner_position_variable.get()
+            )
+            self.main_app.pageflipglsink.set_property(
+                "whitebox-vertical-position",
+                self.whitebox_vertical_position_variable.get(),
+            )
+            self.main_app.pageflipglsink.set_property(
+                "whitebox-horizontal-position",
+                self.whitebox_horizontal_position_variable.get(),
+            )
+            self.main_app.pageflipglsink.set_property(
+                "whitebox-horizontal-spacing",
+                self.whitebox_horizontal_spacing_variable.get(),
+            )
+            self.main_app.pageflipglsink.set_property(
+                "whitebox-size", self.whitebox_size_variable.get()
+            )
+
+    def autosave_active_settings(self):
+        self.save_settings_to_file(
+            os.path.join(
+                self.main_app.base_path, "settings", "last_display_settings.json"
+            )
+        )
+
+    def click_close(self):
+        self.autosave_active_settings()
+        self.top.destroy()
+        self.top = None
