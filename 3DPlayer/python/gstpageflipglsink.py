@@ -42,6 +42,7 @@ import collections
 import threading
 import os
 import psutil
+import ctypes
 
 # """
 import gi
@@ -129,7 +130,7 @@ DISPLAY_DUPLICATE_FRAME_MODE_OFF = 0
 DISPLAY_DUPLICATE_FRAME_MODE_ON = 1
 DISPLAY_DUPLICATE_FRAME_MODE_ON_WITH_COUNTER = 2
 
-WINDOW_NAME = "FlipGLPlayer"
+WINDOW_NAME = "Open3DOLED3DPlayer"
 FINISH_BUFFER_COPY_EVENT_TIMEOUT = 1 / 30
 
 
@@ -190,6 +191,8 @@ class PageflipGLWindow(threading.Thread):
         self.__black_box_horizontal_position = (
             self.__white_box_horizontal_position * self.__pixel_pitch_x
         )
+        self.__display_osd_timestamp = False
+        self.__enable_windows_always_on_top_hack = False
         self.__last_mouse = True
         self.__last_mouse_moved_at = None
         self.__set_menu_on_top_true = True
@@ -702,6 +705,49 @@ class PageflipGLWindow(threading.Thread):
                     if set_menu_on_top_true:
                         pg.mouse.set_visible(True)
                         self.__set_video_on_top_true = False
+                        if os.name == "nt" and self.__enable_windows_always_on_top_hack:
+                            # https://stackoverflow.com/questions/21945573/setwindowlongw-error-1413
+                            # https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowlongw
+                            # https://learn.microsoft.com/en-us/windows/win32/winmsg/window-styles
+                            # https://vimsky.com/examples/detail/python-method-win32gui.GetWindowLong.html
+                            GWL_STYLE = -16
+                            WS_POPUP = 0x80000000
+
+                            # https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-findwindoww
+                            _FindWindow = ctypes.windll.user32.FindWindowW
+                            _FindWindow.argtypes = [ctypes.c_wchar_p, ctypes.c_wchar_p]
+                            _FindWindow.restype = ctypes.c_void_p
+
+                            # https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getwindowlongw
+                            _GetWindowLong = ctypes.windll.user32.GetWindowLongW
+                            _GetWindowLong.argtypes = [ctypes.c_long, ctypes.c_long]
+                            _GetWindowLong.restype = ctypes.c_long
+
+                            # https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowlongw
+                            _SetWindowLong = ctypes.windll.user32.SetWindowLongW
+                            _SetWindowLong.argtypes = [
+                                ctypes.c_long,
+                                ctypes.c_long,
+                                ctypes.c_long,
+                            ]
+                            _SetWindowLong.restype = ctypes.c_void_p
+
+                            opengl_video_window_handle = _FindWindow(
+                                ctypes.POINTER(ctypes.c_wchar_p)(), WINDOW_NAME
+                            )
+
+                            current_styles = _GetWindowLong(
+                                ctypes.c_int(opengl_video_window_handle),
+                                ctypes.c_int(GWL_STYLE),
+                            )
+                            current_styles = current_styles.value & ~(WS_POPUP)
+                            print("Last Error: {0}".format(str(ctypes.GetLastError())))
+                            _SetWindowLong(
+                                ctypes.c_int(opengl_video_window_handle),
+                                ctypes.c_int(GWL_STYLE),
+                                ctypes.c_int(current_styles),
+                            )
+                            print("Last Error: {0}".format(str(ctypes.GetLastError())))
                     else:
                         if self.__fullscreen:
                             self.__sdl2_window.focus()
@@ -744,26 +790,27 @@ class PageflipGLWindow(threading.Thread):
                 # Overlay timestamp
                 if time.time() - self.__last_mouse_moved_at < 2.0:
                     self.__show_help_text = True
-                    new_overlay_timestamp_time_str = str(
-                        datetime.timedelta(
-                            seconds=self.__in_image_play_timestamp // 1000000000
+                    if self.__display_osd_timestamp:
+                        new_overlay_timestamp_time_str = str(
+                            datetime.timedelta(
+                                seconds=self.__in_image_play_timestamp // 1000000000
+                            )
                         )
-                    )
-                    if (
-                        new_overlay_timestamp_time_str
-                        != self.__latest_overlay_timestamp_time_str
-                    ):
-                        self.__latest_overlay_timestamp_time_str = (
+                        if (
                             new_overlay_timestamp_time_str
-                        )
-                        self.__latest_overlay_timestamp = self.__generate_text_surface_with_shadow(
-                            self.__subtitle_font_set,
-                            (
-                                f"{self.__latest_overlay_timestamp_time_str} of {self.__video_duration_str}"
-                                if self.__video_duration_str != ""
-                                else self.__latest_overlay_timestamp_time_str
-                            ),
-                        )
+                            != self.__latest_overlay_timestamp_time_str
+                        ):
+                            self.__latest_overlay_timestamp_time_str = (
+                                new_overlay_timestamp_time_str
+                            )
+                            self.__latest_overlay_timestamp = self.__generate_text_surface_with_shadow(
+                                self.__subtitle_font_set,
+                                (
+                                    f"{self.__latest_overlay_timestamp_time_str} of {self.__video_duration_str}"
+                                    if self.__video_duration_str != ""
+                                    else self.__latest_overlay_timestamp_time_str
+                                ),
+                            )
                 else:
                     self.__show_help_text = False
                     self.__latest_overlay_timestamp = None
@@ -1560,6 +1607,24 @@ class PageflipGLWindow(threading.Thread):
                 self.__update_overlay_boxes()
 
     @property
+    def display_osd_timestamp(self):
+        return self.__display_osd_timestamp
+
+    @display_osd_timestamp.setter
+    def display_osd_timestamp(self, value):
+        if value != self.__display_osd_timestamp:
+            self.__display_osd_timestamp = value
+
+    @property
+    def enable_windows_always_on_top_hack(self):
+        return self.__enable_windows_always_on_top_hack
+
+    @enable_windows_always_on_top_hack.setter
+    def enable_windows_always_on_top_hack(self, value):
+        if value != self.__enable_windows_always_on_top_hack:
+            self.__enable_windows_always_on_top_hack = value
+
+    @property
     def started(self):
         return self.__started
 
@@ -1821,6 +1886,20 @@ class GstPageflipGLSink(GstBase.BaseSink):
             "0",  # default
             GObject.ParamFlags.READWRITE,
         ),
+        "display_osd_timestamp": (
+            GObject.TYPE_BOOLEAN,
+            "Display OSD Timestamp",
+            "When enabled the current timestamp and video duration will be displayed on screen after moving the mouse.",
+            False,  # default
+            GObject.ParamFlags.READWRITE,
+        ),
+        "enable_windows_always_on_top_hack": (
+            GObject.TYPE_BOOLEAN,
+            "Enable Windows Always On Top Hack",
+            "When enabled this will remove the WS_POPUP style from the opengl window after entering fullscreen mode, this is necessary on some computers with incompatible drivers so that the control window will display on top of the fullscreen video.",
+            False,  # default
+            GObject.ParamFlags.READWRITE,
+        ),
         "start": (
             GObject.TYPE_BOOLEAN,
             "Start",
@@ -1925,6 +2004,8 @@ class GstPageflipGLSink(GstBase.BaseSink):
             "whitebox-size": "13",
             "whitebox-horizontal-spacing": "23",
             "whitebox-brightness": "255",
+            "display-osd-timestamp": False,
+            "enable-windows-always-on-top-hack": False,
             "requests": "",
             "latest-subtitle-data": "",
             "subtitle-font": "arial",

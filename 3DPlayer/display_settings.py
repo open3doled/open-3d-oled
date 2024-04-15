@@ -16,6 +16,8 @@ DEFAULT_WHITEBOX_HORIZONTAL_POSITION = "0"
 DEFAULT_WHITEBOX_SIZE = "13"
 DEFAULT_WHITEBOX_HORIZONTAL_SPACING = "23"
 DEFAULT_CALIBRATION_MODE = False
+DEFAULT_DISPLAY_OSD_TIMESTAMP = False
+DEFAULT_ENABLE_WINDOWS_ALWAYS_ON_TOP_HACK = False
 
 
 class DisplaySettingsDialog:
@@ -50,6 +52,10 @@ class DisplaySettingsDialog:
         )
         self.calibration_mode_variable = tkinter.BooleanVar(parent)
         self.calibration_mode_variable.set(False)
+        self.display_osd_timestamp_variable = tkinter.BooleanVar(parent)
+        self.display_osd_timestamp_variable.set(False)
+        self.enable_windows_always_on_top_hack_variable = tkinter.BooleanVar(parent)
+        self.enable_windows_always_on_top_hack_variable.set(False)
 
         file_name = os.path.join(
             self.main_app.base_path, "settings", "last_display_settings.json"
@@ -85,7 +91,7 @@ class DisplaySettingsDialog:
         # self.target_framerate_frame.pack()
         self.target_framerate_option_menu_tooltip = idlelib.tooltip.Hovertip(
             self.target_framerate_option_menu,
-            "If set to a value other than 0 this will force pygame to use a frame delay with tick_busy_loop instead of relying on vsync, this should not normally need to be set and is for experimental purposes only.",
+            "If set to a value other than 0 this will force pygame to use a frame delay with tick_busy_loop instead of relying on vsync, this should not normally need to be set and is for experimental purposes only. \n(this value will not be updated on an already playing video)",
             hover_delay=100,
         )
         self.target_framerate_frame.grid(row=row_count, column=0, sticky="w")
@@ -106,6 +112,11 @@ class DisplaySettingsDialog:
         )
         self.display_resolution_option_menu.pack(padx=5, side=tkinter.LEFT)
         # self.display_resolution_frame.pack()
+        self.display_resolution_tooltip = idlelib.tooltip.Hovertip(
+            self.display_resolution_frame,
+            "This is the resolution the video player will target for fullscreen mode while playing the video. \nIt may change your active resolution if it is different than your current resolution. \n(this value will not be updated on an already playing video)",
+            hover_delay=100,
+        )
         self.display_resolution_frame.grid(row=row_count, column=0, sticky="w")
         row_count += 1
 
@@ -139,7 +150,7 @@ class DisplaySettingsDialog:
         self.display_size_entry.pack(padx=5, side=tkinter.LEFT)
         self.display_size_tooltip = idlelib.tooltip.Hovertip(
             self.display_size_frame,
-            "Specifying the correct display size (provided in inches), allows the screen specific scaling of the on screen trigger boxes to match the sensors unit.",
+            "Specifying the correct display size (provided in inches), allows the screen specific scaling of the on screen trigger boxes to match the sensors unit. \n(this value will not be updated on an already playing video)",
             hover_delay=100,
         )
         # self.display_size_frame.pack()
@@ -286,6 +297,49 @@ class DisplaySettingsDialog:
         self.calibration_mode_frame.grid(row=row_count, column=0, sticky="w")
         row_count += 1
 
+        self.display_osd_timestamp_frame = tkinter.Frame(top)
+        self.display_osd_timestamp_label = tkinter.Label(
+            self.display_osd_timestamp_frame, text="Display OSD Timestamp: "
+        )
+        self.display_osd_timestamp_label.pack(padx=5, side=tkinter.LEFT)
+        self.display_osd_timestamp_check_button = tkinter.Checkbutton(
+            self.display_osd_timestamp_frame,
+            variable=self.display_osd_timestamp_variable,
+        )
+        self.display_osd_timestamp_check_button.pack(padx=5, side=tkinter.LEFT)
+        self.display_osd_timestamp_tooltip = idlelib.tooltip.Hovertip(
+            self.display_osd_timestamp_frame,
+            "When enabled display OSD timestamp shows a timestamp and video duration on screen when the user moves their mouse. \nThis is useful for users when they cannot get the main toolbar window to popover the video on mouse move due to incompatible display drivers.",
+            hover_delay=100,
+        )
+        # self.display_osd_timestamp_frame.pack()
+        self.display_osd_timestamp_frame.grid(row=row_count, column=0, sticky="w")
+        row_count += 1
+
+        self.enable_windows_always_on_top_hack_frame = tkinter.Frame(top)
+        self.enable_windows_always_on_top_hack_label = tkinter.Label(
+            self.enable_windows_always_on_top_hack_frame,
+            text="Enable Windows Always On Top Hack: ",
+        )
+        self.enable_windows_always_on_top_hack_label.pack(padx=5, side=tkinter.LEFT)
+        self.enable_windows_always_on_top_hack_check_button = tkinter.Checkbutton(
+            self.enable_windows_always_on_top_hack_frame,
+            variable=self.enable_windows_always_on_top_hack_variable,
+        )
+        self.enable_windows_always_on_top_hack_check_button.pack(
+            padx=5, side=tkinter.LEFT
+        )
+        self.enable_windows_always_on_top_hack_tooltip = idlelib.tooltip.Hovertip(
+            self.enable_windows_always_on_top_hack_frame,
+            "This will use a hack to clear the WS_POPUP flag on the opengl window at runtime to get the control window to pop over it. \nWhen the control window is visible it will likely degrade video playback performance and interfere with software page flipping.",
+            hover_delay=100,
+        )
+        # self.enable_windows_always_on_top_hack_frame.pack()
+        self.enable_windows_always_on_top_hack_frame.grid(
+            row=row_count, column=0, sticky="w"
+        )
+        row_count += 1
+
         self.action_button_frame_2 = tkinter.Frame(top)
         self.save_settings_to_disk_button = tkinter.Button(
             self.action_button_frame_2,
@@ -347,6 +401,8 @@ class DisplaySettingsDialog:
                 "whitebox_size": self.whitebox_size_variable.get(),
                 "whitebox_horizontal_spacing": self.whitebox_horizontal_spacing_variable.get(),
                 "calibration_mode": self.calibration_mode_variable.get(),
+                "display_osd_timestamp": self.display_osd_timestamp_variable.get(),
+                "enable_windows_always_on_top_hack": self.enable_windows_always_on_top_hack_variable.get(),
             },
             f,
             indent=2,
@@ -406,6 +462,15 @@ class DisplaySettingsDialog:
         self.calibration_mode_variable.set(
             settings.get("calibration_mode", DEFAULT_CALIBRATION_MODE)
         )
+        self.display_osd_timestamp_variable.set(
+            settings.get("display_osd_timestamp", DEFAULT_DISPLAY_OSD_TIMESTAMP)
+        )
+        self.enable_windows_always_on_top_hack_variable.set(
+            settings.get(
+                "enable_windows_always_on_top_hack",
+                DEFAULT_ENABLE_WINDOWS_ALWAYS_ON_TOP_HACK,
+            )
+        )
 
     def click_load_visisble_settings_from_disk(self):
         file_name = tkinter.filedialog.askopenfilename(
@@ -444,6 +509,13 @@ class DisplaySettingsDialog:
             )
             self.main_app.pageflipglsink.set_property(
                 "whitebox-size", self.whitebox_size_variable.get()
+            )
+            self.main_app.pageflipglsink.set_property(
+                "display-osd-timestamp", self.display_osd_timestamp_variable.get()
+            )
+            self.main_app.pageflipglsink.set_property(
+                "enable-windows-always-on-top-hack",
+                self.enable_windows_always_on_top_hack_variable.get(),
             )
 
     def autosave_active_settings(self):

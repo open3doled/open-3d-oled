@@ -578,6 +578,12 @@ class TopWindow:
             self.display_settings_dialog.whitebox_horizontal_spacing_variable.get()
         )
         calibration_mode = self.display_settings_dialog.calibration_mode_variable.get()
+        display_osd_timestamp = (
+            self.display_settings_dialog.display_osd_timestamp_variable.get()
+        )
+        enable_windows_always_on_top_hack = (
+            self.display_settings_dialog.enable_windows_always_on_top_hack_variable.get()
+        )
         # print(frame_packing)
         # print(right_eye)
         # print(display_resolution)
@@ -871,6 +877,11 @@ class TopWindow:
             "whitebox-horizontal-spacing", whitebox_horizontal_spacing
         )
         self.pageflipglsink.set_property("whitebox-size", whitebox_size)
+        self.pageflipglsink.set_property("display-osd-timestamp", display_osd_timestamp)
+        self.pageflipglsink.set_property(
+            "enable-windows-always-on-top-hack", enable_windows_always_on_top_hack
+        )
+
         self.pageflipglsink.set_property("subtitle-font", subtitle_font)
         self.pageflipglsink.set_property("subtitle-size", subtitle_size)
         self.pageflipglsink.set_property("subtitle-depth", subtitle_depth)
