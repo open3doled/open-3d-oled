@@ -5,6 +5,7 @@
 import os
 import sys  # @UnusedImport
 import tkinter  # @UnusedImport
+import tkinter.ttk
 import time
 import traceback  # @UnusedImport
 import functools
@@ -313,6 +314,9 @@ class TopWindow:
         close_button.pack(padx=5, side=tkinter.LEFT)
         close_button.bind("<Button-1>", self.close_player)
 
+        self.video_progress_timestamp_variable = tkinter.IntVar(self.window)
+        self.video_progress_timestamp_variable.set(0)
+
         # window.geometry('100x300')
         window.bind("<Button-1>", self.click_mouse)
         window.bind("<B1-Motion>", self.move_mouse)
@@ -387,6 +391,7 @@ class TopWindow:
         self.__forward_small_button.config(state="disabled")
         self.__forward_big_button.config(state="disabled")
 
+        self.video_progress_frame.destroy()
         if self.player is not None:
             self.player.set_state(Gst.State.NULL)
             self.player.run_dispose()
@@ -910,8 +915,39 @@ class TopWindow:
             failed_to_start = True
 
         if not failed_to_start:
-            duration = self.player.query_duration(Gst.Format.TIME).duration
-            self.pageflipglsink.set_property("video-duration", duration)
+            video_duration = self.player.query_duration(Gst.Format.TIME).duration
+            self.pageflipglsink.set_property("video-duration", video_duration)
+
+            # show video progress frame
+            self.video_progress_timestamp_variable.set(
+                self.player.query_position(Gst.Format.TIME).cur
+            )
+            self.video_progress_frame = tkinter.Frame(self.window)
+            self.video_progress_frame.pack(
+                fill="x",
+                expand=1,
+                pady=5,
+                padx=25,
+                anchor="n",
+            )
+            self.video_progress_bar = tkinter.ttk.Progressbar(
+                self.video_progress_frame,
+                orient=tkinter.HORIZONTAL,
+                maximum=video_duration,
+                mode="determinate",
+                variable=self.video_progress_timestamp_variable,
+            )
+            self.video_progress_bar.pack(
+                fill="x", expand=1, pady=5, padx=5, anchor="n", side=tkinter.LEFT
+            )
+            self.video_progress_bar.bind("<Button-1>", self.seek_from_video_progress)
+            self.video_duration_label = tkinter.Label(
+                self.video_progress_frame,
+                text=str(datetime.timedelta(seconds=video_duration // 1000000000)),
+            )
+            self.video_duration_label.pack(
+                pady=5, padx=5, anchor="n", side=tkinter.RIGHT
+            )
 
             # even after playback started it can still take 1-2 second until all the renderers are ready
             for _ in range(10):
@@ -937,6 +973,30 @@ class TopWindow:
 
         if failed_to_start:
             self.stop_player()
+
+    def update_video_progress(self):
+        self.video_progress_timestamp_variable.set(
+            self.player.query_position(Gst.Format.TIME).cur
+        )
+
+    def seek_from_video_progress(self, event=None):  # @UnusedVariable
+        click_x_progress_position = (
+            self.video_progress_bar.winfo_pointerx()
+            - self.video_progress_bar.winfo_rootx()
+        )
+        click_x_progress_width = self.video_progress_bar.winfo_width()
+        video_duration = self.video_progress_bar["maximum"]
+        seek_target_timestamp = (
+            click_x_progress_position / click_x_progress_width * video_duration
+        )
+        # 'ACCURATE', 'FLUSH', 'KEY_UNIT', 'NONE', 'SEGMENT', 'SKIP', 'SNAP_AFTER', 'SNAP_BEFORE', 'SNAP_NEAREST', 'TRICKMODE', 'TRICKMODE_KEY_UNITS', 'TRICKMODE_NO_AUDIO'
+        self.player.seek_simple(
+            Gst.Format.TIME,
+            # Gst.SeekFlags.FLUSH | Gst.SeekFlags.KEY_UNIT, # use these flags for fast seeking that isn't accurate
+            Gst.SeekFlags.FLUSH
+            | Gst.SeekFlags.ACCURATE,  # use these flags for slower but accurate seeking
+            max(min(seek_target_timestamp, video_duration), 0),
+        )
 
     def click_stop_video_button(self, event=None):  # @UnusedVariable
         self.stop_player()
@@ -1036,6 +1096,7 @@ if __name__ == "__main__":
         # window.mainloop()
         while not top_window.close:
             if top_window.player is not None and top_window.video_open:
+                top_window.update_video_progress()
                 pageflipglsink_requests = top_window.pageflipglsink.get_property(
                     "requests"
                 )
