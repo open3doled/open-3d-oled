@@ -64,9 +64,10 @@ import OpenGL.GL as gl
 import contextlib
 
 with contextlib.redirect_stdout(None):
-    from pygame import _sdl2 as pygame_sdl2
-    from pygame import locals as pg_locals
-    import pygame as pg
+    with contextlib.redirect_stderr(None):
+        from pygame import _sdl2 as pygame_sdl2
+        from pygame import locals as pg_locals
+        import pygame as pg
 
 # if __name__ == "__main__":
 #    Gst.init(None)
