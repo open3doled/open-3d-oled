@@ -59,11 +59,14 @@ import gstreamer_utils  # @UnresolvedImport
 
 import numpy as np
 import sys  # @UnusedImport
-from pygame import _sdl2 as pygame_sdl2
-from pygame import locals as pg_locals
 
 import OpenGL.GL as gl
-import pygame as pg
+import contextlib
+
+with contextlib.redirect_stdout(None):
+    from pygame import _sdl2 as pygame_sdl2
+    from pygame import locals as pg_locals
+    import pygame as pg
 
 # if __name__ == "__main__":
 #    Gst.init(None)
