@@ -229,7 +229,8 @@ Not Working (Untested)
 
   - copy remaining assets and zip
     cp -R videos dist/3d_player/videos
-    cp -R settings dist/3d_player/settings      
+    cp -R settings dist/3d_player/settings
+    rm dist/3d_player/settings/last_display_settings.json
     cp -R firmwares dist/3d_player/firmwares
     cp -R gstreamer_plugins_active /c/3D/3DPlayerWindowsLatest/gstreamer_plugins_active
     cp -R licenses dist/3d_player/licenses

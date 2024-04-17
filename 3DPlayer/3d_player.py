@@ -316,6 +316,7 @@ class TopWindow:
 
         self.video_progress_timestamp_variable = tkinter.IntVar(self.window)
         self.video_progress_timestamp_variable.set(0)
+        self.video_progress_frame = None
 
         # window.geometry('100x300')
         window.bind("<Button-1>", self.click_mouse)
@@ -367,16 +368,35 @@ class TopWindow:
             self.pageflipglsink.set_property("right-eye", "top")
 
     def set_menu_on_top(self, put_on_top, event=None):  # @UnusedVariable
+        window_list = [self.window]
+        if (
+            self.emitter_settings_dialog is not None
+            and self.emitter_settings_dialog.top is not None
+        ):
+            window_list.append(self.emitter_settings_dialog.top)
+        if (
+            self.display_settings_dialog is not None
+            and self.display_settings_dialog.top is not None
+        ):
+            window_list.append(self.display_settings_dialog.top)
+        if (
+            self.start_video_dialog is not None
+            and self.start_video_dialog.top is not None
+        ):
+            window_list.append(self.start_video_dialog.top)
         if (
             self.pageflipglsink
             and self.pageflipglsink.get_property("fullscreen")
             and not put_on_top
         ):
-            self.window.wm_attributes("-topmost", False)
-            self.window.wm_attributes("-alpha", 0.0)
+            set_topmost = False
+            set_alpha = 0.0
         else:
-            self.window.wm_attributes("-topmost", True)
-            self.window.wm_attributes("-alpha", 1.0)
+            set_topmost = True
+            set_alpha = 1.0
+        for temp_window in window_list:
+            temp_window.wm_attributes("-topmost", set_topmost)
+            temp_window.wm_attributes("-alpha", set_alpha)
 
     def stop_player(self, event=None):  # @UnusedVariable
         print("stop_player")
@@ -391,7 +411,9 @@ class TopWindow:
         self.__forward_small_button.config(state="disabled")
         self.__forward_big_button.config(state="disabled")
 
-        self.video_progress_frame.destroy()
+        if self.video_progress_frame is not None:
+            self.video_progress_frame.destroy()
+            self.video_progress_frame = None
         if self.player is not None:
             self.player.set_state(Gst.State.NULL)
             self.player.run_dispose()

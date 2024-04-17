@@ -710,69 +710,10 @@ class PageflipGLWindow(threading.Thread):
                         pg.mouse.set_visible(True)
                         self.__set_video_on_top_true = False
                         if os.name == "nt" and self.__enable_windows_always_on_top_hack:
-                            # https://stackoverflow.com/questions/21945573/setwindowlongw-error-1413
-                            # https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowlongw
-                            # https://learn.microsoft.com/en-us/windows/win32/winmsg/window-styles
-                            # https://vimsky.com/examples/detail/python-method-win32gui.GetWindowLong.html
-                            GWL_STYLE = -16
-                            WS_POPUP = 0x80000000
-
-                            # https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-findwindoww
-                            _FindWindow = (
-                                ctypes.windll.user32.FindWindowW  # @UndefinedVariable
-                            )
-                            _FindWindow.argtypes = [ctypes.c_wchar_p, ctypes.c_wchar_p]
-                            _FindWindow.restype = ctypes.c_void_p
-
-                            # https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getwindowlongw
-                            _GetWindowLong = (
-                                ctypes.windll.user32.GetWindowLongW  # @UndefinedVariable
-                            )
-                            _GetWindowLong.argtypes = [ctypes.c_long, ctypes.c_long]
-                            _GetWindowLong.restype = ctypes.c_long
-
-                            # https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowlongw
-                            _SetWindowLong = (
-                                ctypes.windll.user32.SetWindowLongW  # @UndefinedVariable
-                            )
-                            _SetWindowLong.argtypes = [
-                                ctypes.c_long,
-                                ctypes.c_long,
-                                ctypes.c_long,
-                            ]
-                            _SetWindowLong.restype = ctypes.c_void_p
-
-                            opengl_video_window_handle = _FindWindow(
-                                # ctypes.POINTER(ctypes.c_wchar_p)(), WINDOW_NAME
-                                None,
-                                WINDOW_NAME,
-                            )
-
-                            current_styles = _GetWindowLong(
-                                ctypes.c_int(opengl_video_window_handle),
-                                ctypes.c_int(GWL_STYLE),
-                            )
-                            current_styles = current_styles & ~(WS_POPUP)
-                            error_state_before = (
-                                ctypes.GetLastError()  # @UndefinedVariable
-                            )
-                            print("Last Error: {0}".format(str()))
-                            _SetWindowLong(
-                                ctypes.c_int(opengl_video_window_handle),
-                                ctypes.c_int(GWL_STYLE),
-                                ctypes.c_int(current_styles),
-                            )
-                            error_state_after = (
-                                ctypes.GetLastError()  # @UndefinedVariable
-                            )
-                            if (
-                                error_state_before != error_state_after
-                                and error_state_after != 0
-                            ):
-                                print(
-                                    f"Unable to remove WS_POPUP style from OpenGLWindow due to error {error_state_after}."
-                                )
+                            self.__set_windows_always_on_top_mode(enable=True)
                     else:
+                        if os.name == "nt" and self.__enable_windows_always_on_top_hack:
+                            self.__set_windows_always_on_top_mode(enable=False)
                         if self.__fullscreen:
                             self.__sdl2_window.focus()
                     self.__requests = ",".join(
@@ -1444,6 +1385,60 @@ class PageflipGLWindow(threading.Thread):
             gl.GL_UNSIGNED_BYTE,
             text_data["rendered_data"],
         )
+
+    def __set_windows_always_on_top_mode(self, enable=False):
+
+        # https://stackoverflow.com/questions/21945573/setwindowlongw-error-1413
+        # https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowlongw
+        # https://learn.microsoft.com/en-us/windows/win32/winmsg/window-styles
+        # https://vimsky.com/examples/detail/python-method-win32gui.GetWindowLong.html
+        GWL_STYLE = -16
+        WS_POPUP = 0x80000000
+
+        # https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-findwindoww
+        _FindWindow = ctypes.windll.user32.FindWindowW  # @UndefinedVariable
+        _FindWindow.argtypes = [ctypes.c_wchar_p, ctypes.c_wchar_p]
+        _FindWindow.restype = ctypes.c_void_p
+
+        # https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getwindowlongw
+        _GetWindowLong = ctypes.windll.user32.GetWindowLongW  # @UndefinedVariable
+        _GetWindowLong.argtypes = [ctypes.c_long, ctypes.c_long]
+        _GetWindowLong.restype = ctypes.c_long
+
+        # https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowlongw
+        _SetWindowLong = ctypes.windll.user32.SetWindowLongW  # @UndefinedVariable
+        _SetWindowLong.argtypes = [
+            ctypes.c_long,
+            ctypes.c_long,
+            ctypes.c_long,
+        ]
+        _SetWindowLong.restype = ctypes.c_void_p
+
+        opengl_video_window_handle = _FindWindow(
+            # ctypes.POINTER(ctypes.c_wchar_p)(), WINDOW_NAME
+            None,
+            WINDOW_NAME,
+        )
+
+        current_styles = _GetWindowLong(
+            ctypes.c_int(opengl_video_window_handle),
+            ctypes.c_int(GWL_STYLE),
+        )
+        if enable:
+            current_styles = current_styles & ~(WS_POPUP)
+        else:
+            current_styles = current_styles | WS_POPUP
+        error_state_before = ctypes.GetLastError()  # @UndefinedVariable
+        _SetWindowLong(
+            ctypes.c_int(opengl_video_window_handle),
+            ctypes.c_int(GWL_STYLE),
+            ctypes.c_int(current_styles),
+        )
+        error_state_after = ctypes.GetLastError()  # @UndefinedVariable
+        if error_state_before != error_state_after and error_state_after != 0:
+            print(
+                f"Unable to {'remove' if enable else 'add'} WS_POPUP style from OpenGLWindow due to error {error_state_after}."
+            )
 
     @line_profiler_obj
     def run(self):
