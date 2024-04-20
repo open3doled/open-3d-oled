@@ -196,7 +196,6 @@ class PageflipGLWindow(threading.Thread):
             self.__white_box_horizontal_position * self.__pixel_pitch_x
         )
         self.__display_osd_timestamp = False
-        self.__enable_windows_always_on_top_hack = False
         self.__last_mouse = True
         self.__last_mouse_moved_at = None
         self.__set_menu_on_top_true = True
@@ -359,16 +358,15 @@ class PageflipGLWindow(threading.Thread):
         white_box_gradient_width = int(
             default_white_box_gradient_width * self.__pixel_pitch_x
         )
+        self.__black_box_horizontal_position = (
+            self.__white_box_horizontal_position - self.__black_box_spacing
+        ) * self.__pixel_pitch_x
         original_black_box_width = int(
             (
                 self.__white_box_size
                 + self.__white_box_horizontal_spacing
                 + self.__black_box_spacing
-                + (
-                    self.__black_box_spacing
-                    if self.__black_box_horizontal_position > 0
-                    else 0
-                )
+                + self.__black_box_spacing
             )
             * self.__pixel_pitch_x
         )
@@ -392,24 +390,15 @@ class PageflipGLWindow(threading.Thread):
         else:
             black_box_width = self.__black_box_width = original_black_box_width
             black_box_height = self.__black_box_height = original_black_box_height
-        self.__black_box_horizontal_position = (
-            self.__white_box_horizontal_position * self.__pixel_pitch_x
-        )
         white_box_width = int(self.__white_box_size * self.__pixel_pitch_x)
         white_box_height = int(self.__white_box_size * self.__pixel_pitch_y)
-        if self.__black_box_horizontal_position > 0:
-            white_box_horizontal_offset_1 = int(
-                self.__black_box_spacing * self.__pixel_pitch_x
-            )
-            white_box_horizontal_offset_2 = int(
-                (self.__black_box_spacing + self.__white_box_horizontal_spacing)
-                * self.__pixel_pitch_x
-            )
-        else:
-            white_box_horizontal_offset_1 = int(0 * self.__pixel_pitch_x)
-            white_box_horizontal_offset_2 = int(
-                self.__white_box_horizontal_spacing * self.__pixel_pitch_x
-            )
+        white_box_horizontal_offset_1 = int(
+            self.__black_box_spacing * self.__pixel_pitch_x
+        )
+        white_box_horizontal_offset_2 = int(
+            (self.__black_box_spacing + self.__white_box_horizontal_spacing)
+            * self.__pixel_pitch_x
+        )
         white_box_horizontal_offsets = [
             white_box_horizontal_offset_1,
             white_box_horizontal_offset_2,
@@ -433,7 +422,7 @@ class PageflipGLWindow(threading.Thread):
                     0,
                     False,
                     True,
-                    (True if self.__black_box_horizontal_position > 0 else False),
+                    True,
                     True,
                     False,
                 ),
@@ -709,11 +698,7 @@ class PageflipGLWindow(threading.Thread):
                     if set_menu_on_top_true:
                         pg.mouse.set_visible(True)
                         self.__set_video_on_top_true = False
-                        if os.name == "nt" and self.__enable_windows_always_on_top_hack:
-                            self.__set_windows_always_on_top_mode(enable=True)
                     else:
-                        if os.name == "nt" and self.__enable_windows_always_on_top_hack:
-                            self.__set_windows_always_on_top_mode(enable=False)
                         if self.__fullscreen:
                             self.__sdl2_window.focus()
                     self.__requests = ",".join(
@@ -1390,60 +1375,6 @@ class PageflipGLWindow(threading.Thread):
             text_data["rendered_data"],
         )
 
-    def __set_windows_always_on_top_mode(self, enable=False):
-
-        # https://stackoverflow.com/questions/21945573/setwindowlongw-error-1413
-        # https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowlongw
-        # https://learn.microsoft.com/en-us/windows/win32/winmsg/window-styles
-        # https://vimsky.com/examples/detail/python-method-win32gui.GetWindowLong.html
-        GWL_STYLE = -16
-        WS_POPUP = 0x80000000
-
-        # https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-findwindoww
-        _FindWindow = ctypes.windll.user32.FindWindowW  # @UndefinedVariable
-        _FindWindow.argtypes = [ctypes.c_wchar_p, ctypes.c_wchar_p]
-        _FindWindow.restype = ctypes.c_void_p
-
-        # https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getwindowlongw
-        _GetWindowLong = ctypes.windll.user32.GetWindowLongW  # @UndefinedVariable
-        _GetWindowLong.argtypes = [ctypes.c_long, ctypes.c_long]
-        _GetWindowLong.restype = ctypes.c_long
-
-        # https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowlongw
-        _SetWindowLong = ctypes.windll.user32.SetWindowLongW  # @UndefinedVariable
-        _SetWindowLong.argtypes = [
-            ctypes.c_long,
-            ctypes.c_long,
-            ctypes.c_long,
-        ]
-        _SetWindowLong.restype = ctypes.c_void_p
-
-        opengl_video_window_handle = _FindWindow(
-            # ctypes.POINTER(ctypes.c_wchar_p)(), WINDOW_NAME
-            None,
-            WINDOW_NAME,
-        )
-
-        current_styles = _GetWindowLong(
-            ctypes.c_int(opengl_video_window_handle),
-            ctypes.c_int(GWL_STYLE),
-        )
-        if enable:
-            current_styles = current_styles & ~(WS_POPUP)
-        else:
-            current_styles = current_styles | WS_POPUP
-        error_state_before = ctypes.GetLastError()  # @UndefinedVariable
-        _SetWindowLong(
-            ctypes.c_int(opengl_video_window_handle),
-            ctypes.c_int(GWL_STYLE),
-            ctypes.c_int(current_styles),
-        )
-        error_state_after = ctypes.GetLastError()  # @UndefinedVariable
-        if error_state_before != error_state_after and error_state_after != 0:
-            print(
-                f"Unable to {'remove' if enable else 'add'} WS_POPUP style from OpenGLWindow due to error {error_state_after}."
-            )
-
     @line_profiler_obj
     def run(self):
         while not self.__do_start and not self.__do_stop:
@@ -1637,15 +1568,6 @@ class PageflipGLWindow(threading.Thread):
     def display_osd_timestamp(self, value):
         if value != self.__display_osd_timestamp:
             self.__display_osd_timestamp = value
-
-    @property
-    def enable_windows_always_on_top_hack(self):
-        return self.__enable_windows_always_on_top_hack
-
-    @enable_windows_always_on_top_hack.setter
-    def enable_windows_always_on_top_hack(self, value):
-        if value != self.__enable_windows_always_on_top_hack:
-            self.__enable_windows_always_on_top_hack = value
 
     @property
     def started(self):
@@ -1913,13 +1835,6 @@ class GstPageflipGLSink(GstBase.BaseSink):
             GObject.TYPE_BOOLEAN,
             "Display OSD Timestamp",
             "When enabled the current timestamp and video duration will be displayed on screen after moving the mouse.",
-            False,  # default
-            GObject.ParamFlags.READWRITE,
-        ),
-        "enable_windows_always_on_top_hack": (
-            GObject.TYPE_BOOLEAN,
-            "Enable Windows Always On Top Hack",
-            "When enabled this will remove the WS_POPUP style from the opengl window after entering fullscreen mode, this is necessary on some computers with incompatible drivers so that the control window will display on top of the fullscreen video.",
             False,  # default
             GObject.ParamFlags.READWRITE,
         ),

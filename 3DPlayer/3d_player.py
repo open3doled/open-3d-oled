@@ -367,7 +367,9 @@ class TopWindow:
         elif current_setting == "bottom":
             self.pageflipglsink.set_property("right-eye", "top")
 
-    def set_menu_on_top(self, put_on_top, event=None):  # @UnusedVariable
+    def set_menu_on_top(
+        self, put_on_control_on_top, put_dialogs_on_top, event=None
+    ):  # @UnusedVariable
         window_list = [self.window]
         if (
             self.emitter_settings_dialog is not None
@@ -384,17 +386,20 @@ class TopWindow:
             and self.start_video_dialog.top is not None
         ):
             window_list.append(self.start_video_dialog.top)
-        if (
-            self.pageflipglsink
-            and self.pageflipglsink.get_property("fullscreen")
-            and not put_on_top
-        ):
-            set_topmost = False
-            set_alpha = 0.0
-        else:
-            set_topmost = True
-            set_alpha = 1.0
-        for temp_window in window_list:
+        for idx, temp_window in enumerate(window_list):
+            if (
+                self.pageflipglsink
+                and self.pageflipglsink.get_property("fullscreen")
+                and (
+                    (idx == 0 and put_on_control_on_top)
+                    or (idx > 0 and put_dialogs_on_top)
+                )
+            ):
+                set_topmost = True
+                set_alpha = 1.0
+            else:
+                set_topmost = False
+                set_alpha = 0.0
             temp_window.wm_attributes("-topmost", set_topmost)
             temp_window.wm_attributes("-alpha", set_alpha)
 
@@ -424,7 +429,7 @@ class TopWindow:
             self.emitter_serial.pageflipglsink = None
         if self.pageflipglsink is not None:
             self.pageflipglsink.set_property("close", True)
-        self.set_menu_on_top(True)
+        self.set_menu_on_top(True, False)
         # Gst.deinit()
         return "break"
 
@@ -432,7 +437,7 @@ class TopWindow:
         if self.video_open:
             self.stop_player()
         self.close = True
-        self.set_menu_on_top(True)
+        self.set_menu_on_top(True, False)
         if self.emitter_serial:
             self.emitter_serial.close()
         self.display_settings_dialog.autosave_active_settings()
@@ -607,9 +612,6 @@ class TopWindow:
         calibration_mode = self.display_settings_dialog.calibration_mode_variable.get()
         display_osd_timestamp = (
             self.display_settings_dialog.display_osd_timestamp_variable.get()
-        )
-        enable_windows_always_on_top_hack = (
-            self.display_settings_dialog.enable_windows_always_on_top_hack_variable.get()
         )
         # print(frame_packing)
         # print(right_eye)
@@ -905,9 +907,6 @@ class TopWindow:
         )
         self.pageflipglsink.set_property("whitebox-size", whitebox_size)
         self.pageflipglsink.set_property("display-osd-timestamp", display_osd_timestamp)
-        self.pageflipglsink.set_property(
-            "enable-windows-always-on-top-hack", enable_windows_always_on_top_hack
-        )
 
         self.pageflipglsink.set_property("subtitle-font", subtitle_font)
         self.pageflipglsink.set_property("subtitle-size", subtitle_size)
@@ -1153,9 +1152,10 @@ if __name__ == "__main__":
                             and "set_menu_on_top" not in ignore_duplicate_actions
                         ):
                             ignore_duplicate_actions.add("set_menu_on_top")
-                            top_window.set_menu_on_top(
-                                True if r == "set_menu_on_top_true" else False
-                            )
+                            if r == "set_menu_on_top_true":
+                                top_window.set_menu_on_top(True, True)
+                            else:
+                                top_window.set_menu_on_top(False, False)
                         if r.startswith("calibration-"):
                             increment_by = 0
                             target = None
