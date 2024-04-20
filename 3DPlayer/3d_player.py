@@ -1134,6 +1134,15 @@ if __name__ == "__main__":
                         ):
                             ignore_duplicate_actions.add("toggle_paused")
                             top_window.toggle_paused()
+                        if (
+                            "toggle_sensor_logging" in r
+                            and "toggle_sensor_log" not in ignore_duplicate_actions
+                        ):
+                            if (
+                                top_window.emitter_serial is not None
+                                and top_window.emitter_settings_dialog is not None
+                            ):
+                                top_window.emitter_settings_dialog.click_opt101_enable_stream_readings_to_serial_toggle()
                         if "seek" in r:
                             top_window.perform_seek(r)
                         if "close" in r and "close" not in ignore_duplicate_actions:

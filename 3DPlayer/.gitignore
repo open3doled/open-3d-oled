@@ -5,6 +5,7 @@ debug/*
 installation/*
 old/*
 dot_graph_files/*
+sensor_logs/*
 videos/Big.Buck.Bunny
 settings/last_display_settings.json
 releases/
