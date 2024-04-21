@@ -1,0 +1,103 @@
+Quick Frame Transport Guide:
+
+Description:
+What we are trying to do with these custom monitor timings / modelines is create a duty cycle where the "front/back porch" and "blanking period" is the longest possible relative to the time the active signal is being sent.
+This extended "blanking period" will provide the period of time where the LCD should have a consistent image across the whole screen and will be the time we will open the shutter glasses to get an image with no ghosting.
+As a general rule you want to use the highest possible HDMI clock you can and the largest possible "blanking period" different displays and video cards will support different maximums so you may need to tweak your values to get optimal results.
+
+Windows:
+References:
+https://forums.blurbusters.com/viewtopic.php?t=10571
+https://forums.blurbusters.com/viewtopic.php?t=8946
+
+Notes:
+Follow the instructions on the blurbusters site, you can use the mode timings below from the linux section if you are stuck as they are ones I have tested and generate good images.
+
+Linux:
+References:
+https://nyanpasu64.gitlab.io/blog/crt-modeline-cvt-interlacing/
+
+Original CVT Modelines:
+```
+xrandr --verbose
+  1920x1080 (0x1c0) 564.590MHz +HSync -VSync *current
+        h: width  1920 start 1943 end 1975 total 2030 skew    0 clock 278.12KHz
+        v: height 1080 start 1137 end 1145 total 1160           clock 239.76Hz
+  1920x1080 (0x1c2) 296.700MHz +HSync +VSync
+        h: width  1920 start 2008 end 2052 total 2200 skew    0 clock 134.86KHz
+        v: height 1080 start 1084 end 1089 total 1125           clock 119.88Hz
+```
+
+Custom CVT Modelines:
+Format:
+custom followed by "name" pixel-mhz  hdisplay hsync_start hsync_end htotal  vdisplay vsync_start vsync_end vtotal  [±hsync] [±vsync] [interlace]
+
+1) 594 MHz @ 120hz (52% blanking) A
+xrandr --newmode "1920x1080_120.00_QFT"  594.00  1920 2008 2052 2200  1080 1084 1089 2250 +hsync +vsync
+xrandr --addmode HDMI-0 "1920x1080_120.00_QFT"
+
+2) 564.590 Mhz @ 120hz (53.5% blanking)
+xrandr --newmode "1920x1080_120.00_QFT"  564.59  1920 1943 1975 2030  1080 1137 1145 2320 +hsync +vsync
+xrandr --addmode HDMI-0 "1920x1080_120.00_QFT"
+
+3) 594 MHz Mhz @ 120hz (55.8% blanking) B
+xrandr --newmode "1920x1080_120.00_QFT"  594.00  1920 1943 1975 2030  1080 1084 1089 2438 +hsync +vsync
+xrandr --addmode HDMI-0 "1920x1080_120.00_QFT"
+
+4) 299.000MHz @ 120hz (12.0% blanking)
+xrandr --newmode "1920x1080_120.00_QFT"  299.00  1920 1943 1975 2030  1080 1084 1089 1227 +hsync +vsync
+xrandr --addmode HDMI-0 "1920x1080_120.00_QFT"
+
+5) 299.000MHz @ 100hz (26.7% blanking)
+xrandr --newmode "1920x1080_100.00_QFT"  299.00  1920 1943 1975 2030  1080 1084 1089 1472 +hsync +vsync
+xrandr --addmode HDMI-0 "1920x1080_100.00_QFT"
+
+6) 299.000MHz @ 90hz (34.0% blanking)
+xrandr --newmode "1920x1080_90.00_QFT"  299.00  1920 1943 1975 2030  1080 1084 1089 1636 +hsync +vsync
+xrandr --addmode HDMI-0 "1920x1080_90.00_QFT"
+
+
+
+FAQ:
+1) How do I set the mode from command line?
+If you don't want to do it from the Display settings you can run the following command "xrandr --output HDMI-0 --mode "1920x1080_120.00_QFT"
+2) How do I remove the custom modelines?
+Reboot to clear them all out or execute the following.
+```
+xrandr --delmode HDMI-0 "1920x1080_120.00_QFT"
+xrandr --rmmode "1920x1080_120.00_QFT"
+```
+3) I got the following error when trying to do xrandr addmode waht do I do?
+```
+X Error of failed request:  BadMatch (invalid parameter attributes)
+  Major opcode of failed request:  140 (RANDR)
+  Minor opcode of failed request:  18 (RRAddOutputMode)
+  Serial number of failed request:  64
+  Current serial number in output stream:  65
+```
+Add the following to "/etc/X11/xorg.conf.d/98-monitor.conf" and reboot.
+```
+Section "Screen"
+    Option         "ModeValidation" "AllowNonEdidModes,NoEdidMaxPClkCheck,NoDFPNativeResolutionCheck,NoVirtualSizeCheck,NoMaxPClkCheck,NoHorizSyncCheck,NoVertRefreshCheck,NoWidthAlignmentCheck"
+    Monitor        "Monitor"
+    Identifier     "Screen"
+    Device         "Device"
+EndSection
+
+Section "Monitor"
+    Identifier     "Monitor"
+    HorizSync       30-83
+    VertRefresh     56-75
+EndSection
+```
+ref) https://askubuntu.com/questions/235507/xconfig-xrandr-badmatch
+ref) https://askubuntu.com/questions/4662/where-is-the-x-org-config-file-how-do-i-configure-x-there
+ref) https://unix.stackexchange.com/questions/624297/overclocking-monitor-on-nvidia-card-override-mode-validation
+
+
+
+
+
+
+
+

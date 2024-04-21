@@ -844,7 +844,7 @@ class PageflipGLWindow(threading.Thread):
                         self.__requests = ",".join(
                             self.__requests.split(",") + [f"toggle_sensor_logging"]
                         )
-                    elif event.key == pg.K_F9 and self.__calibration_mode:
+                    elif event.key == pg.K_F9:
                         if USE_LINE_PROFILER:
                             if not line_profiler_obj.global_enable:
                                 print("enable global profiling")
@@ -852,7 +852,7 @@ class PageflipGLWindow(threading.Thread):
                             else:
                                 line_profiler_obj.global_enable = False
                                 print("disable global profiling")
-                    elif event.key == pg.K_F10 and self.__calibration_mode:
+                    elif event.key == pg.K_F10:
                         if USE_LINE_PROFILER:
                             line_profiler_obj.print_stats()
                             line_profiler_obj.clear_stats()

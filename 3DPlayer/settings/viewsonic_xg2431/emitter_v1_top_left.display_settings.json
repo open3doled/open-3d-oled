@@ -1,0 +1,15 @@
+{
+  "target_framerate": "0",
+  "display_resolution": "1920x1080",
+  "display_zoom_factor": "100",
+  "display_size": "24",
+  "whitebox_brightness": "255",
+  "whitebox_corner_position": "top_left",
+  "whitebox_vertical_position": "6",
+  "whitebox_horizontal_position": "0",
+  "whitebox_size": "14",
+  "whitebox_horizontal_spacing": "24",
+  "calibration_mode": false,
+  "display_osd_timestamp": false,
+  "enable_windows_always_on_top_hack": false
+}

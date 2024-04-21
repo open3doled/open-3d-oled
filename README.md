@@ -103,21 +103,23 @@ Windows (in command prompt):
 Working (Tested)
  - LG C1 OLED (Fully working with Motion Pro high setting with no crosstalk due to ~41% BFI duty cycle)
  - Sony OLED XBR 48a9s (Working with clearness high setting but the bottom and top 10% of the screen has crosstalk due to ~61% BFI duty cycle)
+ - Viewsonic XG2431 (Works perfectly zero-ghosting without any BFI enabled at up to 144 hz shutter glasses refresh speed, you online need to setup a custom quick frame transport HDMI profile to get a blanking interval that matches more than 40% of the screen duty cycle, see https://forums.blurbusters.com/viewtopic.php?t=8946 or read the document in the corresponding settings folder)
  - Asus VG248QE LightBoost Capable (Works perfectly with [LightBoost enabled](https://blurbusters.com/zero-motion-blur/lightboost/), Works usably with lightboost turned off using "OPT101 Ignore All Duplicates")
 Partially Working (Tested)
  - Sony X95K MiniLED (Used with "OPT101 Ignore All Duplicates", "Block Signal Detection Delay" 7500, on tv disable "Local Dimming" to reduce ghosting at top of screen, BFI 1, and run at native 4K from pc)
 Untested (But should work well)
  - LG CX/GX/G1 OLED (These should work identical to LG C1 OLED but are as of yet untested)
  - Other OLEDs with 120hz BFI technology.
- - LCD monitors with strobed backlight for BFI and with front polarization that is compatible with 3D glasses (https://www.rtings.com/monitor/tests/motion/black-frame-insertion)
- - Any monitor with strobed backlight for blur reduction (eg NVIDIA "Ultra Low Motion Blur" (ULMB), EIZO "Turbo240", ASUS "Extreme Low Motion Blur" (ELMB), BenQ "Blur Reduction", BenQ/Zowie "Dynamic Acceleration" (DyAc)) (https://blurbusters.com/faq/120hz-monitors/)
- Untested (But should work ok)
- - Any monitor with at least 120hz at 1080p and a G2G (grey to grey) pixel refresh under 1ms (Used with "OPT101 Ignore All Duplicates", "Block Signal Detection Delay" 7500)
+ - Any monitor without BFI with at least 144hz at 1080p and a G2G (grey to grey) pixel refresh under 1ms (Used with "OPT101 Ignore All Duplicates") (You will need to setup an HDMI QFT quick frame transport monitor profile and run the glasses at 110 or 120 hz)
+Untested (But should work ok)
+ - Any monitor without BFI with at least 120hz at 1080p and a G2G (grey to grey) pixel refresh under 1ms (Used with "OPT101 Ignore All Duplicates") (You will need to setup an HDMI QFT quick frame transport monitor profile and run the glasses at 90 or 100 hz)
 Not Working (Untested)
  - LG C2/G2 OLED (Missing 120hz BFI)
  - LG C3/G3 OLED (Missing 120hz BFI)
 ```
 * If you are using a non OLED display or a display for which settings are not already available it is recommended that you set "OPT101 Ignore All Duplicates" to 1 under Emitter Settings. This will ensure the highest possibility the emitter can synchronize to your TV, at the cost of not being able to detect duplicate frames and inform the glasses to resynchornize immediately. It will typically result in a resynchronization delay of 1-2 frames on a duplicate frame, you may be able to get satisfactory results without using this by tuning "OPT101 Block Signal Detection Delay" and "OPT101 Block N Subsequent Duplicates" to match your display characteristics.
+* If you are using an LCD you will want to use HDMI QFT "Quick Frame Transport" to force a long blanking interval between frames. You basically run the monitor clock at for example 240hz but only send 120hz of data. That way 50% of the time the monitor will not be updating the physical screen. During this time the shutter glasses will open and show an image with minimal ghosting.
+* If you display supports BFI and it is an LCD make sure the BFI is phase synchronized to the actual refresh rate. I do not believe this is actually done on many monitors. Even Viewsonic XG2431 doesn't phase synchronize it and you need to do this manually using the blurbusters tool. Unless the BFI/strobing is phase synchronized you may be better to just turn it off.
 * Performance is best on Linux (tested on Ubuntu 20.04 an 22.04) followed by Windows 10 then Windows 11. I haven't tested on Windows 7.
 * On Windows 11 when using a 4k display sometimes Windows decides to use "Active Signal Mode" resolution of 4k and have a "Display Resolution" of 1080p. This confuses the software so make sure your "Active signal mode" and "Display Resolution" match at either 1080P or 4K.
 * HDMI bitstream audio passthrough may have issues on some computers, if you are having difficulty it is recommended to disable HDMI audio passthrough and confirm the audio works on your local PC.
@@ -144,7 +146,11 @@ Not Working (Untested)
 ```
    rm  ~/.cache/gstreamer-1.0/registry.x86_64.bin
    rm "C:\Users\[USERNAME]\AppData\Local\Microsoft\Windows\INetCache\gstreamer-1.0\registry.x86_64-mingw.bin"
-```   
+```  
+* If you need to use line profiling to do performance analysis of gstpageflipglsink.py then use the following modified version of line profiler with a global enable flag and max time tracking.
+```
+   pip install git+https://github.com/46cv8/line_profiler.git@max_time ps
+``` 
 
 ## Development Installation Instructions
 
