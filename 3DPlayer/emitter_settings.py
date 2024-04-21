@@ -713,7 +713,7 @@ class EmitterSettingsDialog:
         self.setting_opt101_ignore_all_duplicates_entry.pack(padx=5, side=tkinter.LEFT)
         self.setting_opt101_ignore_all_duplicates_tooltip = idlelib.tooltip.Hovertip(
             self.setting_opt101_ignore_all_duplicates_entry,
-            "(0=Disable, 1=Enable) On displays with too much jitter where setting OPT101 Block Signal Detection Delay and/or \nOPT101 Block N Subsequent Duplicates does not eliminate false dulicate detection due to strange PWM characteristics \nor variable brightness periods, it may be best to ignore any detected duplicates. This will mean that glasses only \nattempt resynchronization when the alternate eye trigger is sent by the display.",
+            "(0=Disable, 1=Enable) On displays with too much jitter where setting OPT101 Block Signal Detection Delay and/or \nOPT101 Block N Subsequent Duplicates does not eliminate false dulicate detection due to strange PWM characteristics \nor variable brightness periods, it may be best to ignore any detected duplicates. This will mean that glasses only \nattempt resynchronization when the alternate eye trigger is sent by the display. (If you are using a display without some form of BFI it is highly recommended you enable this)",
             hover_delay=100,
         )
         self.setting_opt101_ignore_all_duplicates_frame.grid(
@@ -841,7 +841,7 @@ class EmitterSettingsDialog:
         )
         self.setting_opt101_enable_duplicate_realtime_reporting_tooltip = idlelib.tooltip.Hovertip(
             self.setting_opt101_enable_duplicate_realtime_reporting_entry,
-            "When enabled (set to 1) the emitter will send a signal to the PC every time it detects a duplicate frame. This can be useful during calibration to see if the emitter thinks the pc is sending duplicate frames.",
+            "When enabled (set to 1) the emitter will send a signal to the PC every time it detects a duplicate frame. This can be useful during calibration to see if the emitter thinks the pc is sending duplicate frames. (This will not work unless you have a display with some form of BFI and have tuned 'block signal detection delay appropriately'. \nIf you are relying on 'ignore all duplicates' this will not work)",
             hover_delay=100,
         )
         self.setting_opt101_enable_duplicate_realtime_reporting_frame.grid(

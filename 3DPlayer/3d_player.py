@@ -34,6 +34,7 @@ class TopWindow:
         self.paused = False
         self.close = False
         self.emitter_serial = None
+        self.last_mouse_position = None
 
         self.pageflipglsink = None
         self.subtitle3dsink = None
@@ -320,7 +321,7 @@ class TopWindow:
 
         # window.geometry('100x300')
         window.bind("<Button-1>", self.click_mouse)
-        window.bind("<B1-Motion>", self.move_mouse)
+        window.bind("<B1-Motion>", self.move_mouse_with_click)
         # https://www.tcl.tk/man/tcl8.4/TkCmd/keysyms.html
         window.bind("<F11>", self.toggle_fullscreen)
         window.bind("f", self.flip_right_and_left)
@@ -335,8 +336,24 @@ class TopWindow:
 
         self.process_command_line_arguments(command_line_arguments)
 
-    def move_mouse(self, event=None):
-        if ".!frame.!button" in str(event.widget):
+    def notify_player_if_mouse_moved(self):
+        next_mouse_position = (
+            self.window.winfo_pointerx(),
+            self.window.winfo_pointery(),
+        )
+        if (
+            next_mouse_position != self.last_mouse_position
+            and self.pageflipglsink is not None
+        ):
+            self.pageflipglsink.set_property("mouse-moved", True)
+            self.last_mouse_position = next_mouse_position
+
+    def move_mouse_with_click(self, event=None):
+        widget_string = str(event.widget)
+        if (
+            ".!frame.!button" in widget_string
+            or ".!frame2.!progressbar" in widget_string
+        ):
             return "break"
         # print(('move',dir(event),event.widget,str(event.widget),event.x,event.x_root,event.y,event.y_root,self._offsetx, self._offsety))
         x = self.window.winfo_pointerx() - self._offsetx
@@ -368,7 +385,12 @@ class TopWindow:
             self.pageflipglsink.set_property("right-eye", "top")
 
     def set_menu_on_top(
-        self, put_on_control_on_top, put_dialogs_on_top, event=None
+        self,
+        control_on_top,
+        dialogs_on_top,
+        control_transparent,
+        dialogs_transparent,
+        event=None,
     ):  # @UnusedVariable
         window_list = [self.window]
         if (
@@ -390,16 +412,23 @@ class TopWindow:
             if (
                 self.pageflipglsink
                 and self.pageflipglsink.get_property("fullscreen")
-                and (
-                    (idx == 0 and put_on_control_on_top)
-                    or (idx > 0 and put_dialogs_on_top)
-                )
+                and ((idx == 0 and control_on_top) or (idx > 0 and dialogs_on_top))
             ):
                 set_topmost = True
-                set_alpha = 1.0
             else:
                 set_topmost = False
+
+            if (
+                self.pageflipglsink
+                and self.pageflipglsink.get_property("fullscreen")
+                and (
+                    (idx == 0 and control_transparent)
+                    or (idx > 0 and dialogs_transparent)
+                )
+            ):
                 set_alpha = 0.0
+            else:
+                set_alpha = 1.0
             temp_window.wm_attributes("-topmost", set_topmost)
             temp_window.wm_attributes("-alpha", set_alpha)
 
@@ -429,7 +458,7 @@ class TopWindow:
             self.emitter_serial.pageflipglsink = None
         if self.pageflipglsink is not None:
             self.pageflipglsink.set_property("close", True)
-        self.set_menu_on_top(True, False)
+        self.set_menu_on_top(True, False, False, False)
         # Gst.deinit()
         return "break"
 
@@ -437,7 +466,7 @@ class TopWindow:
         if self.video_open:
             self.stop_player()
         self.close = True
-        self.set_menu_on_top(True, False)
+        self.set_menu_on_top(True, False, False, False)
         if self.emitter_serial:
             self.emitter_serial.close()
         self.display_settings_dialog.autosave_active_settings()
@@ -1093,6 +1122,10 @@ if __name__ == "__main__":
     # os.environ["GST_VAAPI_DRM_DEVICE"] = "/dev/dri/renderD128" # This environment variable can be set to a specified DRM device when DRM display is used, it is ignored when other types of displays are used. By default /dev/dri/renderD128 is used for DRM display.
     # os.environ["GST_PLUGIN_FEATURE_RANK"] = "vaapih264dec:MAX"
 
+    os.environ["SDL_HINT_VIDEO_HIGHDPI_DISABLED"] = (
+        "1"  # https://wiki.libsdl.org/SDL2/SDL_HINT_VIDEO_HIGHDPI_DISABLED https://www.reddit.com/r/sdl/comments/pkvze5/i_wish_i_knew_about_this_feature_months_ago/
+    )
+
     import gi
 
     gi.require_version("Gst", "1.0")
@@ -1153,9 +1186,9 @@ if __name__ == "__main__":
                         ):
                             ignore_duplicate_actions.add("set_menu_on_top")
                             if r == "set_menu_on_top_true":
-                                top_window.set_menu_on_top(True, True)
+                                top_window.set_menu_on_top(True, True, False, False)
                             else:
-                                top_window.set_menu_on_top(False, False)
+                                top_window.set_menu_on_top(False, False, True, True)
                         if r.startswith("calibration-"):
                             increment_by = 0
                             target = None
@@ -1260,10 +1293,11 @@ if __name__ == "__main__":
                             "latest-subtitle-data", latest_subtitle_data
                         )
 
+                top_window.notify_player_if_mouse_moved()
             try:
                 top_window.window.update_idletasks()
                 top_window.window.update()
-                time.sleep(0.001)
+                time.sleep(0.01)
             except:
                 # traceback.print_exc()
                 top_window.close_player()

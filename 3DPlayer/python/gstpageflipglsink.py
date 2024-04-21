@@ -724,6 +724,7 @@ class PageflipGLWindow(threading.Thread):
                     if self.__fullscreen:
                         pg.mouse.set_visible(False)
                         self.__sdl2_window.focus()
+                        print("set video focus")
                         """
                   print('self.__sdl2_window.position', self.__sdl2_window.position)
                   window_sdl = sdl2.video.SDL_GetWindowFromID(self.__sdl2_window.id)
@@ -1425,6 +1426,15 @@ class PageflipGLWindow(threading.Thread):
         self.__do_fullscreen = value
 
     @property
+    def mouse_moved(self):
+        return False
+
+    @mouse_moved.setter
+    def mouse_moved(self, value):
+        if value is True:
+            self.__last_mouse_moved_at = time.time()
+
+    @property
     def frame_packing(self):
         return self.__frame_packing
 
@@ -1747,6 +1757,13 @@ class GstPageflipGLSink(GstBase.BaseSink):
             False,  # default
             GObject.ParamFlags.READWRITE,
         ),
+        "mouse_moved": (
+            GObject.TYPE_BOOLEAN,
+            "Mouse move",
+            "Notify the player the user is moving the mouse outside of the main video player context so it shouldn't try to take back control yet.",
+            False,  # default
+            GObject.ParamFlags.READWRITE,
+        ),
         "frame_packing": (
             GObject.TYPE_STRING,
             "Frame Packing",
@@ -1929,6 +1946,7 @@ class GstPageflipGLSink(GstBase.BaseSink):
         self.__started = False
         self.__parameters = {
             "fullscreen": False,
+            "mouse-moved": False,
             "frame-packing": "side-by-side",
             "right-eye": "right",
             "target-framerate": "0",
