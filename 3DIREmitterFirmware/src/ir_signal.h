@@ -27,6 +27,7 @@ extern uint8_t ir_glasses_selected;
 extern volatile uint16_t ir_frame_duration;
 extern volatile uint16_t ir_frame_delay; 
 extern volatile uint16_t ir_signal_spacing;
+extern volatile uint8_t ir_flip_eyes;
 extern volatile bool ir_led_token_active;
 
 void ir_signal_init(void);

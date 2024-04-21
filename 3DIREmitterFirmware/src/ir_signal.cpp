@@ -12,6 +12,7 @@ uint8_t ir_glasses_selected = 6;
 volatile uint16_t ir_frame_duration = IR_FRAME_DURATION;
 volatile uint16_t ir_frame_delay = IR_FRAME_DELAY;
 volatile uint16_t ir_signal_spacing = IR_SIGNAL_SPACING;
+volatile uint8_t ir_flip_eyes = 0;
 #ifdef OPT101_ENABLE_IGNORE_DURING_IR
 volatile bool ir_led_token_active = false;
 #endif
@@ -45,6 +46,7 @@ void ir_signal_init() {
 	ir_frame_duration = IR_FRAME_DURATION;
 	ir_frame_delay = IR_FRAME_DELAY;
 	ir_signal_spacing = IR_SIGNAL_SPACING;
+  ir_flip_eyes = 0;
 	#ifdef OPT101_ENABLE_IGNORE_DURING_IR
 	ir_led_token_active = false; 
 	#endif
@@ -405,64 +407,11 @@ ISR(TIMER1_COMPC_vect)
 
 /*
  Responsible for converting external state change parameters into the those parameters used internally.
-
- If frame delay is less than frame duration / 2 it means we should schedule the open signal for 
- the current frames eye.
-
- If frame delay is greater than frame duration / 2 it means we are prescheduling open signals for 
- the next frames eye.
- 1) If the open signal is for the same as the last one then we do the following:
-   a) send a special fast switch signal to the glasses to ensure we keep showing the current eye
-   b) we don't need to send a command to close the opposite eye which we may have already triggered to open because this will be handled by fast swap logic
-   c) queue up the close signal for the current eye
-   *) For scheduling the close signal of the current eye we will need to keep track of when the last 
-      open signal was sent for left and right eyes and then subtract this value from the timer4 current
-      value before adding the frame duration.
- 2) queue up the open signal for the opposite eye
+ Schedule the open signal for the current frames eye.
 */
 void ir_signal_process_opt101(uint8_t left_eye, bool duplicate) {
   cli();
   uint16_t current_tcnt1 = TCNT1;
   sei();
-  if (ir_frame_delay < (ir_frame_duration >> 1)) {
-    ir_signal_schedule_send_request(left_eye ? SIGNAL_OPEN_LEFT : SIGNAL_OPEN_RIGHT, current_tcnt1 + (ir_frame_delay << 1));
-  }
-  else {
-    if (duplicate) {
-	    const ir_glasses_signal_library_t* temp_ir_glasses_selected_library = ir_glasses_available[ir_glasses_selected];
-      uint8_t temp_signal_index = temp_ir_glasses_selected_library->signal_index[(left_eye ? SIGNAL_OPEN_LEFT_FAST_SWAP : SIGNAL_OPEN_RIGHT_FAST_SWAP)];
-	    if (temp_signal_index != 255 && temp_signal_index < temp_ir_glasses_selected_library->signal_count) {
-        ir_signal_send_request(left_eye ? SIGNAL_OPEN_LEFT_FAST_SWAP : SIGNAL_OPEN_RIGHT_FAST_SWAP);
-      }
-      else {
-        ir_signal_send_request(left_eye ? SIGNAL_OPEN_LEFT : SIGNAL_OPEN_RIGHT);
-      }
-      // This is unnecessary because fast swap will do this already but maybe we leave it in to help with legacy glasses or to keep debug lines properly updated...
-      ir_signal_send_request(left_eye ? SIGNAL_CLOSE_RIGHT : SIGNAL_CLOSE_LEFT); 
-      if (left_eye) {
-        ir_signal_next_timer1_compa_signal = SIGNAL_NONE;
-        ir_signal_next_timer1_compb_signal = SIGNAL_NONE;
-        bitClear(TIMSK1, OCIE1A);
-        bitClear(TIMSK1, OCIE1B);
-      }
-      else {
-        ir_signal_next_timer1_compa_signal = SIGNAL_NONE;
-        ir_signal_next_timer1_compb_signal = SIGNAL_NONE;
-        bitClear(TIMSK1, OCIE1A);
-        bitClear(TIMSK1, OCIE1B);
-      }
-      ir_signal_schedule_send_request(left_eye ? SIGNAL_CLOSE_LEFT : SIGNAL_CLOSE_RIGHT, (left_eye ? ir_signal_send_last_open_right_tcnt1 : ir_signal_send_last_open_left_tcnt1) + (ir_frame_duration << 1));
-    }
-    //ir_signal_schedule_send_request(left_eye ? SIGNAL_OPEN_RIGHT : SIGNAL_OPEN_LEFT, current_tcnt1 + (ir_frame_delay << 1));
-    current_tcnt1 += (ir_frame_delay << 1);
-    // Record the time open signals are sent
-    if (left_eye) {
-      ir_signal_schedule_send_request(SIGNAL_OPEN_RIGHT, current_tcnt1);
-      ir_signal_send_last_open_right_tcnt1 = current_tcnt1;
-    }
-    else {
-      ir_signal_schedule_send_request(SIGNAL_OPEN_LEFT, current_tcnt1);
-      ir_signal_send_last_open_left_tcnt1 = current_tcnt1;
-    }
-  }
+  ir_signal_schedule_send_request(left_eye ^ ir_flip_eyes ? SIGNAL_OPEN_LEFT : SIGNAL_OPEN_RIGHT, current_tcnt1 + (ir_frame_delay << 1));
 }

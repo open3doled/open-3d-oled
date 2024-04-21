@@ -30,7 +30,7 @@ void setup()
     Serial.println("+startup");
     bitSet(DDR_LED_IR_D3, LED_IR_D3);
     //#ifdef ENABLE_DEBUG_PIN_OUTPUTS
-    //#if (defined(OPT101_ENABLE_FREQUENCY_ANALYSIS_BASED_DUPLICATE_FRAME_DETECTION) && defined(OPT101_ENABLE_FREQUENCY_ANALYSIS_BASED_DUPLICATE_FRAME_DETECTION_DEBUG_PIN_D2)) || defined(OPT101_ENABLE_IGNORE_DURING_IR) && defined(OPT101_ENABLE_IGNORE_DURING_IR_DEBUG_PIN_D2) 
+    //#if (defined(OPT101_ENABLE_IGNORE_DURING_IR) && defined(OPT101_ENABLE_IGNORE_DURING_IR_DEBUG_PIN_D2))
 	bitSet(DDR_DEBUG_PORT_D2, DEBUG_PORT_D2);
 	//#endif
 	bitSet(DDR_DEBUG_PORT_D9, DEBUG_PORT_D9);
@@ -50,7 +50,7 @@ void setup()
     EEPROM.get(EEPROM_SETTING_ADDRESS, eeprom_settings);
     if (eeprom_settings.check_value == EEPROM_SETTING_CHECKVALUE)
     {
-        if (eeprom_settings.version == 2) 
+        if (eeprom_settings.version > 3 && eeprom_settings.version < 14) 
         {
             ir_glasses_selected = eeprom_settings.ir_glasses_selected;
             ir_frame_delay = eeprom_settings.ir_frame_delay;
@@ -59,40 +59,38 @@ void setup()
             opt101_block_signal_detection_delay = eeprom_settings.opt101_block_signal_detection_delay;
             opt101_min_threshold_value_to_activate = eeprom_settings.opt101_min_threshold_value_to_activate;
             opt101_detection_threshold = eeprom_settings.opt101_detection_threshold;
-            opt101_detection_threshold_repeated_high = eeprom_settings.opt101_detection_threshold_repeated_high;
-            opt101_detection_threshold_repeated_low = eeprom_settings.opt101_detection_threshold_repeated_low;
-            opt101_enable_ignore_during_ir = 0;
-            opt101_enable_duplicate_realtime_reporting =  eeprom_settings.opt101_enable_ignore_during_ir;
-            opt101_output_stats = eeprom_settings.opt101_enable_duplicate_realtime_reporting;
-            opt101_enable_frequency_analysis_based_duplicate_frame_detection = eeprom_settings.opt101_output_stats;
-        }
-        else if (eeprom_settings.version > 3) 
-        {
-            ir_glasses_selected = eeprom_settings.ir_glasses_selected;
-            ir_frame_delay = eeprom_settings.ir_frame_delay;
-            ir_frame_duration = eeprom_settings.ir_frame_duration;
-            ir_signal_spacing = eeprom_settings.ir_signal_spacing;
-            opt101_block_signal_detection_delay = eeprom_settings.opt101_block_signal_detection_delay;
-            opt101_min_threshold_value_to_activate = eeprom_settings.opt101_min_threshold_value_to_activate;
-            opt101_detection_threshold = eeprom_settings.opt101_detection_threshold;
-            opt101_detection_threshold_repeated_high = eeprom_settings.opt101_detection_threshold_repeated_high;
-            opt101_detection_threshold_repeated_low = eeprom_settings.opt101_detection_threshold_repeated_low;
-            opt101_enable_ignore_during_ir = eeprom_settings.opt101_enable_ignore_during_ir;
-            opt101_enable_duplicate_realtime_reporting = eeprom_settings.opt101_enable_duplicate_realtime_reporting;
-            opt101_output_stats = eeprom_settings.opt101_output_stats;
-            opt101_enable_frequency_analysis_based_duplicate_frame_detection = eeprom_settings.opt101_enable_frequency_analysis_based_duplicate_frame_detection;
+            opt101_enable_ignore_during_ir = eeprom_settings.opt101_output_stats;
+            opt101_enable_duplicate_realtime_reporting = eeprom_settings.opt101_block_n_subsequent_duplicates;
+            opt101_output_stats = eeprom_settings.opt101_ignore_all_duplicates;
             if (eeprom_settings.version >= 10) 
             {
-                opt101_block_n_subsequent_duplicates = eeprom_settings.opt101_block_n_subsequent_duplicates;
+                opt101_block_n_subsequent_duplicates = eeprom_settings.ir_flip_eyes;
             }
             if (eeprom_settings.version >= 12) 
             {
-                opt101_ignore_all_duplicates = eeprom_settings.opt101_ignore_all_duplicates;
+                opt101_ignore_all_duplicates = eeprom_settings.empty_216;
             }
             if (eeprom_settings.version >= 13)
             {
-                opt101_sensor_filter_mode = eeprom_settings.opt101_sensor_filter_mode;
+                opt101_sensor_filter_mode = eeprom_settings.empty_224;
             }
+        }
+        else
+        {
+            ir_glasses_selected = eeprom_settings.ir_glasses_selected;
+            ir_frame_delay = eeprom_settings.ir_frame_delay;
+            ir_frame_duration = eeprom_settings.ir_frame_duration;
+            ir_signal_spacing = eeprom_settings.ir_signal_spacing;
+            opt101_block_signal_detection_delay = eeprom_settings.opt101_block_signal_detection_delay;
+            opt101_min_threshold_value_to_activate = eeprom_settings.opt101_min_threshold_value_to_activate;
+            opt101_detection_threshold = eeprom_settings.opt101_detection_threshold;
+            opt101_enable_ignore_during_ir = eeprom_settings.opt101_enable_ignore_during_ir;
+            opt101_enable_duplicate_realtime_reporting = eeprom_settings.opt101_enable_duplicate_realtime_reporting;
+            opt101_output_stats = eeprom_settings.opt101_output_stats;
+            opt101_block_n_subsequent_duplicates = eeprom_settings.opt101_block_n_subsequent_duplicates;
+            opt101_ignore_all_duplicates = eeprom_settings.opt101_ignore_all_duplicates;
+            opt101_sensor_filter_mode = eeprom_settings.opt101_sensor_filter_mode;
+            ir_flip_eyes = eeprom_settings.ir_flip_eyes;
         }
 
         Serial.println("eeprom read_settings");
@@ -132,17 +130,20 @@ void loop()
             * 4) ir_signal_spacing
             *   how long to delay after sending one signal before sending the next. 
             *   this is used to ensure the receiver is done handling one signal so as to not overload it. (default 200)
+            * 14) ir_flip_eyes - 
+            *   set this to 1 if you want to flip left and right eyes, this is useful if you need to use a high frame_delay 
+            *   forcing this frame to actually trigger the glasses for the next frames opposite eye
             * 5) opt101_block_signal_detection_delay - 
             *   how long to wait after a high tv signal on left or right before allowing another high tv signal on either 
             *   channel (in microseconds) this is useful to eliminating false triggers when the tv signal is decreasing in a noisy fashion.
             *   this is best set to slighly lower than the target refresh rate (about 80-90%).
-            * 14) opt101_block_n_subsequent_duplicates -
+            * 11) opt101_block_n_subsequent_duplicates -
             *   (number of detections to block) on displays that use a PWM backlight one needs to block fake duplicate frames 
             *   for at least the first math.ceiling((PWM frequency)/framerate) otherwise a PWM pulse may incorrectly 
             *   be detected as the next duplicate frame causing the unit to lose proper synchronization. 
             *   When using this setting one should set opt101_block_signal_detection_delay to a 
             *   value 80-90% of the PWM backlight cycle time. (default 0).
-            * 15) opt101_ignore_all_duplicates -
+            * 12) opt101_ignore_all_duplicates -
             *   (0 disable - >1 enable) on displays with too much jitter where setting opt101_block_signal_detection_delay and/or
             *   opt101_block_n_subsequent_duplicates does not eliminate false dulicate detection due to strange PWM characteristics
             *   or variable brightness periods, it may be best to ignore any detected duplicates. This will mean that glasses only
@@ -156,26 +157,16 @@ void loop()
             *   the level (as a value between 1-255) above which an increasing light intensity is detected as the beggining of a new frame, 
             *   setting this lower will make the device aware of new frames earlier but also increase the likelihood of duplicate frame
             *   detection if the light intensity doesn't fall below this threshold before the opt101_block_signal_detection_delay completes.
-            * 16) opt101_sensor_filter_mode -
+            * 13) opt101_sensor_filter_mode -
             *   this is used to apply custom filtering to the ADC readings to try and eliminate spurious noise currently there are only two modes.
             *   0 - off, 1 - check that the last three readings are trending in the same direction
-            * 10) opt101_enable_ignore_during_ir - 
+            * 8) opt101_enable_ignore_during_ir - 
             *   disable the opt101 sensor detection during the time when ir signals are being emitted.
             *   this stops reflections of IR signals from triggering frame start signals.
-            * 11) opt101_enable_duplicate_realtime_reporting -
+            * 9) opt101_enable_duplicate_realtime_reporting -
             *   detect duplicate frames and pretend they aren't dupes (send no ir) then report the dupe to the host pc so it can skip a second frame immediately. duplicaes are reported to pc in the format "+d 0\n" (right duplicate) "+d 1\n" (left duplicate)
-            * 12) opt101_output_stats -
+            * 10) opt101_output_stats -
             *   output statistics (if built with OPT101_ENABLE_STATS) relating to how the opt101 module is processing all lines start with "+stats " followed by specific statistics.
-            * LCD Specific Parameters
-            * 13) opt101_enable_frequency_analysis_based_duplicate_frame_detection -
-            *   enables the code to detect duplicate frames on screens without a black frame interval (if built with OPT101_ENABLE_FREQUENCY_ANALYSIS_BASED_DUPLICATE_FRAME_DETECTION).
-            * 8) opt101_detection_threshold_repeated_high -
-            *   when attempting to detect duplicate frames on screens without a black frame interval, first the framerate is detected.
-            *   then after each frame detection we wait the frame period, if after the frame period the signal for that same light sensor 
-            *   is above opt101_detection_threshold_repeated_high and not decreasing and the other light sensor is below 
-            *   opt101_detection_threshold_repeated_low and this condition persists for approximately 0.5 milliseconds, it is detected
-            *   as a duplicate frame.
-            * 9) opt101_detection_threshold_repeated_low - see 5 above
             */
             for (uint8_t p = 0; p < 18; p++) 
             {
@@ -224,39 +215,31 @@ void loop()
                         }
                         else if (p == 8) 
                         {
-                            opt101_detection_threshold_repeated_high = temp;
+                            opt101_enable_ignore_during_ir = temp;
                         }
                         else if (p == 9) 
                         {
-                            opt101_detection_threshold_repeated_low = temp;
+                            opt101_enable_duplicate_realtime_reporting = temp;
                         }
                         else if (p == 10) 
                         {
-                            opt101_enable_ignore_during_ir = temp;
+                            opt101_output_stats = temp;
                         }
                         else if (p == 11) 
                         {
-                            opt101_enable_duplicate_realtime_reporting = temp;
+                            opt101_block_n_subsequent_duplicates = temp;
                         }
                         else if (p == 12) 
                         {
-                            opt101_output_stats = temp;
+                            opt101_ignore_all_duplicates = temp;
                         }
                         else if (p == 13) 
                         {
-                            opt101_enable_frequency_analysis_based_duplicate_frame_detection = temp;
+                            opt101_sensor_filter_mode = temp;
                         }
                         else if (p == 14) 
                         {
-                            opt101_block_n_subsequent_duplicates = temp;
-                        }
-                        else if (p == 15) 
-                        {
-                            opt101_ignore_all_duplicates = temp;
-                        }
-                        else if (p == 16) 
-                        {
-                            opt101_sensor_filter_mode = temp;
+                            ir_flip_eyes = temp;
                         }
                     }
                     else if (command == 7 && p == 1 && temp >= 0 && temp < 3) // update glasses mode
@@ -285,15 +268,13 @@ void loop()
                             opt101_block_signal_detection_delay,
                             opt101_min_threshold_value_to_activate,
                             opt101_detection_threshold,
-                            opt101_detection_threshold_repeated_high,
-                            opt101_detection_threshold_repeated_low,
                             opt101_enable_ignore_during_ir,
                             opt101_enable_duplicate_realtime_reporting,
                             opt101_output_stats,
-                            opt101_enable_frequency_analysis_based_duplicate_frame_detection,
                             opt101_block_n_subsequent_duplicates,
                             opt101_ignore_all_duplicates,
-                            opt101_sensor_filter_mode
+                            opt101_sensor_filter_mode,
+                            ir_flip_eyes
                         };
                         EEPROM.put(EEPROM_SETTING_ADDRESS, eeprom_settings);
                         Serial.println("OK");
@@ -329,23 +310,19 @@ void loop()
                 Serial.print(",");
                 Serial.print(opt101_detection_threshold);
                 Serial.print(",");
-                Serial.print(opt101_detection_threshold_repeated_high);
-                Serial.print(",");
-                Serial.print(opt101_detection_threshold_repeated_low);
-                Serial.print(",");
                 Serial.print(opt101_enable_ignore_during_ir);
                 Serial.print(",");
                 Serial.print(opt101_enable_duplicate_realtime_reporting);
                 Serial.print(",");
                 Serial.print(opt101_output_stats);
                 Serial.print(",");
-                Serial.print(opt101_enable_frequency_analysis_based_duplicate_frame_detection);
-                Serial.print(",");
                 Serial.print(opt101_block_n_subsequent_duplicates);
                 Serial.print(",");
                 Serial.print(opt101_ignore_all_duplicates);
                 Serial.print(",");
-                Serial.println(opt101_sensor_filter_mode);
+                Serial.print(opt101_sensor_filter_mode);
+                Serial.print(",");
+                Serial.println(ir_flip_eyes);
                 Serial.println("OK");
             }
             input = String();

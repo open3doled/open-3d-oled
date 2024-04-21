@@ -16,16 +16,6 @@
 volatile uint8_t ir_led_token_active_countdown = 0;
 #endif
 
-#ifdef OPT101_ENABLE_FREQUENCY_ANALYSIS_BASED_DUPLICATE_FRAME_DETECTION
-#define OPT101_TARGET_CONTIGUOUS_NON_DECREASING_READINGS_ABOVE_THRESHOLD 5
-uint32_t opt101_last_detection_time;
-uint32_t opt101_next_eligible_detection_time;
-bool opt101_last_detection_time_initialized;
-uint32_t opt101_average_detection_time_running_total = 0;
-uint8_t opt101_average_detection_time_count = 0;
-uint8_t opt101_contiguous_non_decreasing_readings_above_threshold[OPT101_CHANNELS];
-#endif
-
 #ifdef OPT101_ENABLE_STATS
 uint32_t opt101_stats_count = 0;
 #endif
@@ -66,34 +56,23 @@ uint8_t opt101_readings_realtime_filter[OPT101_CHANNELS];
 uint16_t opt101_reading_counter = 0;
 uint16_t opt101_duplicate_frames_counter = 0;
 uint16_t opt101_premature_frames_counter = 0;
-#ifdef OPT101_ENABLE_FREQUENCY_ANALYSIS_BASED_DUPLICATE_FRAME_DETECTION
-uint32_t opt101_average_detection_time_average = 0;
-#endif
+
 uint16_t opt101_channel_frequency_detection_counter[OPT101_CHANNELS];
 volatile uint8_t opt101_readings[OPT101_CHANNELS];
 uint8_t opt101_readings_high[OPT101_CHANNELS];
 uint8_t opt101_readings_low[OPT101_CHANNELS];
 uint8_t opt101_readings_threshold[OPT101_CHANNELS];
-#ifdef OPT101_ENABLE_FREQUENCY_ANALYSIS_BASED_DUPLICATE_FRAME_DETECTION
-uint8_t opt101_readings_threshold_repeated_high[OPT101_CHANNELS];
-uint8_t opt101_readings_threshold_repeated_low[OPT101_CHANNELS];
-#endif
 
 uint16_t opt101_ss_reading_counter = 0;
 uint16_t opt101_ss_duplicate_frames_counter = 0;
 uint16_t opt101_ss_premature_frames_counter = 0;
-#ifdef OPT101_ENABLE_FREQUENCY_ANALYSIS_BASED_DUPLICATE_FRAME_DETECTION
-uint32_t opt101_ss_average_detection_time_average = 0;
-#endif
+
 uint16_t opt101_ss_channel_frequency_detection_counter[OPT101_CHANNELS];
 volatile uint8_t opt101_ss_readings[OPT101_CHANNELS];
 uint8_t opt101_ss_readings_high[OPT101_CHANNELS];
 uint8_t opt101_ss_readings_low[OPT101_CHANNELS];
 uint8_t opt101_ss_readings_threshold[OPT101_CHANNELS];
-#ifdef OPT101_ENABLE_FREQUENCY_ANALYSIS_BASED_DUPLICATE_FRAME_DETECTION
-uint8_t opt101_ss_readings_threshold_repeated_high[OPT101_CHANNELS];
-uint8_t opt101_ss_readings_threshold_repeated_low[OPT101_CHANNELS];
-#endif
+
 
 /*
     7,  // A0               PF7                 ADC7 // right eye
@@ -110,14 +89,6 @@ void opt101_sensor_Init(void)
 {
     #ifdef OPT101_ENABLE_IGNORE_DURING_IR
     ir_led_token_active_countdown = 0;
-    #endif
-    #ifdef OPT101_ENABLE_FREQUENCY_ANALYSIS_BASED_DUPLICATE_FRAME_DETECTION
-    opt101_last_detection_time = 0;
-    opt101_next_eligible_detection_time = 0;
-    opt101_last_detection_time_initialized = false;
-    opt101_average_detection_time_running_total = 0;
-    opt101_average_detection_time_count = 0;
-    memset((void *)opt101_contiguous_non_decreasing_readings_above_threshold, 0, sizeof(opt101_contiguous_non_decreasing_readings_above_threshold));
     #endif
     #ifdef OPT101_ENABLE_STATS
     opt101_stats_count = 0;
@@ -152,9 +123,6 @@ void opt101_sensor_Init(void)
     opt101_reading_counter = 0;
     opt101_duplicate_frames_counter = 0;
     opt101_premature_frames_counter = 0;
-    #ifdef OPT101_ENABLE_FREQUENCY_ANALYSIS_BASED_DUPLICATE_FRAME_DETECTION
-    opt101_average_detection_time_average = 0;
-    #endif
     memset((void *)opt101_channel_frequency_detection_counter, 0, sizeof(opt101_channel_frequency_detection_counter));
 
     memset((void *)opt101_readings_last, 0, sizeof(opt101_readings_last));
@@ -165,10 +133,6 @@ void opt101_sensor_Init(void)
     memset((void *)opt101_readings_high, 0, sizeof(opt101_readings_high));
     memset((void *)opt101_readings_low, 255, sizeof(opt101_readings_low));
     memset((void *)opt101_readings_threshold, 60, sizeof(opt101_readings_threshold));
-    #ifdef OPT101_ENABLE_FREQUENCY_ANALYSIS_BASED_DUPLICATE_FRAME_DETECTION
-    memset((void *)opt101_readings_threshold_repeated_high, 60, sizeof(opt101_readings_threshold_repeated_high));
-    memset((void *)opt101_readings_threshold_repeated_low, 60, sizeof(opt101_readings_threshold_repeated_low));
-    #endif
     
     ADMUX  = _BV(REFS0)  // ref = AVCC
            | _BV(ADLAR)  // left adjust result
@@ -206,9 +170,6 @@ void opt101_sensor_PrintStats(void)
             opt101_ss_reading_counter = opt101_reading_counter;
             opt101_ss_duplicate_frames_counter = opt101_duplicate_frames_counter;
             opt101_ss_premature_frames_counter = opt101_premature_frames_counter;
-            #ifdef OPT101_ENABLE_FREQUENCY_ANALYSIS_BASED_DUPLICATE_FRAME_DETECTION
-            opt101_ss_average_detection_time_average = opt101_average_detection_time_average;
-            #endif
             for (int ch = 0; ch < OPT101_CHANNELS; ch++)
             {
                 opt101_ss_channel_frequency_detection_counter[ch] = opt101_channel_frequency_detection_counter[ch];
@@ -216,10 +177,6 @@ void opt101_sensor_PrintStats(void)
                 opt101_ss_readings_high[ch] = opt101_readings_high[ch];
                 opt101_ss_readings_low[ch] = opt101_readings_low[ch];
                 opt101_ss_readings_threshold[ch] = opt101_readings_threshold[ch];
-                #ifdef OPT101_ENABLE_FREQUENCY_ANALYSIS_BASED_DUPLICATE_FRAME_DETECTION
-                opt101_ss_readings_threshold_repeated_high[ch] = opt101_readings_threshold_repeated_high[ch];
-                opt101_ss_readings_threshold_repeated_low[ch] = opt101_readings_threshold_repeated_low[ch];
-                #endif
             }
             opt101_sensor_UpdateThresholds();
             opt101_sensor_ClearStats();
@@ -234,18 +191,9 @@ void opt101_sensor_PrintStats(void)
         case 3*OPT101_STATS_SERIAL_OUTPUT_FREQUENCY:
             Serial.print(" premature_frames:");
             Serial.print(opt101_ss_premature_frames_counter);
-    #ifndef OPT101_ENABLE_FREQUENCY_ANALYSIS_BASED_DUPLICATE_FRAME_DETECTION
             Serial.println();
             opt101_stats_count += OPT101_STATS_SERIAL_OUTPUT_FREQUENCY;
             break;
-    #else
-            break;
-        case 4*OPT101_STATS_SERIAL_OUTPUT_FREQUENCY:
-            Serial.print(" average_detection_time:");
-            Serial.print(opt101_ss_average_detection_time_average);
-            Serial.println();
-            break;
-    #endif
         case 5*OPT101_STATS_SERIAL_OUTPUT_FREQUENCY:
             Serial.print("+stats sensor channel:right");
             break;
@@ -268,21 +216,9 @@ void opt101_sensor_PrintStats(void)
         case 10*OPT101_STATS_SERIAL_OUTPUT_FREQUENCY:
             Serial.print(" thr:");
             Serial.print(opt101_ss_readings_threshold[0]);
-    #ifndef OPT101_ENABLE_FREQUENCY_ANALYSIS_BASED_DUPLICATE_FRAME_DETECTION
             Serial.println();
             opt101_stats_count += 2*OPT101_STATS_SERIAL_OUTPUT_FREQUENCY;
             break;
-    #else
-        case 11*OPT101_STATS_SERIAL_OUTPUT_FREQUENCY:
-            Serial.print(" thr_rh:");
-            Serial.print(opt101_ss_readings_threshold_repeated_high[0]);
-            break;
-        case 12*OPT101_STATS_SERIAL_OUTPUT_FREQUENCY:
-            Serial.print(" thr_rl:");
-            Serial.print(opt101_ss_readings_threshold_repeated_low[0]);
-            Serial.println();
-            break;
-    #endif
         case 13*OPT101_STATS_SERIAL_OUTPUT_FREQUENCY:
             Serial.print("+stats sensor channel:left");
             break;
@@ -305,21 +241,9 @@ void opt101_sensor_PrintStats(void)
         case 18*OPT101_STATS_SERIAL_OUTPUT_FREQUENCY:
             Serial.print(" thr:");
             Serial.print(opt101_ss_readings_threshold[1]);
-    #ifndef OPT101_ENABLE_FREQUENCY_ANALYSIS_BASED_DUPLICATE_FRAME_DETECTION
             Serial.println();
             opt101_stats_count += 2*OPT101_STATS_SERIAL_OUTPUT_FREQUENCY;
             break;
-    #else
-        case 19*OPT101_STATS_SERIAL_OUTPUT_FREQUENCY:
-            Serial.print(" thr_rh:");
-            Serial.print(opt101_ss_readings_threshold_repeated_high[1]);
-            break;
-        case 20*OPT101_STATS_SERIAL_OUTPUT_FREQUENCY:
-            Serial.print(" thr_rl:");
-            Serial.print(opt101_ss_readings_threshold_repeated_low[1]);
-            Serial.println();
-            break;
-    #endif
     }
     opt101_stats_count++;
 }
@@ -345,10 +269,7 @@ void opt101_sensor_UpdateThresholds(void)
             opt101_readings_active = false;
         }
         opt101_readings_threshold[c] = mult_by_threshold(opt101_readings_high[c], opt101_readings_low[c], opt101_detection_threshold);
-        #ifdef OPT101_ENABLE_FREQUENCY_ANALYSIS_BASED_DUPLICATE_FRAME_DETECTION
-        opt101_readings_threshold_repeated_high[c] = mult_by_threshold(opt101_readings_high[c], opt101_readings_low[c], opt101_detection_threshold_repeated_high);
-        opt101_readings_threshold_repeated_low[c] = mult_by_threshold(opt101_readings_high[c], opt101_readings_low[c], opt101_detection_threshold_repeated_low);
-        #endif
+
     }
 }
 
@@ -370,9 +291,6 @@ void opt101_sensor_CheckReadings(void)
         {
             uint8_t last_reading = opt101_readings_last[c];
             checked_readings[c] = opt101_readings[c];
-            #ifdef OPT101_ENABLE_FREQUENCY_ANALYSIS_BASED_DUPLICATE_FRAME_DETECTION
-            other_channel = (c == 1 ? 0 : 1);
-            #endif
             opt101_reading_above_threshold[c] = false;
             if (opt101_readings_active)
             {
@@ -398,36 +316,6 @@ void opt101_sensor_CheckReadings(void)
                         }
                     }
                 }
-                #ifdef OPT101_ENABLE_FREQUENCY_ANALYSIS_BASED_DUPLICATE_FRAME_DETECTION
-                else if (opt101_enable_frequency_analysis_based_duplicate_frame_detection)
-                {
-                    if (opt101_current_time == 0)
-                    {
-                        opt101_current_time = micros();
-                    }
-                    if (opt101_average_detection_time_average &&
-                        opt101_current_time > opt101_next_eligible_detection_time &&
-                        last_reading > opt101_readings_threshold_repeated_high[c] && 
-                        reading > opt101_readings_threshold_repeated_high[c] &&
-                        reading >= last_reading &&
-                        opt101_readings[other_channel] < opt101_readings_threshold_repeated_low[other_channel]) // is the other channel under the low threshold
-                    {
-                        opt101_contiguous_non_decreasing_readings_above_threshold[c] += 1;
-                        if (opt101_contiguous_non_decreasing_readings_above_threshold[c] > OPT101_TARGET_CONTIGUOUS_NON_DECREASING_READINGS_ABOVE_THRESHOLD)
-                        {
-                            opt101_reading_above_threshold[c] = true;
-                            #ifdef ENABLE_DEBUG_PIN_OUTPUTS
-                            #ifdef OPT101_ENABLE_FREQUENCY_ANALYSIS_BASED_DUPLICATE_FRAME_DETECTION_DEBUG_PIN_D2
-                            bitSet(PORT_DEBUG_PORT_D2, DEBUG_PORT_D2);
-                            #endif
-                            #endif
-                        }
-                    }
-                    else {
-                        opt101_contiguous_non_decreasing_readings_above_threshold[c] = 0;
-                    }
-                }
-            #endif
             }
             if (opt101_reading_above_threshold[c])
             {
@@ -435,29 +323,6 @@ void opt101_sensor_CheckReadings(void)
                 {
                     opt101_current_time = micros();
                 }
-                #ifdef OPT101_ENABLE_FREQUENCY_ANALYSIS_BASED_DUPLICATE_FRAME_DETECTION
-                if (opt101_last_detection_time_initialized)
-                {
-                    if (opt101_average_detection_time_count == (1 << OPT101_UPDATE_AVERAGE_PERIOD_FOR_FREQUENCY_ANALYSIS_BASED_DUPLICATE_FRAME_DETECTION))
-                    {
-                        opt101_average_detection_time_average = opt101_average_detection_time_running_total >> OPT101_UPDATE_AVERAGE_PERIOD_FOR_FREQUENCY_ANALYSIS_BASED_DUPLICATE_FRAME_DETECTION;
-                        opt101_average_detection_time_running_total = opt101_current_time - opt101_last_detection_time;
-                        opt101_average_detection_time_count = 1;
-                    }
-                    else
-                    {
-                        opt101_average_detection_time_running_total += opt101_current_time - opt101_last_detection_time;
-                        opt101_average_detection_time_count += 1;
-                    }
-                    if (opt101_average_detection_time_average) 
-                    {
-                        // we adjuste down to compensate for OPT101_TARGET_CONTIGUOUS_NON_DECREASING_READINGS_ABOVE_THRESHOLD at 75 micros per cycle
-                        opt101_next_eligible_detection_time = opt101_current_time + opt101_average_detection_time_average - 50 * OPT101_TARGET_CONTIGUOUS_NON_DECREASING_READINGS_ABOVE_THRESHOLD;
-                    }
-                }
-                opt101_last_detection_time = opt101_current_time;
-                opt101_last_detection_time_initialized = true;
-                #endif
                 opt101_ignore_duplicate[c] = false;
                 opt101_duplicate_frame[c] = (opt101_detected_signal_start_eye == c && opt101_detected_signal_start_eye_set);
                 if (opt101_duplicate_frame[c]) 
@@ -623,9 +488,7 @@ void opt101_sensor_CheckReadings(void)
             bitClear(PORT_DEBUG_DETECTED_LEFT_D4, DEBUG_DETECTED_LEFT_D4);
             bitClear(PORT_DEBUG_PREMATURE_FRAME_D14, DEBUG_PREMATURE_FRAME_D14);
             bitClear(PORT_DEBUG_DUPLICATE_FRAME_D16, DEBUG_DUPLICATE_FRAME_D16);
-            #if defined(OPT101_ENABLE_FREQUENCY_ANALYSIS_BASED_DUPLICATE_FRAME_DETECTION) && defined(OPT101_ENABLE_FREQUENCY_ANALYSIS_BASED_DUPLICATE_FRAME_DETECTION_DEBUG_PIN_D2)
-            bitClear(PORT_DEBUG_PORT_D2, DEBUG_PORT_D2);
-            #endif
+
         }
     }
     #endif
