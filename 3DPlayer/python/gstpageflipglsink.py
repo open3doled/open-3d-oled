@@ -1681,7 +1681,8 @@ class PageflipGLWindow(threading.Thread):
                 if "show_now" in parsed_data:
                     parsed_data["start"] = self.__in_image_play_timestamp
                 parsed_data["end"] = parsed_data["start"] + parsed_data["duration"]
-                if parsed_data.get("special_type", None) == "duplicate":
+                special_type = parsed_data.get("special_type", None)
+                if special_type == "duplicate":
                     if (
                         self.__display_duplicate_frame_mode
                         == DISPLAY_DUPLICATE_FRAME_MODE_OFF
@@ -1700,7 +1701,7 @@ class PageflipGLWindow(threading.Thread):
                         ):
                             parsed_data["text"] = "\nduplicate frame"
                             parsed_data["use_surface_cache_key"] = "duplicate"
-                if parsed_data["special_type"] == "setting":
+                if special_type == "setting":
                     self.__latest_subtitles = collections.deque(
                         filter(
                             lambda d: not d["special_type"] == "setting",
