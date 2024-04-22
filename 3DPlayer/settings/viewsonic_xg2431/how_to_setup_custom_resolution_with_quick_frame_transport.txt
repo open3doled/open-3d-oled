@@ -200,8 +200,18 @@ for monitor in get_monitors():
 --when done--
 chmod 600 /dev/i2c-*
 ```
-
-
+6) What is the max pixel clock frequency based on?
+It appears to be a function of the HDMI version, the monitor, the graphics card and the cable.
+For HDMI versions see below.
+```
+https://www.monitortests.com/blog/common-pixel-clock-limits/
+HDMI
+Version	Limit	Data rate	Bandwidth
+1.0-1.2a	165 MHz	3.96 Gbps	4.95 Gbps
+1.3-1.4b	340 MHz*	8.16 Gbps	10.2 Gbps
+2.0-2.0b	600 MHz	14.4 Gbps	18 Gbps
+* AMD GPUs without HDMI 2.0 are limited to 297 MHz. Intel GPUs without HDMI 2.0 are limited to 300.99 MHz.
+```
 
 
 
