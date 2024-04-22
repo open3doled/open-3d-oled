@@ -1691,7 +1691,8 @@ class PageflipGLWindow(threading.Thread):
                     else:
                         self.__latest_subtitles = collections.deque(
                             filter(
-                                lambda d: not d["special_type"] == "duplicate",
+                                lambda d: not d.get("special_type", None)
+                                == "duplicate",
                                 self.__latest_subtitles,
                             )
                         )
@@ -1704,7 +1705,7 @@ class PageflipGLWindow(threading.Thread):
                 if special_type == "setting":
                     self.__latest_subtitles = collections.deque(
                         filter(
-                            lambda d: not d["special_type"] == "setting",
+                            lambda d: not d.get("special_type", None) == "setting",
                             self.__latest_subtitles,
                         )
                     )
