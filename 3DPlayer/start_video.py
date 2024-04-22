@@ -95,6 +95,10 @@ class StartVideoDialog:
             self.video_file_frame, text="Select", command=self.select_video_file
         )
         self.video_file_select_button.pack(padx=5, side=tkinter.LEFT)
+        self.video_file_clear_button = tkinter.Button(
+            self.video_file_frame, text="Clear", command=self.clear_video_file
+        )
+        self.video_file_clear_button.pack(padx=5, side=tkinter.LEFT)
         # self.video_file_frame.pack()
         self.video_file_frame.grid(row=row_count, column=0, sticky="w")
         row_count += 1
@@ -113,6 +117,10 @@ class StartVideoDialog:
             self.subtitle_file_frame, text="Select", command=self.select_subtitle_file
         )
         self.subtitle_file_select_button.pack(padx=5, side=tkinter.LEFT)
+        self.subtitle_file_clear_button = tkinter.Button(
+            self.subtitle_file_frame, text="Clear", command=self.clear_subtitle_file
+        )
+        self.subtitle_file_clear_button.pack(padx=5, side=tkinter.LEFT)
         # self.subtitle_file_frame.pack()
         self.subtitle_file_frame.grid(row=row_count, column=0, sticky="w")
         row_count += 1
@@ -524,6 +532,10 @@ class StartVideoDialog:
             )
             self.__update_right_eye_options()
 
+    def clear_video_file(self):
+        self.video_file_name = ""
+        self.video_file_location_label.config(text=self.video_file_name)
+
     def select_subtitle_file(self):
         new_subtitle_file_name = tkinter.filedialog.askopenfilename(
             title="Select Subtitle from Disk",
@@ -535,6 +547,10 @@ class StartVideoDialog:
             )
             self.subtitle_file_name = new_subtitle_file_name
             self.subtitle_file_location_label.config(text=self.subtitle_file_name)
+
+    def clear_subtitle_file(self):
+        self.subtitle_file_name = ""
+        self.subtitle_file_location_label.config(text=self.subtitle_file_name)
 
     def __build_video_history_entry(self):
         return {

@@ -25,6 +25,7 @@ import util
 import emitter_settings
 import display_settings
 import start_video
+import thanks
 
 
 class TopWindow:
@@ -67,6 +68,7 @@ class TopWindow:
         self.emitter_settings_dialog = None
         self.display_settings_dialog = None
         self.start_video_dialog = None
+        self.thanks_dialog = None
         self.select_video_initialdir = os.path.join(self.base_path, "videos")
         self.select_subtitle_initialdir = os.path.join(self.base_path, "videos")
         self.select_firmware_file_initialdir = os.path.join(self.base_path, "firmwares")
@@ -298,6 +300,19 @@ class TopWindow:
         self.__forward_big_button.bind(
             "<Button-1>", functools.partial(self.perform_seek, "seek_forward_big")
         )
+        thanks_button_image = util.svg_to_imagetk_photoimage(
+            self.internal_base_path, "./images/bookmark-heart.svg"
+        )
+        self.__thanks_button = tkinter.Button(
+            top_frame,
+            text="Forward 60s (shift-right)",
+            image=thanks_button_image,
+            highlightthickness=0,
+            bd=0,
+        )
+        self.__thanks_button.tk_img = thanks_button_image
+        self.__thanks_button.pack(padx=5, side=tkinter.LEFT)
+        self.__thanks_button.bind("<Button-1>", self.click_thanks_button)
         close_button_image = util.svg_to_imagetk_photoimage(
             self.internal_base_path, "./images/x.svg"
         )
@@ -562,6 +577,12 @@ class TopWindow:
             if args.display_resolution:
                 playback_parameters["display_resolution"] = args.display_resolution
             self.start_video(playback_parameters)
+
+    def click_thanks_button(self, event=None):  # @UnusedVariable
+        if self.thanks_dialog and self.thanks_dialog.top:
+            return
+
+        self.thanks_dialog = thanks.ThanksDialog(self.window, self)
 
     def click_start_video_button(self, event=None):  # @UnusedVariable
         if self.video_open:
