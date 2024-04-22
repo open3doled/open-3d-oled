@@ -107,7 +107,9 @@ class GstSubtitle3DSink(GstBase.BaseSink):
 
     def do_render(self, inbuffer: Gst.Buffer) -> Gst.FlowReturn:
         # https://gstreamer.freedesktop.org/documentation/gstreamer/gstbuffer.html?gi-language=python
-        text = inbuffer.extract_dup(0, inbuffer.get_size()).decode("utf-8")
+        text = inbuffer.extract_dup(0, inbuffer.get_size()).decode(
+            "utf-8", errors="ignore"
+        )
         # Gst.info(f"start:{Gst.TIME_ARGS(inbuffer.pts)} duration:{Gst.TIME_ARGS(inbuffer.duration)} text={text}")
         # print(f"start:{Gst.TIME_ARGS(inbuffer.pts)} duration:{Gst.TIME_ARGS(inbuffer.duration)} text={text}")
         subtitle_data = {

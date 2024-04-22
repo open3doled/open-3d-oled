@@ -1681,7 +1681,7 @@ class PageflipGLWindow(threading.Thread):
                 if "show_now" in parsed_data:
                     parsed_data["start"] = self.__in_image_play_timestamp
                 parsed_data["end"] = parsed_data["start"] + parsed_data["duration"]
-                if parsed_data["special_type"] == "duplicate":
+                if parsed_data.get("special_type", None) == "duplicate":
                     if (
                         self.__display_duplicate_frame_mode
                         == DISPLAY_DUPLICATE_FRAME_MODE_OFF
