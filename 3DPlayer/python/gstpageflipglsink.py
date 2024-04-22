@@ -75,6 +75,8 @@ Gst.init(
     None
 )  # because of how multiprocessing on windows doesn't use fork we need to initialize again here
 
+USE_VIEWSONIC_XG2431_CALIBRATION = False
+
 USE_LINE_PROFILER = False
 if USE_LINE_PROFILER:
     from line_profiler import LineProfiler
@@ -218,6 +220,10 @@ class PageflipGLWindow(threading.Thread):
         self.__window_size_scale_factor = 1.0
         self.__subtitle_font_set = None
         self.__skip_n_page_flips = 0
+        self.__viewsonic_xg2431_strobe_mode = 0
+        self.__viewsonic_xg2431_strobe_length = 30
+        self.__viewsonic_xg2431_strobe_phase = 75
+        self.__viewsonic_xg2431_overdrive_gain = 10
 
         self.__calibration_mode = False
         self.__show_calibration_instruction_image = (
@@ -840,6 +846,13 @@ class PageflipGLWindow(threading.Thread):
                             self.__requests.split(",")
                             + [f"seek_{seek_direction}_{seek_size}"]
                         )
+                    # The following 3 are used for testing and visualizing glasses resync speed after a dropped frame
+                    elif event.key == pg.K_F1:
+                        self.__skip_n_page_flips = 1
+                    elif event.key == pg.K_F2:
+                        self.__skip_n_page_flips = 2
+                    elif event.key == pg.K_F3:
+                        self.__skip_n_page_flips = 3
                     elif event.key == pg.K_F8 and self.__calibration_mode:
                         self.__requests = ",".join(
                             self.__requests.split(",") + [f"toggle_sensor_logging"]
@@ -867,7 +880,8 @@ class PageflipGLWindow(threading.Thread):
                             self.__right_eye = "bottom"
                         elif self.__right_eye == "bottom":
                             self.__right_eye = "top"
-                    elif self.__calibration_mode:
+
+                    if self.__calibration_mode:
                         if event.key == pg.K_g:
                             self.__show_calibration_instruction_image = (
                                 not self.__show_calibration_instruction_image
@@ -971,13 +985,72 @@ class PageflipGLWindow(threading.Thread):
                                     f"calibration-{calibration_target_field}-{calibration_decrease_or_increase}-{calibration_adjustment_amount}"
                                 ]
                             )
-                    # The following are used for testing and visualizing glasses resync speed after a dropped frame
-                    elif event.key == pg.K_z:
-                        self.__skip_n_page_flips = 1
-                    elif event.key == pg.K_x:
-                        self.__skip_n_page_flips = 2
-                    elif event.key == pg.K_c:
-                        self.__skip_n_page_flips = 3
+
+                    if USE_VIEWSONIC_XG2431_CALIBRATION:
+                        subtitle_text = None
+                        if event.key == pg.K_F4:
+                            if self.__viewsonic_xg2431_strobe_mode == 0:
+                                self.__viewsonic_xg2431_strobe_mode = 5
+                            else:
+                                self.__viewsonic_xg2431_strobe_mode = 0
+                            os.system(
+                                f"sudo ddcutil --verbose --model XG2431 setvcp 0xE8 {self.__viewsonic_xg2431_strobe_mode}"
+                            )
+                            subtitle_text = (
+                                f"strobe mode {self.__viewsonic_xg2431_strobe_mode}"
+                            )
+                        elif event.key == pg.K_r:
+                            self.__viewsonic_xg2431_strobe_length = max(
+                                min(
+                                    40,
+                                    self.__viewsonic_xg2431_strobe_length
+                                    + (-2 if event.mod & pg.KMOD_SHIFT else 2),
+                                ),
+                                1,
+                            )
+                            os.system(
+                                f"sudo ddcutil --verbose --model XG2431 setvcp 0xEF {self.__viewsonic_xg2431_strobe_length}"
+                            )
+                            subtitle_text = (
+                                f"strobe length {self.__viewsonic_xg2431_strobe_length}"
+                            )
+                        elif event.key == pg.K_t:
+                            self.__viewsonic_xg2431_strobe_phase = max(
+                                min(
+                                    99,
+                                    self.__viewsonic_xg2431_strobe_phase
+                                    + (-5 if event.mod & pg.KMOD_SHIFT else 5),
+                                ),
+                                0,
+                            )
+                            os.system(
+                                f"sudo ddcutil --verbose --model XG2431 setvcp 0xEA {self.__viewsonic_xg2431_strobe_phase}"
+                            )
+                            subtitle_text = (
+                                f"strobe phase {self.__viewsonic_xg2431_strobe_phase}"
+                            )
+                        elif event.key == pg.K_y:
+                            self.__viewsonic_xg2431_overdrive_gain = max(
+                                min(
+                                    100,
+                                    self.__viewsonic_xg2431_overdrive_gain
+                                    + (-5 if event.mod & pg.KMOD_SHIFT else 5),
+                                ),
+                                0,
+                            )
+                            os.system(
+                                f"sudo ddcutil --verbose --model XG2431 setvcp 0xE3 {self.__viewsonic_xg2431_overdrive_gain}"
+                            )
+                            subtitle_text = f"overdrive_gain {self.__viewsonic_xg2431_overdrive_gain}"
+                        if subtitle_text is not None:
+                            self.latest_subtitle_data = json.dumps(
+                                {
+                                    "show_now": True,
+                                    "text": subtitle_text,
+                                    "duration": 1000000000,
+                                    "special_type": "setting",
+                                }
+                            )
 
                     # print(f"Requests: {self.__requests}")
 

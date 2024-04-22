@@ -9,6 +9,7 @@ Windows:
 References:
 https://forums.blurbusters.com/viewtopic.php?t=10571
 https://forums.blurbusters.com/viewtopic.php?t=8946
+https://blurbusters.com/blur-busters-strobe-utility-download-for-now-shipping-viewsonic-xg2431-240hz-23-8-ips-monitor/
 
 Notes:
 Follow the instructions on the blurbusters site, you can use the mode timings below from the linux section if you are stuck as they are ones I have tested and generate good images.
@@ -94,7 +95,111 @@ ref) https://askubuntu.com/questions/235507/xconfig-xrandr-badmatch
 ref) https://askubuntu.com/questions/4662/where-is-the-x-org-config-file-how-do-i-configure-x-there
 ref) https://unix.stackexchange.com/questions/624297/overclocking-monitor-on-nvidia-card-override-mode-validation
 
+4) Is it possible to use blur busters strobe utility under linux? 
+The blurbusters program will not work but you may be able to adjust the parameters using ddcutil
+https://manpages.ubuntu.com/manpages/bionic/man1/ddcutil.1.html
+```
+sudo apt install ddcutils
+sudo ddcutil detect
+sudo ddcutil interrogate --model XG2431
 
+...
+Features found by scanning but not declared as capabilities:
+   Feature x1e - Auto setup
+   Feature x6c - Video black level: Red
+   Feature x6e - Video black level: Green
+   Feature x70 - Video black level: Blue
+   Feature x72 - Gamma
+   Feature x86 - Display Scaling
+   Feature xc0 - Display usage time
+   Feature xc9 - Display firmware level
+   Feature xe1 - Manufacturer Specific
+   Feature xe3 - Manufacturer Specific
+   Feature xe6 - Manufacturer Specific
+   Feature xe8 - Manufacturer Specific
+   Feature xe9 - Manufacturer Specific
+   Feature xea - Manufacturer Specific
+   Feature xef - Manufacturer Specific
+...
+
+From 
+ViewSonicStrobeUtility.ini
+...
+CommandEnable=0xE8
+CommandStrobeLen=0xEF
+CommandStrobePhase=0xEA
+CommandOverdriveGain=0xE3
+HasSingleStrobe60Hz=true
+StrobeEnable0=Off
+StrobeEnable1=Light
+StrobeEnable2=Normal
+StrobeEnable3=Extreme
+StrobeEnable4=Ultra
+StrobeEnable5=Custom
+StrobeLenMin=1
+StrobeLenMax=40
+StrobePhaseMin=0
+StrobePhaseMax=99
+OverdriveGainMin=0
+OverdriveGainMax=100
+...
+
+sudo ddcutil --model XG2431 getvcp 0xE8
+VCP code 0xe8 (Manufacturer Specific         ): mh=0x00, ml=0x05, sh=0x00, sl=0x00
+VCP code 0xe8 (Manufacturer Specific         ): mh=0x00, ml=0x05, sh=0x00, sl=0x05
+
+sudo ddcutil --model XG2431 getvcp 0xEF
+VCP code 0xef (Manufacturer Specific         ): mh=0x00, ml=0x28, sh=0x00, sl=0x13
+19
+
+sudo ddcutil --model XG2431 getvcp 0xEA
+VCP code 0xea (Manufacturer Specific         ): mh=0x00, ml=0x64, sh=0x00, sl=0x5a
+90
+
+sudo ddcutil --model XG2431 getvcp 0xE3
+VCP code 0xe3 (Manufacturer Specific         ): mh=0x00, ml=0x64, sh=0x00, sl=0x0b
+11
+
+# disable custom the same as doing it from menu
+sudo ddcutil --model XG2431 setvcp 0xE8 0x00
+
+# enable custom and configure for 90hz qft 299mhz profile
+sudo ddcutil --model XG2431 setvcp 0xE8 0x05
+sudo ddcutil --model XG2431 setvcp 0xEF 30
+sudo ddcutil --model XG2431 setvcp 0xEA 75
+sudo ddcutil --model XG2431 setvcp 0xE3 10
+
+# enable custom and configure for 100hz qft 299mhz profile
+sudo ddcutil --model XG2431 setvcp 0xE8 0x05
+sudo ddcutil --model XG2431 setvcp 0xEF 5
+sudo ddcutil --model XG2431 setvcp 0xEA 5
+sudo ddcutil --model XG2431 setvcp 0xE3 10
+
+If possible it's best to use one of the 594 MHz pixel clock monitor timings as those truely have no ghosting.
+The 299 mhz pixel clock monitor timings still have some ghosting as the pixel transition are not fully completed.
+```
+Alternatively I couldn't get it working but it may be possible to tune the parameters using
+https://pypi.org/project/monitorcontrol/
+I used the following sets of steps to get VCP access to the monitor parameters.
+```
+pip install monitorcontrol
+ls -Al /dev/i2c-*
+chmod 666 /dev/i2c-*
+python3
+
+from monitorcontrol import get_monitors
+from pprint import pprint
+
+for monitor in get_monitors():
+    with monitor:
+        try:
+            pprint(monitor.get_vcp_capabilities())
+        except Exception as exc:
+            pprint(exc)
+
+--when done--
+chmod 600 /dev/i2c-*
+```
 
 
 
