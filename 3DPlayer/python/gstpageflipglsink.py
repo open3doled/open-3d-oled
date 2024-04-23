@@ -1043,14 +1043,7 @@ class PageflipGLWindow(threading.Thread):
                             )
                             subtitle_text = f"overdrive_gain {self.__viewsonic_xg2431_overdrive_gain}"
                         if subtitle_text is not None:
-                            self.latest_subtitle_data = json.dumps(
-                                {
-                                    "show_now": True,
-                                    "text": subtitle_text,
-                                    "duration": 1000000000,
-                                    "special_type": "setting",
-                                }
-                            )
+                            self.__add_new_osd_subtitle(subtitle_text)
 
                     # print(f"Requests: {self.__requests}")
 
@@ -1420,6 +1413,16 @@ class PageflipGLWindow(threading.Thread):
         )
         local_image_rgba = np.concatenate((local_image_rgb, local_image_alpha), 2)
         return np.flip(local_image_rgba.transpose((1, 0, 2)), 0)
+
+    def __add_new_osd_subtitle(self, subtitle_text):
+        self.latest_subtitle_data = json.dumps(
+            {
+                "show_now": True,
+                "text": subtitle_text,
+                "duration": 1000000000,
+                "special_type": "setting",
+            }
+        )
 
     def __draw_centered_osd_text(self, vertical_position, text_data, depth_shift):
         current_horizontal_position = (
