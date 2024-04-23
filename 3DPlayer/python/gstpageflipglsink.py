@@ -266,7 +266,8 @@ class PageflipGLWindow(threading.Thread):
 
         flags = pg_locals.DOUBLEBUF | pg_locals.OPENGL | pg_locals.RESIZABLE
         if os.name == WINDOWS_OS_NAME:
-            flags |= pg_locals.NOFRAME
+            pass
+            # flags |= pg_locals.NOFRAME # the frame isn't visible anyways and by excluding this we can force the graphics driver not to treat it like an overlay window unless we call toggle_fullscreen, it comes with a performance penality and lots of duplicate frames though.
         else:
             flags |= pg_locals.FULLSCREEN
         self.__pg_clock = pg.time.Clock()
@@ -286,6 +287,9 @@ class PageflipGLWindow(threading.Thread):
         # self.__sdl2_window.restore()  # this changes window from maximized state to normal window state
         # self.__sdl2_window.set_windowed()
         self.__do_fullscreen = None
+
+        self.__update_window_scale_factor()
+
         pg.display.set_caption(WINDOW_NAME)
         pg.display.set_icon(
             pg.image.load(os.path.join(os.path.dirname(__file__), "blank.ico"))
@@ -733,7 +737,7 @@ class PageflipGLWindow(threading.Thread):
                     )
 
                 set_video_on_top_true = (
-                    True if time.time() - self.__last_mouse_moved_at > 3 else False
+                    True if time.time() - self.__last_mouse_moved_at > 2.05 else False
                 )
                 if (
                     self.__set_video_on_top_true is False
@@ -747,9 +751,8 @@ class PageflipGLWindow(threading.Thread):
                         ):
                             self.__disable_mouse_detection_until = time.time() + 1
                             pg.display.toggle_fullscreen()
-                        else:
-                            pg.mouse.set_visible(False)
-                            self.__sdl2_window.focus()
+                        pg.mouse.set_visible(False)
+                        self.__sdl2_window.focus()
                         print("set video focus")
                         """
                   print('self.__sdl2_window.position', self.__sdl2_window.position)
