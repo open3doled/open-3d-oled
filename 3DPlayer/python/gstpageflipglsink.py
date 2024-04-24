@@ -77,6 +77,9 @@ Gst.init(
 
 USE_VIEWSONIC_XG2431_CALIBRATION = False
 
+WINDOWS_OS_NAME = "nt"
+# WINDOWS_OS_NAME = "posix"
+
 USE_LINE_PROFILER = False
 if USE_LINE_PROFILER:
     from line_profiler import LineProfiler
@@ -151,10 +154,12 @@ class PageflipGLWindow(threading.Thread):
         self.__in_image_updated = False
         self.__in_image = None
         self.__in_image_play_timestamp = None
-        self.__window_height = None
-        self.__window_width = None
+        self.__restore_to_window_height = None
+        self.__restore_to_window_width = None
+        self.__actual_window_height = None
+        self.__actual_window_width = None
         self.__do_fullscreen = None
-        self.__fullscreen = False
+        self.__fullscreen = True
         self.__frame_packing = "side-by-side-half"
         self.__right_eye = "right"
         self.__target_framerate = "0"
@@ -200,6 +205,7 @@ class PageflipGLWindow(threading.Thread):
         self.__display_osd_timestamp = False
         self.__last_mouse = True
         self.__last_mouse_moved_at = None
+        self.__disable_mouse_detection_until = None
         self.__set_menu_on_top_true = True
         self.__set_video_on_top_true = False
         self.__requests = ""
@@ -245,10 +251,12 @@ class PageflipGLWindow(threading.Thread):
         pg.init()
 
     def __start(self):
-        (self.__window_width, self.__window_height) = (
-            self.__display_resolution_width // 2,
-            self.__display_resolution_height // 2,
+        (self.__actual_window_width, self.__actual_window_height) = (
+            self.__display_resolution_width,
+            self.__display_resolution_height,
         )
+        self.__restore_to_window_width = self.__actual_window_width // 2
+        self.__restore_to_window_height = self.__actual_window_height // 2
 
         p = psutil.Process(os.getpid())
         if os.name == "nt":
@@ -256,27 +264,28 @@ class PageflipGLWindow(threading.Thread):
         else:
             p.nice(10)
 
+        flags = pg_locals.DOUBLEBUF | pg_locals.OPENGL | pg_locals.RESIZABLE
+        if os.name == WINDOWS_OS_NAME:
+            flags |= pg_locals.NOFRAME
+        else:
+            flags |= pg_locals.FULLSCREEN
         self.__pg_clock = pg.time.Clock()
         self.__pg_window = pg.display.set_mode(
             (self.__display_resolution_width, self.__display_resolution_height),
-            pg_locals.DOUBLEBUF
-            | pg_locals.OPENGL
-            | pg_locals.RESIZABLE
-            | pg_locals.FULLSCREEN,
-            # pg_locals.DOUBLEBUF | pg_locals.OPENGL | pg_locals.RESIZABLE,
+            flags,
             vsync=1,
         )
         self.__fullscreen = True
         self.__sdl2_window = pygame_sdl2.Window.from_display_module()
         self.__sdl2_window.size = (
-            self.__display_resolution_width // 2,
-            self.__display_resolution_height // 2,
+            self.__display_resolution_width,
+            self.__display_resolution_height,
         )
         self.__sdl2_window.position = pygame_sdl2.WINDOWPOS_CENTERED
         # self.__sdl2_window.set_fullscreen(desktop=False) # desktop False change full screen resolution to window size, desktop True use desktop resolution
         # self.__sdl2_window.restore()  # this changes window from maximized state to normal window state
         # self.__sdl2_window.set_windowed()
-        self.__do_fullscreen = False
+        self.__do_fullscreen = None
         pg.display.set_caption(WINDOW_NAME)
         pg.display.set_icon(
             pg.image.load(os.path.join(os.path.dirname(__file__), "blank.ico"))
@@ -684,8 +693,8 @@ class PageflipGLWindow(threading.Thread):
         else:
             self.__window_size_scale_factor = min(
                 (
-                    self.__window_width / self.__display_resolution_width,
-                    self.__window_height / self.__display_resolution_height,
+                    self.__actual_window_width / self.__display_resolution_width,
+                    self.__actual_window_height / self.__display_resolution_height,
                 )
             )
         self.__update_subtitle_fonts()
@@ -702,6 +711,11 @@ class PageflipGLWindow(threading.Thread):
                 if self.__set_menu_on_top_true != set_menu_on_top_true:
                     self.__set_menu_on_top_true = set_menu_on_top_true
                     if set_menu_on_top_true:
+                        if (
+                            os.name == WINDOWS_OS_NAME
+                            and self.__pg_window.get_flags() & pg_locals.FULLSCREEN != 0
+                        ):
+                            pg.display.toggle_fullscreen()
                         pg.mouse.set_visible(True)
                         self.__set_video_on_top_true = False
                     else:
@@ -725,11 +739,17 @@ class PageflipGLWindow(threading.Thread):
                     self.__set_video_on_top_true is False
                     and set_video_on_top_true is True
                 ):
-
                     self.__set_video_on_top_true = set_video_on_top_true
                     if self.__fullscreen:
-                        pg.mouse.set_visible(False)
-                        self.__sdl2_window.focus()
+                        if (
+                            os.name == WINDOWS_OS_NAME
+                            and self.__pg_window.get_flags() & pg_locals.FULLSCREEN == 0
+                        ):
+                            self.__disable_mouse_detection_until = time.time() + 1
+                            pg.display.toggle_fullscreen()
+                        else:
+                            pg.mouse.set_visible(False)
+                            self.__sdl2_window.focus()
                         print("set video focus")
                         """
                   print('self.__sdl2_window.position', self.__sdl2_window.position)
@@ -774,16 +794,22 @@ class PageflipGLWindow(threading.Thread):
                     self.__latest_overlay_timestamp_time_str = None
 
             latest_mouse = pg.mouse.get_pos()
-            if latest_mouse != self.__last_mouse:
+            if latest_mouse != self.__last_mouse and (
+                self.__disable_mouse_detection_until is None
+                or time.time() > self.__disable_mouse_detection_until
+            ):
                 self.__last_mouse = latest_mouse
                 self.__last_mouse_moved_at = time.time()
             for event in pg.event.get():
                 if event.type == pg.QUIT:
                     self.__requests = ",".join(self.__requests.split(",") + ["close"])
                 elif event.type == pg.VIDEORESIZE:
-                    self.__window_width, self.__window_height = event.size
+                    self.__actual_window_width, self.__actual_window_height = event.size
+                    if not self.__fullscreen:
+                        self.__restore_to_window_width = self.__actual_window_width
+                        self.__restore_to_window_height = self.__actual_window_height
                     print(
-                        f"PageflipGLSink Resized window ({self.__window_width}x{self.__window_height})"
+                        f"PageflipGLSink Resized window ({self.__actual_window_width}x{self.__actual_window_height}) (fullscreen {self.__fullscreen} windowed {self.__restore_to_window_width}x{self.__restore_to_window_height})"
                     )
                     self.__update_window_scale_factor()
                 elif event.type == pg.KEYDOWN:
@@ -1476,22 +1502,80 @@ class PageflipGLWindow(threading.Thread):
     def fullscreen(self):
         return self.__fullscreen
 
+    # @fullscreen.setter
+    # def fullscreen(self, value):
+    #     self.__fullscreen = value
+    #     if (
+    #         self.__pg_window.get_flags() & pg_locals.FULLSCREEN != 0
+    #     ) != self.__fullscreen:
+    #         pg.display.toggle_fullscreen()
+    #         self.__requests = ",".join(
+    #             self.__requests.split(",") + ["set_menu_on_top_true"]
+    #         )
+    #         if not self.__fullscreen:
+    #             pg.mouse.set_visible(True)
+    #             self.__set_menu_on_top_true = True
+    #             self.__set_video_on_top_true = False
+    #         # self.__sdl2_window.focus()
+    #         self.__update_window_scale_factor()
+
     @fullscreen.setter
     def fullscreen(self, value):
-        self.__fullscreen = value
-        if (
-            self.__pg_window.get_flags() & pg_locals.FULLSCREEN != 0
-        ) != self.__fullscreen:
-            pg.display.toggle_fullscreen()
+        if value != self.__fullscreen:
+            if os.name == WINDOWS_OS_NAME:
+                if value:
+                    new_width = self.__display_resolution_width
+                    new_height = self.__display_resolution_height
+                    new_flags = (
+                        pg_locals.DOUBLEBUF
+                        | pg_locals.OPENGL
+                        | pg_locals.RESIZABLE
+                        | pg_locals.NOFRAME
+                    )
+                else:
+                    new_width = self.__restore_to_window_width
+                    new_height = self.__restore_to_window_height
+                    new_flags = (
+                        pg_locals.DOUBLEBUF | pg_locals.OPENGL | pg_locals.RESIZABLE
+                    )
+                    # new_flags |= pg_locals.NOFRAME
+                print(
+                    f"PageflipGLSink Fullscreen Mode Change fullscreen {value} resolution {new_width}x{new_height}"
+                )
+                self.__pg_window = pg.display.set_mode(
+                    (new_width, new_height),
+                    new_flags,
+                    vsync=1,
+                )
+                self.__sdl2_window.size = (
+                    new_width,
+                    new_height,
+                )
+                self.__sdl2_window.position = pygame_sdl2.WINDOWPOS_CENTERED
+                if value:
+                    self.__sdl2_window.maximize()
+                    # self.__sdl2_window.set_fullscreen(desktop=False)
+                else:
+                    self.__sdl2_window.set_windowed()
+                    self.__sdl2_window.restore()
+            else:
+                if (self.__pg_window.get_flags() & pg_locals.FULLSCREEN != 0) != value:
+                    pg.display.toggle_fullscreen()
+
+            self.__fullscreen = value
+
             self.__requests = ",".join(
                 self.__requests.split(",") + ["set_menu_on_top_true"]
             )
+
+            # self.__sdl2_window.focus()
+            self.__update_window_scale_factor()
+
+            # pg.display.toggle_fullscreen()
             if not self.__fullscreen:
                 pg.mouse.set_visible(True)
                 self.__set_menu_on_top_true = True
                 self.__set_video_on_top_true = False
-            # self.__sdl2_window.focus()
-            self.__update_window_scale_factor()
 
     @property
     def do_fullscreen(self):
@@ -1507,7 +1591,10 @@ class PageflipGLWindow(threading.Thread):
 
     @mouse_moved.setter
     def mouse_moved(self, value):
-        if value is True:
+        if value is True and (
+            self.__disable_mouse_detection_until is None
+            or time.time() > self.__disable_mouse_detection_until
+        ):
             self.__last_mouse_moved_at = time.time()
 
     @property

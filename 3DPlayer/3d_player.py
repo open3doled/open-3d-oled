@@ -935,7 +935,7 @@ class TopWindow:
             )  # https://gstreamer.freedesktop.org/documentation/playback/playbin.html?gi-language=python
 
         self.pageflipglsink.set_property("calibration-mode", calibration_mode)
-        self.pageflipglsink.set_property("fullscreen", False)
+        self.pageflipglsink.set_property("fullscreen", True)
         self.pageflipglsink.set_property("frame-packing", frame_packing)
         self.pageflipglsink.set_property("right-eye", right_eye)
         self.pageflipglsink.set_property("target-framerate", target_framerate)
@@ -1019,11 +1019,6 @@ class TopWindow:
             self.video_duration_label.pack(
                 pady=5, padx=5, anchor="n", side=tkinter.RIGHT
             )
-
-            # even after playback started it can still take 1-2 second until all the renderers are ready
-            for _ in range(10):
-                time.sleep(0.2)
-                self.pageflipglsink.set_property("fullscreen", True)
 
             self.__open_video_file_button.config(state="disabled")
             self.__flip_right_and_left_button.config(state="normal")
