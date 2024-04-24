@@ -160,6 +160,7 @@ class PageflipGLWindow(threading.Thread):
         self.__actual_window_width = None
         self.__do_fullscreen = None
         self.__fullscreen = True
+        self.__fullscreen_psuedo = True if os.name == WINDOWS_OS_NAME else False
         self.__frame_packing = "side-by-side-half"
         self.__right_eye = "right"
         self.__target_framerate = "0"
@@ -426,7 +427,7 @@ class PageflipGLWindow(threading.Thread):
             white_box_horizontal_offsets.reverse()  # we reverse them here because we are going to flip the numpy ndarray later for right aligned boxes
         temp_overlay_boxes = []
 
-        for n in range(2):  # 0 left, 1 right
+        for n in range(3):  # 0 left, 1 right, 2 blank
             box = np.ndarray(
                 shape=(black_box_height, black_box_width, 4), dtype=np.uint8
             )
@@ -445,23 +446,28 @@ class PageflipGLWindow(threading.Thread):
                     True,
                     False,
                 ),
-                # (white_box_horizontal_offsets[n], black_box_height-white_box_height, white_box_width, white_box_height, white_box_gradient_width, 0, False, True, True if n == 1 else False, True, True)
-                (
-                    white_box_horizontal_offsets[n],
-                    black_box_height
-                    - white_box_height
-                    - int(self.__white_box_vertical_position * self.__pixel_pitch_y),
-                    white_box_width,
-                    white_box_height,
-                    white_box_gradient_width,
-                    0,
-                    True,
-                    True,
-                    True,
-                    True,
-                    True,
-                ),
             ]
+            if n < 2:
+                # (white_box_horizontal_offsets[n], black_box_height-white_box_height, white_box_width, white_box_height, white_box_gradient_width, 0, False, True, True if n == 1 else False, True, True)
+                boxes_to_make.append(
+                    (
+                        white_box_horizontal_offsets[n],
+                        black_box_height
+                        - white_box_height
+                        - int(
+                            self.__white_box_vertical_position * self.__pixel_pitch_y
+                        ),
+                        white_box_width,
+                        white_box_height,
+                        white_box_gradient_width,
+                        0,
+                        True,
+                        True,
+                        True,
+                        True,
+                        True,
+                    )
+                )
             if self.__calibration_mode:
                 x_halfway_point = (
                     white_box_horizontal_offset_1
@@ -720,6 +726,7 @@ class PageflipGLWindow(threading.Thread):
                             and self.__pg_window.get_flags() & pg_locals.FULLSCREEN != 0
                         ):
                             pg.display.toggle_fullscreen()
+                            self.__fullscreen_psuedo = True
                         pg.mouse.set_visible(True)
                         self.__set_video_on_top_true = False
                     else:
@@ -751,6 +758,7 @@ class PageflipGLWindow(threading.Thread):
                         ):
                             self.__disable_mouse_detection_until = time.time() + 1
                             pg.display.toggle_fullscreen()
+                            self.__fullscreen_psuedo = False
                         pg.mouse.set_visible(False)
                         self.__sdl2_window.focus()
                         print("set video focus")
@@ -1237,33 +1245,36 @@ class PageflipGLWindow(threading.Thread):
             )
 
             # add black and white boxes then subtitles
-            if self.__right_eye in ("right", "top"):
-                if self.__left_or_bottom_page:
-                    # white_box_offset = white_box_horizontal_offset_1
-                    overlay_box = self.__overlay_boxes[0]
-                    subtitle_depth_shift = (
-                        0 if self.__calibration_mode else self.__subtitle_depth
-                    )
-                else:
-                    # white_box_offset = white_box_horizontal_offset_2
-                    overlay_box = self.__overlay_boxes[1]
-                    subtitle_depth_shift = (
-                        0 if self.__calibration_mode else -self.__subtitle_depth
-                    )
+            if self.__fullscreen_psuedo:
+                overlay_box = self.__overlay_boxes[2]
             else:
-                assert self.__right_eye in ("left", "bottom")
-                if self.__left_or_bottom_page:
-                    # white_box_offset = white_box_horizontal_offset_2
-                    overlay_box = self.__overlay_boxes[1]
-                    subtitle_depth_shift = (
-                        0 if self.__calibration_mode else -self.__subtitle_depth
-                    )
+                if self.__right_eye in ("right", "top"):
+                    if self.__left_or_bottom_page:
+                        # white_box_offset = white_box_horizontal_offset_1
+                        overlay_box = self.__overlay_boxes[0]
+                        subtitle_depth_shift = (
+                            0 if self.__calibration_mode else self.__subtitle_depth
+                        )
+                    else:
+                        # white_box_offset = white_box_horizontal_offset_2
+                        overlay_box = self.__overlay_boxes[1]
+                        subtitle_depth_shift = (
+                            0 if self.__calibration_mode else -self.__subtitle_depth
+                        )
                 else:
-                    # white_box_offset = white_box_horizontal_offset_1
-                    overlay_box = self.__overlay_boxes[0]
-                    subtitle_depth_shift = (
-                        0 if self.__calibration_mode else self.__subtitle_depth
-                    )
+                    assert self.__right_eye in ("left", "bottom")
+                    if self.__left_or_bottom_page:
+                        # white_box_offset = white_box_horizontal_offset_2
+                        overlay_box = self.__overlay_boxes[1]
+                        subtitle_depth_shift = (
+                            0 if self.__calibration_mode else -self.__subtitle_depth
+                        )
+                    else:
+                        # white_box_offset = white_box_horizontal_offset_1
+                        overlay_box = self.__overlay_boxes[0]
+                        subtitle_depth_shift = (
+                            0 if self.__calibration_mode else self.__subtitle_depth
+                        )
 
             if self.__calibration_mode and self.__show_calibration_instruction_image:
                 (
@@ -1561,6 +1572,8 @@ class PageflipGLWindow(threading.Thread):
                 else:
                     self.__sdl2_window.set_windowed()
                     self.__sdl2_window.restore()
+
+                self.__fullscreen_psuedo = value
             else:
                 if (self.__pg_window.get_flags() & pg_locals.FULLSCREEN != 0) != value:
                     pg.display.toggle_fullscreen()
