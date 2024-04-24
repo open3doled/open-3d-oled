@@ -78,6 +78,12 @@ X Error of failed request:  BadMatch (invalid parameter attributes)
 ```
 Add the following to "/etc/X11/xorg.conf.d/98-monitor.conf" and reboot.
 ```
+Section "Monitor"
+    Identifier     "HDMI-0"
+    Modeline       "1920x1080_90.00_QFT"  299.00  1920 1943 1975 2030  1080 1084 1089 1636 +hsync +vsync
+    Option         "PreferredMode" "1920x1080_90.00_QFT"
+EndSection
+
 Section "Screen"
     Option         "ModeValidation" "AllowNonEdidModes,NoEdidMaxPClkCheck,NoDFPNativeResolutionCheck,NoVirtualSizeCheck,NoMaxPClkCheck,NoHorizSyncCheck,NoVertRefreshCheck,NoWidthAlignmentCheck"
     Monitor        "Monitor"
