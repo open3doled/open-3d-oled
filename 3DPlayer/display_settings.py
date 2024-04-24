@@ -17,6 +17,7 @@ DEFAULT_WHITEBOX_SIZE = "13"
 DEFAULT_WHITEBOX_HORIZONTAL_SPACING = "23"
 DEFAULT_CALIBRATION_MODE = False
 DEFAULT_DISPLAY_OSD_TIMESTAMP = False
+DEFAULT_DISABLE_3D_ON_MOUSE_MOVE_UNDER_WINDOWS = True
 
 
 class DisplaySettingsDialog:
@@ -50,9 +51,15 @@ class DisplaySettingsDialog:
             DEFAULT_WHITEBOX_HORIZONTAL_SPACING
         )
         self.calibration_mode_variable = tkinter.BooleanVar(parent)
-        self.calibration_mode_variable.set(False)
+        self.calibration_mode_variable.set(DEFAULT_CALIBRATION_MODE)
         self.display_osd_timestamp_variable = tkinter.BooleanVar(parent)
-        self.display_osd_timestamp_variable.set(False)
+        self.display_osd_timestamp_variable.set(DEFAULT_DISPLAY_OSD_TIMESTAMP)
+        self.disable_3d_on_mouse_move_under_windows_variable = tkinter.BooleanVar(
+            parent
+        )
+        self.disable_3d_on_mouse_move_under_windows_variable.set(
+            DEFAULT_DISABLE_3D_ON_MOUSE_MOVE_UNDER_WINDOWS
+        )
 
         file_name = os.path.join(
             self.main_app.base_path, "settings", "last_display_settings.json"
@@ -88,7 +95,7 @@ class DisplaySettingsDialog:
         # self.target_framerate_frame.pack()
         self.target_framerate_option_menu_tooltip = idlelib.tooltip.Hovertip(
             self.target_framerate_option_menu,
-            "If set to a value other than 0 this will force pygame to use a frame delay with tick_busy_loop instead of relying on vsync, this should not normally need to be set and is for experimental purposes only. \n(this value will not be updated on an already playing video)",
+            "If set to a value other than 0 this will force pygame to use a frame delay with tick_busy_loop instead of relying on vsync, this should not normally need to be set and is for experimental purposes only. \n(this value will not be updated on an already playing video) \n(default {DEFAULT_TARGET_FRAMERATE})",
             hover_delay=100,
         )
         self.target_framerate_frame.grid(row=row_count, column=0, sticky="w")
@@ -111,7 +118,7 @@ class DisplaySettingsDialog:
         # self.display_resolution_frame.pack()
         self.display_resolution_tooltip = idlelib.tooltip.Hovertip(
             self.display_resolution_frame,
-            "This is the resolution the video player will target for fullscreen mode while playing the video. \nIt may change your active resolution if it is different than your current resolution. \n(this value will not be updated on an already playing video)",
+            "This is the resolution the video player will target for fullscreen mode while playing the video. \nIt may change your active resolution if it is different than your current resolution. \n(this value will not be updated on an already playing video) \n(default {DEFAULT_DISPLAY_RESOLUTION})",
             hover_delay=100,
         )
         self.display_resolution_frame.grid(row=row_count, column=0, sticky="w")
@@ -130,7 +137,7 @@ class DisplaySettingsDialog:
         # self.display_zoom_factor_frame.pack()
         self.display_zoom_factor_tooltip = idlelib.tooltip.Hovertip(
             self.display_zoom_factor_frame,
-            "(integer 0 to 100) Zooms out the video by the percent specified. This is to shrink videos on displays which have ghosting at the top and bottom of screen.",
+            "(integer 0 to 100) Zooms out the video by the percent specified. This is to shrink videos on displays which have ghosting at the top and bottom of screen. \n(default {DEFAULT_DISPLAY_ZOOM_FACTOR})",
             hover_delay=100,
         )
         self.display_zoom_factor_frame.grid(row=row_count, column=0, sticky="w")
@@ -147,7 +154,7 @@ class DisplaySettingsDialog:
         self.display_size_entry.pack(padx=5, side=tkinter.LEFT)
         self.display_size_tooltip = idlelib.tooltip.Hovertip(
             self.display_size_frame,
-            "Specifying the correct display size (provided in inches), allows the screen specific scaling of the on screen trigger boxes to match the sensors unit. \n(this value will not be updated on an already playing video)",
+            "Specifying the correct display size (provided in inches), allows the screen specific scaling of the on screen trigger boxes to match the sensors unit. \n(this value will not be updated on an already playing video) \n(default {DEFAULT_DISPLAY_SIZE})",
             hover_delay=100,
         )
         # self.display_size_frame.pack()
@@ -166,7 +173,7 @@ class DisplaySettingsDialog:
         self.whitebox_brightness_entry.pack(padx=5, side=tkinter.LEFT)
         self.whitebox_brightness_tooltip = idlelib.tooltip.Hovertip(
             self.whitebox_brightness_frame,
-            f"The whitebox brightness setting (0 black to 255 white) lets users lower the brightness of the white boxes to help aleviate concerns of OLED burn in. (default {DEFAULT_WHITEBOX_BRIGHTNESS})",
+            f"The whitebox brightness setting (0 black to 255 white) lets users lower the brightness of the white boxes to help aleviate concerns of OLED burn in. \n(default {DEFAULT_WHITEBOX_BRIGHTNESS})",
             hover_delay=100,
         )
         # self.whitebox_brightness_frame.pack()
@@ -189,7 +196,7 @@ class DisplaySettingsDialog:
         self.whitebox_corner_position_option_menu.pack(padx=5, side=tkinter.LEFT)
         self.whitebox_corner_position_tooltip = idlelib.tooltip.Hovertip(
             self.whitebox_corner_position_frame,
-            f"The whitebox corner position lets the user specify where the whitebox should be positioned, for best performance and duplicate frame (dropped frame) handling on OLED displays (or other displays which update from the top of the screen first) top_left or top_right are recommended. (default {DEFAULT_WHITEBOX_CORNER_POSITION})",
+            f"The whitebox corner position lets the user specify where the whitebox should be positioned, for best performance and duplicate frame (dropped frame) handling on OLED displays (or other displays which update from the top of the screen first) top_left or top_right are recommended. \n(default {DEFAULT_WHITEBOX_CORNER_POSITION})",
             hover_delay=100,
         )
         # self.whitebox_corner_position_frame.pack()
@@ -208,7 +215,7 @@ class DisplaySettingsDialog:
         self.whitebox_vertical_position_entry.pack(padx=5, side=tkinter.LEFT)
         self.whitebox_vertical_position_tooltip = idlelib.tooltip.Hovertip(
             self.whitebox_vertical_position_frame,
-            f"The whitebox vertical position lets the user move the screen based whitebox down to better align with the 3d emitter tv mount they have. It is roughly equivalent to mm when display size is correctly configured. (default {DEFAULT_WHITEBOX_VERTICAL_POSITION})",
+            f"The whitebox vertical position lets the user move the screen based whitebox down to better align with the 3d emitter tv mount they have. It is roughly equivalent to mm when display size is correctly configured. \n(default {DEFAULT_WHITEBOX_VERTICAL_POSITION})",
             hover_delay=100,
         )
         # self.whitebox_vertical_position_frame.pack()
@@ -228,7 +235,7 @@ class DisplaySettingsDialog:
         self.whitebox_horizontal_position_entry.pack(padx=5, side=tkinter.LEFT)
         self.whitebox_horizontal_position_tooltip = idlelib.tooltip.Hovertip(
             self.whitebox_horizontal_position_frame,
-            f"The whitebox horizontal position lets the user move the screen based whitebox sideways towards the center of the screen. It is roughly equivalent to mm when display size is correctly configured. (default {DEFAULT_WHITEBOX_HORIZONTAL_POSITION})",
+            f"The whitebox horizontal position lets the user move the screen based whitebox sideways towards the center of the screen. It is roughly equivalent to mm when display size is correctly configured. \n(default {DEFAULT_WHITEBOX_HORIZONTAL_POSITION})",
             hover_delay=100,
         )
         # self.whitebox_horizontal_position_frame.pack()
@@ -249,7 +256,7 @@ class DisplaySettingsDialog:
         self.whitebox_horizontal_spacing_entry.pack(padx=5, side=tkinter.LEFT)
         self.whitebox_horizontal_spacing_tooltip = idlelib.tooltip.Hovertip(
             self.whitebox_horizontal_spacing_frame,
-            f"The whitebox horizontal spacing lets the user increase/decrease the separation between white boxes to better align with the 3d emitter and tv pixel pitch they have. It is roughly equivalent to mm when display size is correctly configured. (default {DEFAULT_WHITEBOX_HORIZONTAL_SPACING})",
+            f"The whitebox horizontal spacing lets the user increase/decrease the separation between white boxes to better align with the 3d emitter and tv pixel pitch they have. It is roughly equivalent to mm when display size is correctly configured. \n(default {DEFAULT_WHITEBOX_HORIZONTAL_SPACING})",
             hover_delay=100,
         )
         # self.whitebox_horizontal_spacing_frame.pack()
@@ -269,7 +276,7 @@ class DisplaySettingsDialog:
         self.whitebox_size_entry.pack(padx=5, side=tkinter.LEFT)
         self.whitebox_size_tooltip = idlelib.tooltip.Hovertip(
             self.whitebox_size_frame,
-            f"The whitebox size lets the user increase or decrease the size of the whitebox. Setting the value too high will lead to cross talk and miss triggering, setting it too low will cause a low signal to noise and also miss triggering. (default {DEFAULT_WHITEBOX_SIZE})",
+            f"The whitebox size lets the user increase or decrease the size of the whitebox. Setting the value too high will lead to cross talk and miss triggering, setting it too low will cause a low signal to noise and also miss triggering. \n(default {DEFAULT_WHITEBOX_SIZE})",
             hover_delay=100,
         )
         # self.whitebox_size_frame.pack()
@@ -287,7 +294,7 @@ class DisplaySettingsDialog:
         self.calibration_mode_check_button.pack(padx=5, side=tkinter.LEFT)
         self.calibration_mode_tooltip = idlelib.tooltip.Hovertip(
             self.calibration_mode_frame,
-            "Calibration mode shows a reticule to help with alignment of the sensor bar \nand also allows for adjustment of emitter frame_delay and frame_duration using hotkeys as instructed on the OSD. \nTo adjust emitter timing parameters you will need to ensure the emitter settings dialog is also open and connected to the emitter. \nTo optimize emitter settings adjustment it is recommended to use the red/blue or black/white test videos.",
+            "Calibration mode shows a reticule to help with alignment of the sensor bar \nand also allows for adjustment of emitter frame_delay and frame_duration using hotkeys as instructed on the OSD. \nTo adjust emitter timing parameters you will need to ensure the emitter settings dialog is also open and connected to the emitter. \nTo optimize emitter settings adjustment it is recommended to use the red/blue or black/white test videos. \n(default {DEFAULT_CALIBATION_MODE})",
             hover_delay=100,
         )
         # self.calibration_mode_frame.pack()
@@ -306,11 +313,37 @@ class DisplaySettingsDialog:
         self.display_osd_timestamp_check_button.pack(padx=5, side=tkinter.LEFT)
         self.display_osd_timestamp_tooltip = idlelib.tooltip.Hovertip(
             self.display_osd_timestamp_frame,
-            "When enabled display OSD timestamp shows a timestamp and video duration on screen when the user moves their mouse. \nThis is useful for users when they cannot get the main toolbar window to popover the video on mouse move due to incompatible display drivers.",
+            "When enabled display OSD timestamp shows a timestamp and video duration on screen when the user moves their mouse. \nThis is useful for users when they cannot get the main toolbar window to popover the video on mouse move due to incompatible display drivers. \n(default {DEFAULT_DISPLAY_OSD_TIMESTAMP})",
             hover_delay=100,
         )
         # self.display_osd_timestamp_frame.pack()
         self.display_osd_timestamp_frame.grid(row=row_count, column=0, sticky="w")
+        row_count += 1
+
+        self.disable_3d_on_mouse_move_under_windows_frame = tkinter.Frame(top)
+        self.disable_3d_on_mouse_move_under_windows_label = tkinter.Label(
+            self.disable_3d_on_mouse_move_under_windows_frame,
+            text="Disable 3D On Mouse Move Under Windows: ",
+        )
+        self.disable_3d_on_mouse_move_under_windows_label.pack(
+            padx=5, side=tkinter.LEFT
+        )
+        self.disable_3d_on_mouse_move_under_windows_check_button = tkinter.Checkbutton(
+            self.disable_3d_on_mouse_move_under_windows_frame,
+            variable=self.disable_3d_on_mouse_move_under_windows_variable,
+        )
+        self.disable_3d_on_mouse_move_under_windows_check_button.pack(
+            padx=5, side=tkinter.LEFT
+        )
+        self.disable_3d_on_mouse_move_under_windows_tooltip = idlelib.tooltip.Hovertip(
+            self.disable_3d_on_mouse_move_under_windows_frame,
+            "When the mouse moves on windows we switch from true fullscreen overlay mode to full screen windowed mode, this causes a drop in performance which can result in lots of duplicate frames on some PC's, this option will stop the 3D effect on mouse movement to avoid potential discomfort. \n(default {DEFAULT_DISABLE_3D_ON_MOUSE_MOVE_UNDER_WINDOWS})",
+            hover_delay=100,
+        )
+        # self.disable_3d_on_mouse_move_under_windows_frame.pack()
+        self.disable_3d_on_mouse_move_under_windows_frame.grid(
+            row=row_count, column=0, sticky="w"
+        )
         row_count += 1
 
         self.action_button_frame_2 = tkinter.Frame(top)
@@ -375,6 +408,7 @@ class DisplaySettingsDialog:
                 "whitebox_horizontal_spacing": self.whitebox_horizontal_spacing_variable.get(),
                 "calibration_mode": self.calibration_mode_variable.get(),
                 "display_osd_timestamp": self.display_osd_timestamp_variable.get(),
+                "disable_3d_on_mouse_move_under_windows": self.disable_3d_on_mouse_move_under_windows_variable.get(),
             },
             f,
             indent=2,
@@ -437,12 +471,18 @@ class DisplaySettingsDialog:
         self.display_osd_timestamp_variable.set(
             settings.get("display_osd_timestamp", DEFAULT_DISPLAY_OSD_TIMESTAMP)
         )
+        self.disable_3d_on_mouse_move_under_windows_variable.set(
+            settings.get(
+                "disable_3d_on_mouse_move_under_windows",
+                DEFAULT_DISABLE_3D_ON_MOUSE_MOVE_UNDER_WINDOWS,
+            )
+        )
 
     def click_load_visisble_settings_from_disk(self):
         file_name = tkinter.filedialog.askopenfilename(
             title="Load Display Settings from Disk",
             initialdir=os.path.join(self.main_app.base_path, "settings"),
-            filetypes=[("Display Settings FIle", "*.display_settings.json")],
+            filetypes=[("Display Settings File", "*.display_settings.json")],
         )
         if file_name:
             self.load_settings_from_file(file_name)
@@ -478,6 +518,10 @@ class DisplaySettingsDialog:
             )
             self.main_app.pageflipglsink.set_property(
                 "display-osd-timestamp", self.display_osd_timestamp_variable.get()
+            )
+            self.main_app.pageflipglsink.set_property(
+                "disable-3d-on-mouse-move-under-windows",
+                self.disable_3d_on_mouse_move_under_windows_variable.get(),
             )
 
     def autosave_active_settings(self):

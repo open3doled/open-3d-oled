@@ -663,6 +663,9 @@ class TopWindow:
         display_osd_timestamp = (
             self.display_settings_dialog.display_osd_timestamp_variable.get()
         )
+        disable_3d_on_mouse_move_under_windows = (
+            self.display_settings_dialog.disable_3d_on_mouse_move_under_windows_variable.get()
+        )
         # print(frame_packing)
         # print(right_eye)
         # print(display_resolution)
@@ -963,6 +966,10 @@ class TopWindow:
         self.pageflipglsink.set_property("subtitle-depth", subtitle_depth)
         self.pageflipglsink.set_property(
             "subtitle-vertical-offset", subtitle_vertical_offset
+        )
+        self.pageflipglsink.set_property(
+            "disable-3d-on-mouse-move-under-windows",
+            disable_3d_on_mouse_move_under_windows,
         )
         self.pageflipglsink.set_property("start", True)  # this must be done last
         self.player.set_property("video-sink", self.pageflipglsink)

@@ -204,6 +204,7 @@ class PageflipGLWindow(threading.Thread):
             self.__white_box_horizontal_position * self.__pixel_pitch_x
         )
         self.__display_osd_timestamp = False
+        self.__disable_3d_on_mouse_move_under_windows = True
         self.__last_mouse = True
         self.__last_mouse_moved_at = None
         self.__disable_mouse_detection_until = None
@@ -1245,7 +1246,10 @@ class PageflipGLWindow(threading.Thread):
             )
 
             # add black and white boxes then subtitles
-            if self.__fullscreen_psuedo:
+            if (
+                self.__fullscreen_psuedo
+                and self.__disable_3d_on_mouse_move_under_windows
+            ):
                 overlay_box = self.__overlay_boxes[2]
             else:
                 if self.__right_eye in ("right", "top"):
@@ -1759,6 +1763,15 @@ class PageflipGLWindow(threading.Thread):
             self.__display_osd_timestamp = value
 
     @property
+    def disable_3d_on_mouse_move_under_windows(self):
+        return self.__disable_3d_on_mouse_move_under_windows
+
+    @disable_3d_on_mouse_move_under_windows.setter
+    def disable_3d_on_mouse_move_under_windows(self, value):
+        if value != self.__disable_3d_on_mouse_move_under_windows:
+            self.__disable_3d_on_mouse_move_under_windows = value
+
+    @property
     def started(self):
         return self.__started
 
@@ -2036,6 +2049,13 @@ class GstPageflipGLSink(GstBase.BaseSink):
             False,  # default
             GObject.ParamFlags.READWRITE,
         ),
+        "disable_3d_on_mouse_move_under_windows": (
+            GObject.TYPE_BOOLEAN,
+            "Disable 3D On Mouse Move Under Windows",
+            "When the mouse moves on windows we switch from true fullscreen overlay mode to full screen windowed mode, this causes a drop in performance which can result in lots of duplicate frames on some PC's, this option will stop the 3D effect on mouse movement to avoid potential discomfort.",
+            True,  # default
+            GObject.ParamFlags.READWRITE,
+        ),
         "start": (
             GObject.TYPE_BOOLEAN,
             "Start",
@@ -2142,6 +2162,7 @@ class GstPageflipGLSink(GstBase.BaseSink):
             "whitebox-horizontal-spacing": "23",
             "whitebox-brightness": "255",
             "display-osd-timestamp": False,
+            "disable-3d-on-mouse-move-under-windows": True,
             "enable-windows-always-on-top-hack": False,
             "requests": "",
             "latest-subtitle-data": "",
