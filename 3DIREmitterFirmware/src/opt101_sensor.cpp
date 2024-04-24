@@ -264,7 +264,7 @@ void opt101_sensor_UpdateThresholds(void)
     opt101_readings_active = true;
     for (uint8_t c = 0; c < OPT101_CHANNELS; c++)
     {
-        if (opt101_readings_threshold[c] < opt101_min_threshold_value_to_activate)
+        if (opt101_readings_high[c] < opt101_min_threshold_value_to_activate)
         {
             opt101_readings_active = false;
         }
@@ -335,7 +335,8 @@ void opt101_sensor_CheckReadings(void)
                         bitSet(PORT_DEBUG_DUPLICATE_FRAME_D16, DEBUG_DUPLICATE_FRAME_D16);
                     }
                     #endif
-                    if (opt101_enable_duplicate_realtime_reporting && ((opt101_duplicate_frames_in_a_row_counter % 2) == 1)) 
+                    if (opt101_enable_duplicate_realtime_reporting && ((opt101_duplicate_frames_in_a_row_counter % 2) == 1) && 
+                        (!opt101_ignore_all_duplicates || opt101_duplicate_frames_in_a_row_counter == 1)) // if ignore all duplicates is on then we only report the first duplicate because it will keep detecting duplicates multiple times per frame
                     {
                         Serial.println("+d");
                     }
