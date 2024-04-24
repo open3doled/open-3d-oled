@@ -95,7 +95,7 @@ class DisplaySettingsDialog:
         # self.target_framerate_frame.pack()
         self.target_framerate_option_menu_tooltip = idlelib.tooltip.Hovertip(
             self.target_framerate_option_menu,
-            "If set to a value other than 0 this will force pygame to use a frame delay with tick_busy_loop instead of relying on vsync, this should not normally need to be set and is for experimental purposes only. \n(this value will not be updated on an already playing video) \n(default {DEFAULT_TARGET_FRAMERATE})",
+            f"If set to a value other than 0 this will force pygame to use a frame delay with tick_busy_loop instead of relying on vsync, this should not normally need to be set and is for experimental purposes only. \n(this value will not be updated on an already playing video) \n(default {DEFAULT_TARGET_FRAMERATE})",
             hover_delay=100,
         )
         self.target_framerate_frame.grid(row=row_count, column=0, sticky="w")
@@ -118,7 +118,7 @@ class DisplaySettingsDialog:
         # self.display_resolution_frame.pack()
         self.display_resolution_tooltip = idlelib.tooltip.Hovertip(
             self.display_resolution_frame,
-            "This is the resolution the video player will target for fullscreen mode while playing the video. \nIt may change your active resolution if it is different than your current resolution. \n(this value will not be updated on an already playing video) \n(default {DEFAULT_DISPLAY_RESOLUTION})",
+            f"This is the resolution the video player will target for fullscreen mode while playing the video. \nIt may change your active resolution if it is different than your current resolution. \n(this value will not be updated on an already playing video) \n(default {DEFAULT_DISPLAY_RESOLUTION})",
             hover_delay=100,
         )
         self.display_resolution_frame.grid(row=row_count, column=0, sticky="w")
@@ -137,7 +137,7 @@ class DisplaySettingsDialog:
         # self.display_zoom_factor_frame.pack()
         self.display_zoom_factor_tooltip = idlelib.tooltip.Hovertip(
             self.display_zoom_factor_frame,
-            "(integer 0 to 100) Zooms out the video by the percent specified. This is to shrink videos on displays which have ghosting at the top and bottom of screen. \n(default {DEFAULT_DISPLAY_ZOOM_FACTOR})",
+            f"(integer 0 to 100) Zooms out the video by the percent specified. This is to shrink videos on displays which have ghosting at the top and bottom of screen. \n(default {DEFAULT_DISPLAY_ZOOM_FACTOR})",
             hover_delay=100,
         )
         self.display_zoom_factor_frame.grid(row=row_count, column=0, sticky="w")
@@ -154,7 +154,7 @@ class DisplaySettingsDialog:
         self.display_size_entry.pack(padx=5, side=tkinter.LEFT)
         self.display_size_tooltip = idlelib.tooltip.Hovertip(
             self.display_size_frame,
-            "Specifying the correct display size (provided in inches), allows the screen specific scaling of the on screen trigger boxes to match the sensors unit. \n(this value will not be updated on an already playing video) \n(default {DEFAULT_DISPLAY_SIZE})",
+            f"Specifying the correct display size (provided in inches), allows the screen specific scaling of the on screen trigger boxes to match the sensors unit. \n(this value will not be updated on an already playing video) \n(default {DEFAULT_DISPLAY_SIZE})",
             hover_delay=100,
         )
         # self.display_size_frame.pack()
@@ -294,7 +294,7 @@ class DisplaySettingsDialog:
         self.calibration_mode_check_button.pack(padx=5, side=tkinter.LEFT)
         self.calibration_mode_tooltip = idlelib.tooltip.Hovertip(
             self.calibration_mode_frame,
-            "Calibration mode shows a reticule to help with alignment of the sensor bar \nand also allows for adjustment of emitter frame_delay and frame_duration using hotkeys as instructed on the OSD. \nTo adjust emitter timing parameters you will need to ensure the emitter settings dialog is also open and connected to the emitter. \nTo optimize emitter settings adjustment it is recommended to use the red/blue or black/white test videos. \n(default {DEFAULT_CALIBATION_MODE})",
+            f"Calibration mode shows a reticule to help with alignment of the sensor bar \nand also allows for adjustment of emitter frame_delay and frame_duration using hotkeys as instructed on the OSD. \nTo adjust emitter timing parameters you will need to ensure the emitter settings dialog is also open and connected to the emitter. \nTo optimize emitter settings adjustment it is recommended to use the red/blue or black/white test videos. \n(default {DEFAULT_CALIBRATION_MODE})",
             hover_delay=100,
         )
         # self.calibration_mode_frame.pack()
@@ -313,7 +313,7 @@ class DisplaySettingsDialog:
         self.display_osd_timestamp_check_button.pack(padx=5, side=tkinter.LEFT)
         self.display_osd_timestamp_tooltip = idlelib.tooltip.Hovertip(
             self.display_osd_timestamp_frame,
-            "When enabled display OSD timestamp shows a timestamp and video duration on screen when the user moves their mouse. \nThis is useful for users when they cannot get the main toolbar window to popover the video on mouse move due to incompatible display drivers. \n(default {DEFAULT_DISPLAY_OSD_TIMESTAMP})",
+            f"When enabled display OSD timestamp shows a timestamp and video duration on screen when the user moves their mouse. \nThis is useful for users when they cannot get the main toolbar window to popover the video on mouse move due to incompatible display drivers. \n(default {DEFAULT_DISPLAY_OSD_TIMESTAMP})",
             hover_delay=100,
         )
         # self.display_osd_timestamp_frame.pack()
@@ -337,7 +337,7 @@ class DisplaySettingsDialog:
         )
         self.disable_3d_on_mouse_move_under_windows_tooltip = idlelib.tooltip.Hovertip(
             self.disable_3d_on_mouse_move_under_windows_frame,
-            "When the mouse moves on windows we switch from true fullscreen overlay mode to full screen windowed mode, this causes a drop in performance which can result in lots of duplicate frames on some PC's, this option will stop the 3D effect on mouse movement to avoid potential discomfort. \n(default {DEFAULT_DISABLE_3D_ON_MOUSE_MOVE_UNDER_WINDOWS})",
+            f"When the mouse moves on windows we switch from true fullscreen overlay mode to full screen windowed mode, this causes a drop in performance which can result in lots of duplicate frames on some PC's, this option will stop the 3D effect on mouse movement to avoid potential discomfort. \n(default {DEFAULT_DISABLE_3D_ON_MOUSE_MOVE_UNDER_WINDOWS})",
             hover_delay=100,
         )
         # self.disable_3d_on_mouse_move_under_windows_frame.pack()
