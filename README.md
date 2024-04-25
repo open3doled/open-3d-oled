@@ -126,7 +126,17 @@ Not Working (Untested)
 * If you are using an LCD you will want to use HDMI QFT "Quick Frame Transport" to force a long blanking interval between frames. You basically run the monitor clock at for example 240hz but only send 120hz of data. That way 50% of the time the monitor will not be updating the physical screen. During this time the shutter glasses will open and show an image with minimal ghosting.
 * If you display supports BFI and it is an LCD make sure the BFI is phase synchronized to the actual refresh rate. I do not believe this is actually done on many monitors. Even Viewsonic XG2431 doesn't phase synchronize it and you need to do this manually using the blurbusters tool. Unless the BFI/strobing is phase synchronized you may be better to just turn it off.
 * Performance is best on Linux (tested on Ubuntu 20.04 an 22.04) followed by Windows 10 then Windows 11. I haven't tested on Windows 7.
-* On Windows 11 when using a 4k display sometimes Windows decides to use "Active Signal Mode" resolution of 4k and have a "Display Resolution" of 1080p. This confuses the software so make sure your "Active signal mode" and "Display Resolution" match at either 1080P or 4K.
+* On Windows 11 when using a 4k display sometimes Windows decides to use "Active Signal Mode" resolution of 4k and have a "Display Resolution" of 1080p. This confuses the software so make sure your "Active signal mode" and "Display Resolution" match at either 1080P or 4K. Most users will not want to change this as it will cause text to be tiny on your PC but there is a workaround where this setting can be applied only to the 3d_player software, the following steps detail that process.
+```
+1) right click on the 3d_player.exe and goto "Properties"
+2) select the compatabillity tab from the top
+3) down near the bottom click the button "Change high DPI settings"
+4) a new window titled "High DPI settings for 3d_player.exe" should open.
+5) at the bottom select the checkbox next to "Override high DPI scaling behavior. Scaling performed by:"
+6) click OK to close the window "High DPI settings for 3d_player.exe"
+7) click OK to close the window "3d_player.exe Properties"
+8) Now when you use the program on a screen with High DPI scaling the software should function with all necessary elements at the correct size.
+```
 * HDMI bitstream audio passthrough may have issues on some computers, if you are having difficulty it is recommended to disable HDMI audio passthrough and confirm the audio works on your local PC.
 * For test videos beyond the calibration videos below are some recommendations
 ```

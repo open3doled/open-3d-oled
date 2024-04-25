@@ -16,8 +16,11 @@ class ThanksDialog:
         self.thanks_top_frame = tkinter.Frame(top)
         self.thanks_label = tkinter.Label(
             self.thanks_top_frame,
-            text="""I want to say a big thankyou to the following people for helping support this project!\n
-Alain""",
+            text="""
+I want to say a big thankyou to the following people for helping support this project!
+
+Alain
+Bryan Chow""",
         )
         self.thanks_label.pack(padx=5, side=tkinter.LEFT)
         self.thanks_top_frame.grid(row=row_count, column=0, sticky="w")
