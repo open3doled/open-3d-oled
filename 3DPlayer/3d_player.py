@@ -611,7 +611,6 @@ class TopWindow:
             "subtitle_offset": start_video_dialog.subtitle_offset_variable.get(),
             "frame_packing": start_video_dialog.frame_packing_variable.get(),
             "right_eye": start_video_dialog.right_eye_variable.get(),
-            "decoder_preference": start_video_dialog.decoder_preference_variable.get(),
             "generate_dot_graph_file": start_video_dialog.generate_dot_graph_file_variable.get(),
             "audio_format_filter": start_video_dialog.audio_format_filter_variable.get(),
         }
@@ -629,7 +628,6 @@ class TopWindow:
         subtitle_offset = playback_parameters["subtitle_offset"]
         frame_packing = playback_parameters["frame_packing"]
         right_eye = playback_parameters["right_eye"]
-        decoder_preference = playback_parameters["decoder_preference"]
         generate_dot_graph_file = playback_parameters["generate_dot_graph_file"]
         audio_format_filter = playback_parameters["audio_format_filter"]
 
@@ -643,6 +641,9 @@ class TopWindow:
             (self.display_settings_dialog.display_zoom_factor_variable.get()),
         )
         display_size = self.display_settings_dialog.display_size_variable.get()
+        decoder_preference = (
+            self.display_settings_dialog.decoder_preference_variable.get()
+        )
         whitebox_brightness = (
             self.display_settings_dialog.whitebox_brightness_variable.get()
         )
@@ -754,15 +755,15 @@ class TopWindow:
             + d3d11_filters
             + software_filters
         )
-        if decoder_preference == start_video.DECODER_PREFERENCE_NVCODEC:
+        if decoder_preference == display_settings.DECODER_PREFERENCE_NVCODEC:
             filters_to_prioritize.extend(nvcodec_filters)
-        elif decoder_preference == start_video.DECODER_PREFERENCE_VAAPI:
+        elif decoder_preference == display_settings.DECODER_PREFERENCE_VAAPI:
             filters_to_prioritize.extend(vaapi_filters)
-        elif decoder_preference == start_video.DECODER_PREFERENCE_MSDK:
+        elif decoder_preference == display_settings.DECODER_PREFERENCE_MSDK:
             filters_to_prioritize.extend(msdk_filters)
-        elif decoder_preference == start_video.DECODER_PREFERENCE_D3D11:
+        elif decoder_preference == display_settings.DECODER_PREFERENCE_D3D11:
             filters_to_prioritize.extend(d3d11_filters)
-        elif decoder_preference == start_video.DECODER_PREFERENCE_SOFTWARE:
+        elif decoder_preference == display_settings.DECODER_PREFERENCE_SOFTWARE:
             filters_to_prioritize.extend(software_filters)
         else:  # default
             filters_to_deprioritize = set()

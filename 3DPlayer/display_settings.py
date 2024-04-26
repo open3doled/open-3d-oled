@@ -4,11 +4,19 @@ import tkinter  # @UnusedImport
 import tkinter.filedialog
 import idlelib.tooltip
 
+DECODER_PREFERENCE_DEFAULT = "default (GStreamers first choice)"
+DECODER_PREFERENCE_NVCODEC = "nvcodec (NVidia Codec)"
+DECODER_PREFERENCE_VAAPI = "vaapi (Video Acceleration API)"
+DECODER_PREFERENCE_MSDK = "msdk (Intel Media SDK)"
+DECODER_PREFERENCE_D3D11 = "d3d11 (Direct 3D 11)"
+DECODER_PREFERENCE_SOFTWARE = "software (No HW Acceleration)"
+
 # Display Setting Defaults
 DEFAULT_TARGET_FRAMERATE = "0"
 DEFAULT_DISPLAY_RESOLUTION = "1920x1080"
 DEFAULT_DISPLAY_ZOOM_FACTOR = "100"
 DEFAULT_DISPLAY_SIZE = "55"
+DEFAULT_DECODER_PREFERENCE = DECODER_PREFERENCE_DEFAULT
 DEFAULT_WHITEBOX_BRIGHTNESS = "255"
 DEFAULT_WHITEBOX_CORNER_POSITION = "top_left"
 DEFAULT_WHITEBOX_VERTICAL_POSITION = "0"
@@ -34,6 +42,8 @@ class DisplaySettingsDialog:
         self.display_zoom_factor_variable.set(DEFAULT_DISPLAY_ZOOM_FACTOR)
         self.display_size_variable = tkinter.StringVar(parent)
         self.display_size_variable.set(DEFAULT_DISPLAY_SIZE)
+        self.decoder_preference_variable = tkinter.StringVar(parent)
+        self.decoder_preference_variable.set(DEFAULT_DECODER_PREFERENCE)
         self.whitebox_brightness_variable = tkinter.StringVar(parent)
         self.whitebox_brightness_variable.set(DEFAULT_WHITEBOX_BRIGHTNESS)
         self.whitebox_corner_position_variable = tkinter.StringVar(parent)
@@ -159,6 +169,31 @@ class DisplaySettingsDialog:
         )
         # self.display_size_frame.pack()
         self.display_size_frame.grid(row=row_count, column=0, sticky="w")
+        row_count += 1
+
+        self.decoder_preference_frame = tkinter.Frame(top)
+        self.decoder_preference_label = tkinter.Label(
+            self.decoder_preference_frame, text="Decoder Preference: "
+        )
+        self.decoder_preference_label.pack(padx=5, side=tkinter.LEFT)
+        self.decoder_preference_option_menu = tkinter.OptionMenu(
+            self.decoder_preference_frame,
+            self.decoder_preference_variable,
+            DECODER_PREFERENCE_DEFAULT,
+            DECODER_PREFERENCE_NVCODEC,
+            DECODER_PREFERENCE_VAAPI,
+            DECODER_PREFERENCE_MSDK,
+            DECODER_PREFERENCE_D3D11,
+            DECODER_PREFERENCE_SOFTWARE,
+        )
+        self.decoder_preference_option_menu.pack(padx=5, side=tkinter.LEFT)
+        # self.decoder_preference_frame.pack()
+        self.generate_dot_graph_file_tooltip = idlelib.tooltip.Hovertip(
+            self.decoder_preference_frame,
+            "Sets a decoder preference which will be used to instruct gstreamer about which decoder to use. \nThis will only have an effect if the approriate hardware accelerated decoders are available on your system and compatible with the media file you are playing. \nYou can check available decoders using 'gst-inspect-1.0 | grep 'nvcodec\|vaapi\|264\|265\|vp9' \n(this value will not be updated on an already playing video)",
+            hover_delay=100,
+        )
+        self.decoder_preference_frame.grid(row=row_count, column=0, sticky="w")
         row_count += 1
 
         self.whitebox_brightness_frame = tkinter.Frame(top)
@@ -400,6 +435,7 @@ class DisplaySettingsDialog:
                 "display_resolution": self.display_resolution_variable.get(),
                 "display_zoom_factor": self.display_zoom_factor_variable.get(),
                 "display_size": self.display_size_variable.get(),
+                "decoder_preference": self.decoder_preference_variable.get(),
                 "whitebox_brightness": self.whitebox_brightness_variable.get(),
                 "whitebox_corner_position": self.whitebox_corner_position_variable.get(),
                 "whitebox_vertical_position": self.whitebox_vertical_position_variable.get(),
@@ -440,6 +476,9 @@ class DisplaySettingsDialog:
         )
         self.display_size_variable.set(
             settings.get("display_size", DEFAULT_DISPLAY_SIZE)
+        )
+        self.decoder_preference_variable.set(
+            settings.get("decoder_preference", DEFAULT_DECODER_PREFERENCE)
         )
         self.whitebox_brightness_variable.set(
             settings.get("whitebox_brightness", DEFAULT_WHITEBOX_BRIGHTNESS)

@@ -9,13 +9,6 @@ import idlelib.tooltip
 
 import util
 
-DECODER_PREFERENCE_DEFAULT = "default (GStreamers first choice)"
-DECODER_PREFERENCE_NVCODEC = "nvcodec (NVidia Codec)"
-DECODER_PREFERENCE_VAAPI = "vaapi (Video Acceleration API)"
-DECODER_PREFERENCE_MSDK = "msdk (Intel Media SDK)"
-DECODER_PREFERENCE_D3D11 = "d3d11 (Direct 3D 11)"
-DECODER_PREFERENCE_SOFTWARE = "software (No HW Acceleration)"
-
 # Video Defaults
 DEFAULT_SUBTITLE_FONT = "MS Gothic" if os.name == "nt" else "Noto Sans CJK JP"
 DEFAULT_SUBTITLE_SIZE = "60"
@@ -24,7 +17,6 @@ DEFAULT_SUBTITLE_VERTICAL_OFFSET = "150"
 DEFAULT_SUBTITLE_OFFSET = "0"
 DEFAULT_FRAME_PACKING = "side-by-side-half"
 DEFAULT_RIGHT_EYE = "right"
-DEFAULT_DECODER_PREFERENCE = DECODER_PREFERENCE_DEFAULT
 DEFAULT_GENERATE_DOT_GRAPH_FILE = False
 DEFAULT_AUDIO_FORMAT_FILTER = ""
 
@@ -262,33 +254,6 @@ class StartVideoDialog:
         self.right_eye_frame.grid(row=row_count, column=0, sticky="w")
         row_count += 1
 
-        self.decoder_preference_frame = tkinter.Frame(top)
-        self.decoder_preference_variable = tkinter.StringVar(top)
-        self.decoder_preference_variable.set(DEFAULT_DECODER_PREFERENCE)
-        self.decoder_preference_label = tkinter.Label(
-            self.decoder_preference_frame, text="Decoder Preference: "
-        )
-        self.decoder_preference_label.pack(padx=5, side=tkinter.LEFT)
-        self.decoder_preference_option_menu = tkinter.OptionMenu(
-            self.decoder_preference_frame,
-            self.decoder_preference_variable,
-            DECODER_PREFERENCE_DEFAULT,
-            DECODER_PREFERENCE_NVCODEC,
-            DECODER_PREFERENCE_VAAPI,
-            DECODER_PREFERENCE_MSDK,
-            DECODER_PREFERENCE_D3D11,
-            DECODER_PREFERENCE_SOFTWARE,
-        )
-        self.decoder_preference_option_menu.pack(padx=5, side=tkinter.LEFT)
-        # self.decoder_preference_frame.pack()
-        self.generate_dot_graph_file_tooltip = idlelib.tooltip.Hovertip(
-            self.decoder_preference_frame,
-            "Sets a decoder preference which will be used to instruct gstreamer about which decoder to use. \nThis will only have an effect if the approriate hardware accelerated decoders are available on your system and compatible with the media file you are playing. \nYou can check available decoders using 'gst-inspect-1.0 | grep 'nvcodec\|vaapi\|264\|265\|vp9'",
-            hover_delay=100,
-        )
-        self.decoder_preference_frame.grid(row=row_count, column=0, sticky="w")
-        row_count += 1
-
         self.generate_dot_graph_file_variable = tkinter.BooleanVar(parent)
         self.generate_dot_graph_file_variable.set(DEFAULT_GENERATE_DOT_GRAPH_FILE)
         self.generate_dot_graph_file_frame = tkinter.Frame(top)
@@ -465,9 +430,6 @@ class StartVideoDialog:
             select=selected_video_history.get("right_eye", DEFAULT_RIGHT_EYE)
         )
         # self.right_eye_variable.set(selected_video_history["right_eye"])
-        self.decoder_preference_variable.set(
-            selected_video_history.get("decoder_preference", DEFAULT_DECODER_PREFERENCE)
-        )
         self.generate_dot_graph_file_variable.set(
             selected_video_history.get(
                 "generate_dot_graph_file", DEFAULT_GENERATE_DOT_GRAPH_FILE
@@ -563,7 +525,6 @@ class StartVideoDialog:
             "subtitle_offset": self.subtitle_offset_variable.get(),
             "frame_packing": self.frame_packing_variable.get(),
             "right_eye": self.right_eye_variable.get(),
-            "decoder_preference": self.decoder_preference_variable.get(),
             "generate_dot_graph_file": self.generate_dot_graph_file_variable.get(),
             "audio_format_filter": self.audio_format_filter_variable.get(),
         }
@@ -678,7 +639,6 @@ class StartVideoDialog:
             "subtitle_offset": DEFAULT_SUBTITLE_OFFSET,
             "frame_packing": DEFAULT_FRAME_PACKING,
             "right_eye": DEFAULT_RIGHT_EYE,
-            "decoder_preference": DEFAULT_DECODER_PREFERENCE,
             "generate_dot_graph_file": DEFAULT_GENERATE_DOT_GRAPH_FILE,
             "audio_format_filter": DEFAULT_AUDIO_FORMAT_FILTER,
         }
