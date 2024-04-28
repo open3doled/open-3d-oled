@@ -212,7 +212,6 @@ class PageflipGLWindow(threading.Thread):
         self.__set_video_on_top_true = False
         self.__requests = ""
         self.__invalidate_overlay_boxes = False
-        self.__overlay_boxes = None  # 0 left, 1 right
         self.__overlay_box_black_vertex_buffer = None
         self.__overlay_box_black_color_buffer = None
         self.__overlay_box_white_left_vertex_buffer = None
@@ -476,225 +475,6 @@ class PageflipGLWindow(threading.Thread):
         ]
         if "right" in self.__white_box_corner_position:
             white_box_horizontal_offsets.reverse()  # we reverse them here because we are going to flip the numpy ndarray later for right aligned boxes
-        # temp_overlay_boxes = []
-        #
-        # for n in range(3):  # 0 left, 1 right, 2 blank
-        #     box = np.ndarray(
-        #         shape=(black_box_height, black_box_width, 4), dtype=np.uint8
-        #     )
-        #     # box = pg.surface.Surface((black_box_width, black_box_height), flags=pg_locals.SRCALPHA, )
-        #     boxes_to_make = [
-        #         (
-        #             0,
-        #             0,
-        #             black_box_width,
-        #             black_box_height,
-        #             black_box_gradient_width,
-        #             0,
-        #             False,
-        #             True,
-        #             True,
-        #             True,
-        #             False,
-        #         ),
-        #     ]
-        #     if n < 2:
-        #         # (white_box_horizontal_offsets[n], black_box_height-white_box_height, white_box_width, white_box_height, white_box_gradient_width, 0, False, True, True if n == 1 else False, True, True)
-        #         boxes_to_make.append(
-        #             (
-        #                 white_box_horizontal_offsets[n],
-        #                 black_box_height
-        #                 - white_box_height
-        #                 - int(
-        #                     self.__white_box_vertical_position * self.__pixel_pitch_y
-        #                 ),
-        #                 white_box_width,
-        #                 white_box_height,
-        #                 white_box_gradient_width,
-        #                 0,
-        #                 True,
-        #                 True,
-        #                 True,
-        #                 True,
-        #                 True,
-        #             )
-        #         )
-        #     if self.__calibration_mode:
-        #         x_halfway_point = (
-        #             white_box_horizontal_offset_1
-        #             + white_box_width
-        #             + white_box_horizontal_offset_2
-        #         ) // 2
-        #         boxes_to_make.extend(
-        #             [
-        #                 (
-        #                     original_black_box_width,
-        #                     black_box_height
-        #                     - white_box_height // 2
-        #                     - int(
-        #                         self.__white_box_vertical_position
-        #                         * self.__pixel_pitch_y
-        #                     ),
-        #                     black_box_width - original_black_box_width,
-        #                     1,
-        #                     0,
-        #                     int(self.__white_box_brightness),
-        #                     False,
-        #                     False,
-        #                     False,
-        #                     False,
-        #                     False,
-        #                 ),  # horizontal reticule
-        #                 (
-        #                     x_halfway_point,
-        #                     0,
-        #                     1,
-        #                     black_box_height - original_black_box_height,
-        #                     0,
-        #                     int(self.__white_box_brightness),
-        #                     False,
-        #                     False,
-        #                     False,
-        #                     False,
-        #                     False,
-        #                 ),  # verticle reticule
-        #             ]
-        #         )
-        #     # import pprint
-        #     # pprint.pprint(boxes_to_make)
-        #     for (
-        #         px,
-        #         py,
-        #         wx,
-        #         wy,
-        #         box_gradient_width,
-        #         shade,
-        #         smooth_top,
-        #         smooth_bottom,
-        #         smooth_left,
-        #         smooth_right,
-        #         is_white_box,
-        #     ) in boxes_to_make:
-        #         for x in range(wx):
-        #             for y in range(wy):
-        #                 if (
-        #                     smooth_left
-        #                     and smooth_bottom
-        #                     and x < box_gradient_width
-        #                     and y < box_gradient_width
-        #                 ):  # bottom left corner (smoothed)
-        #                     tone = int(
-        #                         (min(x, box_gradient_width) / box_gradient_width)
-        #                         * (min(y, box_gradient_width) / box_gradient_width)
-        #                         * 255
-        #                     )
-        #                 elif (
-        #                     smooth_left
-        #                     and smooth_top
-        #                     and x < box_gradient_width
-        #                     and y > wy - box_gradient_width
-        #                 ):  # top left corner (smoothed)
-        #                     tone = int(
-        #                         (min(x, box_gradient_width) / box_gradient_width)
-        #                         * (min(wy - y, box_gradient_width) / box_gradient_width)
-        #                         * 255
-        #                     )
-        #                 elif (
-        #                     smooth_right
-        #                     and smooth_bottom
-        #                     and x > wx - box_gradient_width
-        #                     and y < box_gradient_width
-        #                 ):  # bottom right corner (smoothed)
-        #                     tone = int(
-        #                         (min(wx - x, box_gradient_width) / box_gradient_width)
-        #                         * (min(y, box_gradient_width) / box_gradient_width)
-        #                         * 255
-        #                     )
-        #                 elif (
-        #                     smooth_right
-        #                     and smooth_top
-        #                     and x > wx - box_gradient_width
-        #                     and y > wy - box_gradient_width
-        #                 ):  # top right corner (smoothed)
-        #                     tone = int(
-        #                         (min(wx - x, box_gradient_width) / box_gradient_width)
-        #                         * (min(wy - y, box_gradient_width) / box_gradient_width)
-        #                         * 255
-        #                     )
-        #                 elif (
-        #                     smooth_left and x < box_gradient_width
-        #                 ):  # left side (smoothed)
-        #                     tone = int(
-        #                         (min(x, box_gradient_width) / box_gradient_width) * 255
-        #                     )
-        #                 elif (
-        #                     smooth_right and x > wx - box_gradient_width
-        #                 ):  # right side (smoothed)
-        #                     tone = int(
-        #                         (min(wx - x, box_gradient_width) / box_gradient_width)
-        #                         * 255
-        #                     )
-        #                 elif (
-        #                     smooth_bottom and y < box_gradient_width
-        #                 ):  # bottom side (smoothed)
-        #                     tone = int(
-        #                         (min(y, box_gradient_width) / box_gradient_width) * 255
-        #                     )
-        #                 elif (
-        #                     smooth_top and y > wy - box_gradient_width
-        #                 ):  # top side (smoothed)
-        #                     tone = int(
-        #                         (min(wy - y, box_gradient_width) / box_gradient_width)
-        #                         * 255
-        #                     )
-        #                 else:
-        #                     tone = 255
-        #                 if is_white_box:
-        #                     white_box_shade = int(
-        #                         tone * self.__white_box_brightness / 255
-        #                     )
-        #                     box[max(min(py + y, black_box_height - 1), 0)][px + x][
-        #                         0
-        #                     ] = white_box_shade
-        #                     box[max(min(py + y, black_box_height - 1), 0)][px + x][
-        #                         1
-        #                     ] = white_box_shade
-        #                     box[max(min(py + y, black_box_height - 1), 0)][px + x][
-        #                         2
-        #                     ] = white_box_shade
-        #                     box[max(min(py + y, black_box_height - 1), 0)][px + x][
-        #                         3
-        #                     ] = box[max(min(py + y, black_box_height - 1), 0)][px + x][
-        #                         3
-        #                     ]
-        #                 else:
-        #                     box[max(min(py + y, black_box_height - 1), 0)][px + x] = [
-        #                         shade,
-        #                         shade,
-        #                         shade,
-        #                         tone,
-        #                     ]
-        #
-        #     if self.__white_box_corner_position == "top_left":
-        #         pass
-        #     elif self.__white_box_corner_position == "top_right":
-        #         box = np.flip(box, 1)
-        #     elif self.__white_box_corner_position == "bottom_left":
-        #         box = np.flip(box, 0)
-        #     elif self.__white_box_corner_position == "bottom_right":
-        #         box = np.flip(box, (0, 1))
-        #
-        #     temp_overlay_boxes.append(box)
-        #     # np.set_printoptions(threshold=sys.maxsize)
-        #     # print(box)
-        #     # self.__overlay_boxes.append(box.convert_alpha())
-        #
-        # self.__overlay_boxes = temp_overlay_boxes
-        self.__overlay_boxes = [
-            None,
-            None,
-            None,
-        ]  # dummy values for debugging new opengl mode
 
         buffers_to_build = [
             (
@@ -1701,13 +1481,11 @@ class PageflipGLWindow(threading.Thread):
                 self.__fullscreen_psuedo
                 and self.__disable_3d_on_mouse_move_under_windows
             ):
-                overlay_box = self.__overlay_boxes[2]
                 overlay_box_white_vertex_buffer = None
             else:
                 if self.__right_eye in ("right", "top"):
                     if self.__left_or_bottom_page:
                         # white_box_offset = white_box_horizontal_offset_1
-                        overlay_box = self.__overlay_boxes[0]
                         overlay_box_white_vertex_buffer = (
                             self.__overlay_box_white_left_vertex_buffer
                         )
@@ -1716,7 +1494,6 @@ class PageflipGLWindow(threading.Thread):
                         )
                     else:
                         # white_box_offset = white_box_horizontal_offset_2
-                        overlay_box = self.__overlay_boxes[1]
                         overlay_box_white_vertex_buffer = (
                             self.__overlay_box_white_right_vertex_buffer
                         )
@@ -1727,7 +1504,6 @@ class PageflipGLWindow(threading.Thread):
                     assert self.__right_eye in ("left", "bottom")
                     if self.__left_or_bottom_page:
                         # white_box_offset = white_box_horizontal_offset_2
-                        overlay_box = self.__overlay_boxes[1]
                         overlay_box_white_vertex_buffer = (
                             self.__overlay_box_white_right_vertex_buffer
                         )
@@ -1736,7 +1512,6 @@ class PageflipGLWindow(threading.Thread):
                         )
                     else:
                         # white_box_offset = white_box_horizontal_offset_1
-                        overlay_box = self.__overlay_boxes[0]
                         overlay_box_white_vertex_buffer = (
                             self.__overlay_box_white_left_vertex_buffer
                         )
@@ -1837,30 +1612,6 @@ class PageflipGLWindow(threading.Thread):
                                 "rendered_surface"
                             ].get_height()
                 self.__latest_subtitles_event.set()
-
-            # gl.glWindowPos2d(
-            #     (
-            #         self.__black_box_horizontal_position
-            #         if "left" in self.__white_box_corner_position
-            #         else (
-            #             self.__display_resolution_width
-            #             - self.__black_box_width
-            #             - self.__black_box_horizontal_position
-            #         )
-            #     ),
-            #     (
-            #         self.__display_resolution_height - self.__black_box_height
-            #         if "top" in self.__white_box_corner_position
-            #         else 0
-            #     ),
-            # )
-            # gl.glDrawPixels(
-            #     self.__black_box_width,
-            #     self.__black_box_height,
-            #     gl.GL_RGBA,
-            #     gl.GL_UNSIGNED_BYTE,
-            #     overlay_box,
-            # )
 
             # trigger boxes
             gl.glEnableClientState(gl.GL_VERTEX_ARRAY)
