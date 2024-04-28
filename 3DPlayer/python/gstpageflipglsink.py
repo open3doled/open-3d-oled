@@ -154,6 +154,7 @@ class PageflipGLWindow(threading.Thread):
         self.__in_image_updated = False
         self.__in_image = None
         self.__in_image_play_timestamp = None
+        self.__keys_pressed = dict()
         self.__restore_to_window_height = None
         self.__restore_to_window_width = None
         self.__actual_window_height = None
@@ -1004,7 +1005,6 @@ class PageflipGLWindow(threading.Thread):
                             self.__fullscreen_psuedo = False
                         pg.mouse.set_visible(False)
                         self.__sdl2_window.focus()
-                        print("set video focus")
                         """
                   print('self.__sdl2_window.position', self.__sdl2_window.position)
                   window_sdl = sdl2.video.SDL_GetWindowFromID(self.__sdl2_window.id)
@@ -1069,16 +1069,35 @@ class PageflipGLWindow(threading.Thread):
                 elif event.type == pg.KEYDOWN:
                     # https://www.pygame.org/docs/ref/key.html
                     # print(f"Keydown {event.key}")
-                    # print(f"Calibration Mode {self.__calibration_mode}")
-                    if event.key == pg.K_ESCAPE:
+                    self.__keys_pressed[event.key] = [
+                        time.time(),
+                        time.time() - 1,
+                        event.mod,
+                    ]
+                elif event.type == pg.KEYUP:
+                    # print(f"Keydown {event.key}")
+                    del self.__keys_pressed[event.key]
+
+                for key_pressed, key_details in self.__keys_pressed.items():
+                    (
+                        key_ressed_at,  # @UnusedVariable
+                        key_ignore_until,
+                        key_modifiers,
+                    ) = key_details
+                    if time.time() < key_ignore_until:
+                        continue
+                    key_details[1] = time.time() + 1  # by default ignore for 1 second
+                    # print(f"Keyheld {key_pressed}")
+
+                    if key_pressed == pg.K_ESCAPE:
                         self.__requests = ",".join(
                             self.__requests.split(",") + ["close"]
                         )
-                    elif event.key == pg.K_h:
+                    elif key_pressed == pg.K_h:
                         self.__show_help_instruction_image = (
                             not self.__show_help_instruction_image
                         )
-                    elif event.key == pg.K_c:
+                    elif key_pressed == pg.K_c:
                         self.calibration_mode = not self.calibration_mode
                         self.__requests = ",".join(
                             self.__requests.split(",")
@@ -1086,7 +1105,7 @@ class PageflipGLWindow(threading.Thread):
                                 f"calibration-calibration_mode-set-{'true' if self.__calibration_mode else 'false'}"
                             ]
                         )
-                    elif event.key == pg.K_v:
+                    elif key_pressed == pg.K_v:
                         if (
                             self.__display_duplicate_frame_mode
                             == DISPLAY_DUPLICATE_FRAME_MODE_OFF
@@ -1108,36 +1127,36 @@ class PageflipGLWindow(threading.Thread):
                             self.__display_duplicate_frame_mode = (
                                 DISPLAY_DUPLICATE_FRAME_MODE_OFF
                             )
-                    elif event.key == pg.K_SPACE:
+                    elif key_pressed == pg.K_SPACE:
                         self.__requests = ",".join(
                             self.__requests.split(",") + ["toggle_paused"]
                         )
-                    elif event.key >= pg.K_0 and event.key <= pg.K_9:
+                    elif key_pressed >= pg.K_0 and key_pressed <= pg.K_9:
                         self.__requests = ",".join(
                             self.__requests.split(",")
-                            + [f"seek_percent_{event.key - pg.K_0}"]
+                            + [f"seek_percent_{key_pressed - pg.K_0}"]
                         )
-                    elif event.key == pg.K_RIGHT or event.key == pg.K_LEFT:
+                    elif key_pressed == pg.K_RIGHT or key_pressed == pg.K_LEFT:
                         seek_direction = (
-                            "forward" if event.key == pg.K_RIGHT else "backward"
+                            "forward" if key_pressed == pg.K_RIGHT else "backward"
                         )
-                        seek_size = "big" if event.mod & pg.KMOD_SHIFT else "small"
+                        seek_size = "big" if key_modifiers & pg.KMOD_SHIFT else "small"
                         self.__requests = ",".join(
                             self.__requests.split(",")
                             + [f"seek_{seek_direction}_{seek_size}"]
                         )
                     # The following 3 are used for testing and visualizing glasses resync speed after a dropped frame
-                    elif event.key == pg.K_F1:
+                    elif key_pressed == pg.K_F1:
                         self.__skip_n_page_flips = 1
-                    elif event.key == pg.K_F2:
+                    elif key_pressed == pg.K_F2:
                         self.__skip_n_page_flips = 2
-                    elif event.key == pg.K_F3:
+                    elif key_pressed == pg.K_F3:
                         self.__skip_n_page_flips = 3
-                    elif event.key == pg.K_F8 and self.__calibration_mode:
+                    elif key_pressed == pg.K_F8 and self.__calibration_mode:
                         self.__requests = ",".join(
                             self.__requests.split(",") + [f"toggle_sensor_logging"]
                         )
-                    elif event.key == pg.K_F9:
+                    elif key_pressed == pg.K_F9:
                         if USE_LINE_PROFILER:
                             if not line_profiler_obj.global_enable:
                                 print("enable global profiling")
@@ -1145,13 +1164,13 @@ class PageflipGLWindow(threading.Thread):
                             else:
                                 line_profiler_obj.global_enable = False
                                 print("disable global profiling")
-                    elif event.key == pg.K_F10:
+                    elif key_pressed == pg.K_F10:
                         if USE_LINE_PROFILER:
                             line_profiler_obj.print_stats()
                             line_profiler_obj.clear_stats()
-                    elif event.key == pg.K_F11:
+                    elif key_pressed == pg.K_F11:
                         self.fullscreen = not self.__fullscreen
-                    elif event.key == pg.K_f:
+                    elif key_pressed == pg.K_f:
                         if self.__right_eye == "right":
                             self.__right_eye = "left"
                         elif self.__right_eye == "left":
@@ -1162,86 +1181,98 @@ class PageflipGLWindow(threading.Thread):
                             self.__right_eye = "top"
 
                     if self.__calibration_mode:
-                        if event.key == pg.K_g:
+                        if key_pressed == pg.K_g:
                             self.__show_calibration_instruction_image = (
                                 not self.__show_calibration_instruction_image
                             )
                         calibration_target_field = None
                         calibration_decrease_or_increase = None
                         calibration_adjustment_amount = None
-                        shift_down = event.mod & pg.KMOD_SHIFT
+                        shift_down = key_modifiers & pg.KMOD_SHIFT
                         if (
-                            event.key == pg.K_w
+                            key_pressed == pg.K_w
                             and "top" in self.__white_box_corner_position
                         ) or (
-                            event.key == pg.K_s
+                            key_pressed == pg.K_s
                             and "bottom" in self.__white_box_corner_position
                         ):
                             calibration_target_field = "white_box_vertical_position"
                             calibration_decrease_or_increase = "decrease"
                             calibration_adjustment_amount = 10 if shift_down else 1
+                            key_details[1] = time.time() + 0.033
                         elif (
-                            event.key == pg.K_s
+                            key_pressed == pg.K_s
                             and "top" in self.__white_box_corner_position
                         ) or (
-                            event.key == pg.K_w
+                            key_pressed == pg.K_w
                             and "bottom" in self.__white_box_corner_position
                         ):
                             calibration_target_field = "white_box_vertical_position"
                             calibration_decrease_or_increase = "increase"
                             calibration_adjustment_amount = 10 if shift_down else 1
+                            key_details[1] = time.time() + 0.033
                         elif (
-                            event.key == pg.K_a
+                            key_pressed == pg.K_a
                             and "left" in self.__white_box_corner_position
                         ) or (
-                            event.key == pg.K_d
+                            key_pressed == pg.K_d
                             and "right" in self.__white_box_corner_position
                         ):
                             calibration_target_field = "white_box_horizontal_position"
                             calibration_decrease_or_increase = "decrease"
                             calibration_adjustment_amount = 10 if shift_down else 1
+                            key_details[1] = time.time() + 0.033
                         elif (
-                            event.key == pg.K_d
+                            key_pressed == pg.K_d
                             and "left" in self.__white_box_corner_position
                         ) or (
-                            event.key == pg.K_a
+                            key_pressed == pg.K_a
                             and "right" in self.__white_box_corner_position
                         ):
                             calibration_target_field = "white_box_horizontal_position"
                             calibration_decrease_or_increase = "increase"
                             calibration_adjustment_amount = 10 if shift_down else 1
-                        elif event.key == pg.K_q:
+                            key_details[1] = time.time() + 0.033
+                        elif key_pressed == pg.K_q:
                             calibration_target_field = "white_box_horizontal_spacing"
                             calibration_decrease_or_increase = "decrease"
                             calibration_adjustment_amount = 5 if shift_down else 1
-                        elif event.key == pg.K_e:
+                            key_details[1] = time.time() + 0.033
+                        elif key_pressed == pg.K_e:
                             calibration_target_field = "white_box_horizontal_spacing"
                             calibration_decrease_or_increase = "increase"
                             calibration_adjustment_amount = 5 if shift_down else 1
-                        elif event.key == pg.K_z:
+                            key_details[1] = time.time() + 0.033
+                        elif key_pressed == pg.K_z:
                             calibration_target_field = "white_box_size"
                             calibration_decrease_or_increase = "decrease"
                             calibration_adjustment_amount = 10 if shift_down else 1
-                        elif event.key == pg.K_x:
+                            key_details[1] = time.time() + 0.033
+                        elif key_pressed == pg.K_x:
                             calibration_target_field = "white_box_size"
                             calibration_decrease_or_increase = "increase"
                             calibration_adjustment_amount = 10 if shift_down else 1
-                        elif event.key == pg.K_i:
+                            key_details[1] = time.time() + 0.033
+                        elif key_pressed == pg.K_i:
                             calibration_target_field = "frame_delay"
                             calibration_decrease_or_increase = "decrease"
                             calibration_adjustment_amount = 200 if shift_down else 10
-                        elif event.key == pg.K_k:
+                            key_details[1] = time.time() + 0.1
+                        elif key_pressed == pg.K_k:
                             calibration_target_field = "frame_delay"
                             calibration_decrease_or_increase = "increase"
                             calibration_adjustment_amount = 200 if shift_down else 10
-                        elif event.key == pg.K_o:
+                            key_details[1] = time.time() + 0.1
+                        elif key_pressed == pg.K_o:
                             calibration_target_field = "frame_duration"
                             calibration_decrease_or_increase = "decrease"
                             calibration_adjustment_amount = 200 if shift_down else 10
-                        elif event.key == pg.K_l:
+                            key_details[1] = time.time() + 0.1
+                        elif key_pressed == pg.K_l:
                             calibration_target_field = "frame_duration"
                             calibration_decrease_or_increase = "increase"
                             calibration_adjustment_amount = 200 if shift_down else 10
+                            key_details[1] = time.time() + 0.1
                         if calibration_target_field:
                             self.__requests = ",".join(
                                 self.__requests.split(",")
@@ -1252,7 +1283,7 @@ class PageflipGLWindow(threading.Thread):
 
                     if USE_VIEWSONIC_XG2431_CALIBRATION:
                         subtitle_text = None
-                        if event.key == pg.K_F4:
+                        if key_pressed == pg.K_F4:
                             if self.__viewsonic_xg2431_strobe_mode == 0:
                                 self.__viewsonic_xg2431_strobe_mode = 5
                             else:
@@ -1263,12 +1294,12 @@ class PageflipGLWindow(threading.Thread):
                             subtitle_text = (
                                 f"strobe mode {self.__viewsonic_xg2431_strobe_mode}"
                             )
-                        elif event.key == pg.K_r:
+                        elif key_pressed == pg.K_r:
                             self.__viewsonic_xg2431_strobe_length = max(
                                 min(
                                     40,
                                     self.__viewsonic_xg2431_strobe_length
-                                    + (-2 if event.mod & pg.KMOD_SHIFT else 2),
+                                    + (-2 if key_modifiers & pg.KMOD_SHIFT else 2),
                                 ),
                                 1,
                             )
@@ -1278,12 +1309,13 @@ class PageflipGLWindow(threading.Thread):
                             subtitle_text = (
                                 f"strobe length {self.__viewsonic_xg2431_strobe_length}"
                             )
-                        elif event.key == pg.K_t:
+                            key_details[1] = time.time() + 0.1
+                        elif key_pressed == pg.K_t:
                             self.__viewsonic_xg2431_strobe_phase = max(
                                 min(
                                     99,
                                     self.__viewsonic_xg2431_strobe_phase
-                                    + (-5 if event.mod & pg.KMOD_SHIFT else 5),
+                                    + (-5 if key_modifiers & pg.KMOD_SHIFT else 5),
                                 ),
                                 0,
                             )
@@ -1293,12 +1325,13 @@ class PageflipGLWindow(threading.Thread):
                             subtitle_text = (
                                 f"strobe phase {self.__viewsonic_xg2431_strobe_phase}"
                             )
-                        elif event.key == pg.K_y:
+                            key_details[1] = time.time() + 0.1
+                        elif key_pressed == pg.K_y:
                             self.__viewsonic_xg2431_overdrive_gain = max(
                                 min(
                                     100,
                                     self.__viewsonic_xg2431_overdrive_gain
-                                    + (-5 if event.mod & pg.KMOD_SHIFT else 5),
+                                    + (-5 if key_modifiers & pg.KMOD_SHIFT else 5),
                                 ),
                                 0,
                             )
@@ -1306,6 +1339,7 @@ class PageflipGLWindow(threading.Thread):
                                 f"sudo ddcutil --verbose --model XG2431 setvcp 0xE3 {self.__viewsonic_xg2431_overdrive_gain}"
                             )
                             subtitle_text = f"overdrive_gain {self.__viewsonic_xg2431_overdrive_gain}"
+                            key_details[1] = time.time() + 0.1
                         if subtitle_text is not None:
                             self.__add_new_osd_subtitle(subtitle_text)
 
