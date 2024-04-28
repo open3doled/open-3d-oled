@@ -97,7 +97,7 @@ else:
 overlay_timestamp_vertical_offset = 60  # this should be more than the height of the emitter box to avoid being blocked by it
 
 # defaults for 55inch LG OLED 1920x1080 120hz all in mm to be adjusted by pixel pitch factor for different display sizes
-default_black_box_gradient_width = 7
+default_black_box_gradient_width = 14
 default_white_box_gradient_width = 4
 default_black_box_spacing = 10
 default_black_box_calibration_border_width = 40
@@ -775,10 +775,10 @@ class PageflipGLWindow(threading.Thread):
                 c,
                 c,
                 c,
-                0,
+                1,
             ]
         )  # top right
-        bb_cb.extend([c, c, c, 1, c, c, c, 1, c, c, c, 0, c, c, c, 0])  # top
+        bb_cb.extend([c, c, c, 1, c, c, c, 1, c, c, c, 1, c, c, c, 1])  # top
         bb_cb.extend(
             [
                 c,
@@ -796,7 +796,7 @@ class PageflipGLWindow(threading.Thread):
                 c,
                 c,
                 c,
-                0,
+                1,
             ]
         )  # top left (starting in top right to get triangles to look better)
         bb_cb.extend([c, c, c, 0, c, c, c, 1, c, c, c, 1, c, c, c, 0])  # left
