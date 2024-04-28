@@ -97,7 +97,7 @@ else:
 overlay_timestamp_vertical_offset = 60  # this should be more than the height of the emitter box to avoid being blocked by it
 
 # defaults for 55inch LG OLED 1920x1080 120hz all in mm to be adjusted by pixel pitch factor for different display sizes
-default_black_box_gradient_width = 14
+default_black_box_gradient_width = 8
 default_white_box_gradient_width = 4
 default_black_box_spacing = 10
 default_black_box_calibration_border_width = 40
@@ -487,6 +487,7 @@ class PageflipGLWindow(threading.Thread):
                         black_box_width,
                         black_box_height,
                         black_box_gradient_width,
+                        ["black_box_bottom_corners"],
                     )
                 ],
             ),
@@ -503,6 +504,7 @@ class PageflipGLWindow(threading.Thread):
                         white_box_width,
                         white_box_height,
                         white_box_gradient_width,
+                        [],
                     )
                 ],
             ),
@@ -519,6 +521,7 @@ class PageflipGLWindow(threading.Thread):
                         white_box_width,
                         white_box_height,
                         white_box_gradient_width,
+                        [],
                     )
                 ],
             ),
@@ -540,6 +543,7 @@ class PageflipGLWindow(threading.Thread):
                             black_box_width - original_black_box_width,
                             3,
                             0,
+                            [],
                         ),  # horizontal
                         (
                             (
@@ -553,6 +557,7 @@ class PageflipGLWindow(threading.Thread):
                             3,
                             black_box_height - original_black_box_height,
                             0,
+                            [],
                         ),  # vertical
                     ],
                 )
@@ -591,7 +596,7 @@ class PageflipGLWindow(threading.Thread):
         for buffer, boxes in buffers_to_build:
             vb = []
             for box_attributes in boxes:
-                (px, py, wx, wy, bgw) = box_attributes
+                (px, py, wx, wy, bgw, flags) = box_attributes
                 # each quad starting at top left and go clockwise (unless otherwise noted)
                 vb.extend(
                     [
@@ -606,18 +611,32 @@ class PageflipGLWindow(threading.Thread):
                     ]
                 )  # middle
                 if bgw > 0:
-                    vb.extend(
-                        [
-                            bpx + (px) * mpx,
-                            bpy + (py) * mpy,
-                            bpx + (px + bgw) * mpx,
-                            bpy + (py) * mpy,
-                            bpx + (px + bgw) * mpx,
-                            bpy + (py + bgw) * mpy,
-                            bpx + (px) * mpx,
-                            bpy + (py + bgw) * mpy,
-                        ]
-                    )  # bottom left
+                    if "black_box_bottom_corners" in flags:
+                        vb.extend(
+                            [
+                                bpx + (px + bgw) * mpx,
+                                bpy + (py) * mpy,
+                                bpx + (px + bgw) * mpx,
+                                bpy + (py + bgw) * mpy,
+                                bpx + (px) * mpx,
+                                bpy + (py + bgw) * mpy,
+                                bpx + (px + bgw * 0.25) * mpx,
+                                bpy + (py + bgw * 0.25) * mpy,
+                            ]
+                        )  # bottom left (starting in top right to get pointed corner)
+                    else:
+                        vb.extend(
+                            [
+                                bpx + (px) * mpx,
+                                bpy + (py) * mpy,
+                                bpx + (px + bgw) * mpx,
+                                bpy + (py) * mpy,
+                                bpx + (px + bgw) * mpx,
+                                bpy + (py + bgw) * mpy,
+                                bpx + (px) * mpx,
+                                bpy + (py + bgw) * mpy,
+                            ]
+                        )  # bottom left
                     vb.extend(
                         [
                             bpx + (px + bgw) * mpx,
@@ -630,18 +649,32 @@ class PageflipGLWindow(threading.Thread):
                             bpy + (py + bgw) * mpy,
                         ]
                     )  # bottom
-                    vb.extend(
-                        [
-                            bpx + (px + wx) * mpx,
-                            bpy + (py) * mpy,
-                            bpx + (px + wx) * mpx,
-                            bpy + (py + bgw) * mpy,
-                            bpx + (px + wx - bgw) * mpx,
-                            bpy + (py + bgw) * mpy,
-                            bpx + (px + wx - bgw) * mpx,
-                            bpy + (py) * mpy,
-                        ]
-                    )  # bottom right (starting in top right to get triangles to look better)
+                    if "black_box_bottom_corners" in flags:
+                        vb.extend(
+                            [
+                                bpx + (px + wx - bgw) * mpx,
+                                bpy + (py) * mpy,
+                                bpx + (px + wx - bgw * 0.25) * mpx,
+                                bpy + (py + bgw * 0.25) * mpy,
+                                bpx + (px + wx) * mpx,
+                                bpy + (py + bgw) * mpy,
+                                bpx + (px + wx - bgw) * mpx,
+                                bpy + (py + bgw) * mpy,
+                            ]
+                        )  # bottom right
+                    else:
+                        vb.extend(
+                            [
+                                bpx + (px + wx) * mpx,
+                                bpy + (py) * mpy,
+                                bpx + (px + wx) * mpx,
+                                bpy + (py + bgw) * mpy,
+                                bpx + (px + wx - bgw) * mpx,
+                                bpy + (py + bgw) * mpy,
+                                bpx + (px + wx - bgw) * mpx,
+                                bpy + (py) * mpy,
+                            ]
+                        )  # bottom right (starting in top right to get triangles to look better)
                     vb.extend(
                         [
                             bpx + (px + wx - bgw) * mpx,
@@ -725,11 +758,11 @@ class PageflipGLWindow(threading.Thread):
                 c,
                 c,
                 c,
-                0,
-                c,
-                c,
-                c,
                 1,
+                c,
+                c,
+                c,
+                0,
                 c,
                 c,
                 c,
@@ -749,12 +782,12 @@ class PageflipGLWindow(threading.Thread):
                 0,
                 c,
                 c,
+                c,
+                0,
+                c,
+                c,
                 0,
                 1,
-                c,
-                c,
-                c,
-                0,
             ]
         )  # bottom right (starting in top right to get triangles to look better)
         bb_cb.extend([c, c, c, 1, c, c, c, 0, c, c, c, 0, c, c, c, 1])  # right
