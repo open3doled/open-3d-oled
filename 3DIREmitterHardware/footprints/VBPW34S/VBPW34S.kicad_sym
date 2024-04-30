@@ -1,0 +1,122 @@
+
+(kicad_symbol_lib (version 20211014) (generator kicad_symbol_editor)
+  (symbol "VBPW34S" (pin_names (offset 1.016)) (in_bom yes) (on_board yes)
+    (property "Reference" "D" (id 0) (at -0.5588 4.4958 0)
+      (effects (font (size 1.27 1.27)) (justify bottom left))
+    )
+    (property "Value" "VBPW34S" (id 1) (at -1.016 -3.302 0)
+      (effects (font (size 1.27 1.27)) (justify bottom left))
+    )
+    (property "Footprint" "VBPW34S:XDCR_VBPW34S" (id 2) (at 0 0 0)
+      (effects (font (size 1.27 1.27)) (justify bottom) hide)
+    )
+    (property "DigiKey_Part_Number" "751-1500-2-ND" (id 4) (at 0 0 0)
+      (effects (font (size 1.27 1.27)) (justify bottom) hide)
+    )
+    (property "MF" "Vishay" (id 5) (at 0 0 0)
+      (effects (font (size 1.27 1.27)) (justify bottom) hide)
+    )
+    (property "MAXIMUM_PACKAGE_HEIGHT" "1.4mm" (id 6) (at 0 0 0)
+      (effects (font (size 1.27 1.27)) (justify bottom) hide)
+    )
+    (property "Package" "Package" (id 7) (at 0 0 0)
+      (effects (font (size 1.27 1.27)) (justify bottom) hide)
+    )
+    (property "Check_prices" "https://www.snapeda.com/parts/VBPW34S/Vishay+Semiconductor+Opto+Division/view-part/?ref=eda" (id 8) (at 0 0 0)
+      (effects (font (size 1.27 1.27)) (justify bottom) hide)
+    )
+    (property "STANDARD" "Manufacturer Recommendations" (id 9) (at 0 0 0)
+      (effects (font (size 1.27 1.27)) (justify bottom) hide)
+    )
+    (property "PARTREV" "1.2" (id 10) (at 0 0 0)
+      (effects (font (size 1.27 1.27)) (justify bottom) hide)
+    )
+    (property "SnapEDA_Link" "https://www.snapeda.com/parts/VBPW34S/Vishay+Semiconductor+Opto+Division/view-part/?ref=snap" (id 11) (at 0 0 0)
+      (effects (font (size 1.27 1.27)) (justify bottom) hide)
+    )
+    (property "MP" "VBPW34S" (id 12) (at 0 0 0)
+      (effects (font (size 1.27 1.27)) (justify bottom) hide)
+    )
+    (property "Purchase-URL" "https://www.snapeda.com/api/url_track_click_mouser/?unipart_id=139260&manufacturer=Vishay&part_name=VBPW34S&search_term=vbpw34" (id 13) (at 0 0 0)
+      (effects (font (size 1.27 1.27)) (justify bottom) hide)
+    )
+    (property "Description" "\nPhotodiode 940nm 100ns 130° 2-SMD, Gull Wing\n" (id 14) (at 0 0 0)
+      (effects (font (size 1.27 1.27)) (justify bottom) hide)
+    )
+    (property "MANUFACTURER" "Vishay" (id 15) (at 0 0 0)
+      (effects (font (size 1.27 1.27)) (justify bottom) hide)
+    )
+    (symbol "VBPW34S_0_0"
+      (polyline
+        (pts (xy 0.0 1.524) (xy 0.0 -1.524)) (stroke (width 0.254))
+      )
+      (polyline
+        (pts (xy 0.0 -1.524) (xy 2.54 0.0)) (stroke (width 0.254))
+      )
+      (polyline
+        (pts (xy 2.54 0.0) (xy 0.0 1.524)) (stroke (width 0.254))
+      )
+      (polyline
+        (pts (xy 2.54 1.524) (xy 2.54 -1.524)) (stroke (width 0.254))
+      )
+      (polyline
+        (pts (xy 0.762 2.032) (xy 2.54 4.064)) (stroke (width 0.254))
+      )
+      (polyline
+        (pts (xy 1.0922 2.9972) (xy 1.651 2.5146)) (stroke (width 0.254))
+      )
+      (polyline
+        (pts (xy 1.651 2.5146) (xy 0.762 2.032)) (stroke (width 0.254))
+      )
+      (polyline
+        (pts (xy 0.762 2.032) (xy 1.0922 2.9972)) (stroke (width 0.254))
+      )
+      (polyline
+        (pts (xy 1.0922 2.9972) (xy 1.0668 2.2606)) (stroke (width 0.254))
+      )
+      (polyline
+        (pts (xy 1.0668 2.2606) (xy 1.1938 2.2606)) (stroke (width 0.254))
+      )
+      (polyline
+        (pts (xy 1.4732 2.5908) (xy 1.2446 2.4384)) (stroke (width 0.254))
+      )
+      (polyline
+        (pts (xy 2.0066 1.9304) (xy 3.7846 3.9624)) (stroke (width 0.254))
+      )
+      (polyline
+        (pts (xy 2.3368 2.8956) (xy 2.8956 2.413)) (stroke (width 0.254))
+      )
+      (polyline
+        (pts (xy 2.8956 2.413) (xy 2.0066 1.9304)) (stroke (width 0.254))
+      )
+      (polyline
+        (pts (xy 2.0066 1.9304) (xy 2.3368 2.8956)) (stroke (width 0.254))
+      )
+      (polyline
+        (pts (xy 2.3368 2.8956) (xy 2.3114 2.159)) (stroke (width 0.254))
+      )
+      (polyline
+        (pts (xy 2.3114 2.159) (xy 2.4384 2.159)) (stroke (width 0.254))
+      )
+      (polyline
+        (pts (xy 2.7178 2.4892) (xy 2.4892 2.3368)) (stroke (width 0.254))
+      )
+      (pin passive line (at 7.62 0.0 180.0) (length 5.08)
+        (name "~"
+          (effects (font (size 1.016 1.016)))
+        )
+        (number "K"
+          (effects (font (size 1.016 1.016)))
+        )
+      )
+      (pin passive line (at -5.08 0.0 0) (length 5.08)
+        (name "~"
+          (effects (font (size 1.016 1.016)))
+        )
+        (number "A"
+          (effects (font (size 1.016 1.016)))
+        )
+      )
+    )
+  )
+)

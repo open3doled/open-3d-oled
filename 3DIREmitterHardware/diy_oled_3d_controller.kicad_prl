@@ -67,6 +67,12 @@
     "visible_layers": "7ffffff_80000001",
     "zone_display_mode": 0
   },
+  "git": {
+    "repo_password": "",
+    "repo_type": "",
+    "repo_username": "",
+    "ssh_key": ""
+  },
   "meta": {
     "filename": "diy_oled_3d_controller.kicad_prl",
     "version": 3
