@@ -64,7 +64,7 @@ photodiode_depth = 1.8; // bpw34  // measured 1.6
 // photodiode_depth = 4.3; // opt101
 
 /* [Explode Design Vertically:] */
-explode=35;   // [0, 35]
+explode=35;   // [0, 0.5, 35]
 
 
 /* [Hidden:] */
@@ -271,6 +271,8 @@ mc_usbh_px = 6; // should be 7 but appears to actually be 6
 mc_usbh_pz = 17;
 mc_usbh_wx = 13;
 mc_usbh_wz = main_pcb_wh+mb_base_d;
+mc_ts_wx = 1.2;
+mc_ts_wy = 4;
 mc_mh_pz_st = 5;
 mc_mh_pxl = [main_pcb_wx/2-sensor_pcb_wx*0.05+mb_base_w_ox-sb_base_w_ox,main_pcb_wx/2-sensor_pcb_wx*0.95+mb_base_w_ox-sb_base_w_ox];
 mc_mh_py = mb_base_wy_o+mt_base_d_eff+mc_cc_wy+2*bevel_w-mc_mh_wr_s;
@@ -331,11 +333,21 @@ module cover_main() {
             cylinder(h=main_pcb_wh+mb_base_d-mc_mh_pz_st+bevel_w,r=mc_mh_wr_st);
             translate([mc_mh_px-mc_mh_wr_st,mc_mh_py,mc_mh_pz_st])
             cube([2*mc_mh_wr_st,mb_base_wy_o+mt_base_d_eff+mc_cc_wy+2*bevel_w-mc_mh_py,main_pcb_wh+mb_base_d-mc_mh_pz_st+bevel_w]);
+            // main cover top supports
+            for (px_wy=[[-mb_base_wx_o/2+mb_base_er_wx+cover_tol,mc_ts_wy],[mc_mh_pxl[1]-mc_ts_wx/2,mc_ts_wy+cover_channel_width],[mc_mh_pxl[0]-mc_ts_wx/2,mc_ts_wy+cover_channel_width]]) {
+              translate([px_wy[0],mb_base_wy_o+mt_base_d_eff+cover_tol+bevel_w-mc_ts_wy,mb_base_d-ovr])
+              cube([mc_ts_wx,px_wy[1]+ovr,main_pcb_wh+2*ovr]);
+            }
           }
         }
+      union() {
         // main cover p1 (same as above)
         translate([mc_p1_px-bevel_w,0,0])
         cube([sb_base_wx_o+2*bevel_w,mb_base_wy_o+mt_base_d_eff+mc_cc_wy+2*bevel_w,main_pcb_wh+mb_base_d+bevel_w]);
+        // main cover p2 (same as above)
+        translate([-mb_base_wx_o/2-bevel_w,0,0])
+        cube([mb_base_wx_o+2*bevel_w,mb_base_wy_o+mt_base_d_eff+2*bevel_w,main_pcb_wh+mb_base_d+bevel_w]);
+      }
       }
       union() {
         for (mc_mh_px=mc_mh_pxl) {
