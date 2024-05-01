@@ -660,6 +660,7 @@ class TopWindow:
         whitebox_horizontal_spacing = (
             self.display_settings_dialog.whitebox_horizontal_spacing_variable.get()
         )
+        blackbox_border = self.display_settings_dialog.blackbox_border_variable.get()
         calibration_mode = self.display_settings_dialog.calibration_mode_variable.get()
         display_osd_timestamp = (
             self.display_settings_dialog.display_osd_timestamp_variable.get()
@@ -960,6 +961,7 @@ class TopWindow:
             "whitebox-horizontal-spacing", whitebox_horizontal_spacing
         )
         self.pageflipglsink.set_property("whitebox-size", whitebox_size)
+        self.pageflipglsink.set_property("blackbox-border", blackbox_border)
         self.pageflipglsink.set_property("display-osd-timestamp", display_osd_timestamp)
 
         self.pageflipglsink.set_property("subtitle-font", subtitle_font)
@@ -1227,19 +1229,23 @@ if __name__ == "__main__":
                                     "display",
                                     top_window.display_settings_dialog.calibration_mode_variable,
                                 ),
-                                "white_box_vertical_position": (
+                                "whitebox_vertical_position": (
                                     "display",
                                     top_window.display_settings_dialog.whitebox_vertical_position_variable,
                                 ),
-                                "white_box_horizontal_position": (
+                                "whitebox_horizontal_position": (
                                     "display",
                                     top_window.display_settings_dialog.whitebox_horizontal_position_variable,
                                 ),
-                                "white_box_horizontal_spacing": (
+                                "whitebox_horizontal_spacing": (
                                     "display",
                                     top_window.display_settings_dialog.whitebox_horizontal_spacing_variable,
                                 ),
-                                "white_box_size": (
+                                "blackbox_border": (
+                                    "display",
+                                    top_window.display_settings_dialog.blackbox_border_variable,
+                                ),
+                                "whitebox_size": (
                                     "display",
                                     top_window.display_settings_dialog.whitebox_size_variable,
                                 ),
