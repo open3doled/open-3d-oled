@@ -18,7 +18,7 @@
 /* [TV Settings:] */
 
 // Screen bezel to pixel height dimension (lgc155=11)
-tv_bezel_to_pixels_vertical_distance = 11.0;
+tv_bezel_to_pixels_vertical_distance = 11;
 /*
   11 mm - LG C1 OLED and Sony XBR-48A9S Bezel Only
   14 mm - LG C1 OLED and MMK 55MBL-EL Screen protector
