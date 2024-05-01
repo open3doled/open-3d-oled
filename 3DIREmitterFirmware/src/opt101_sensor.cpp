@@ -57,7 +57,6 @@ uint16_t opt101_reading_counter = 0;
 uint16_t opt101_duplicate_frames_counter = 0;
 uint16_t opt101_premature_frames_counter = 0;
 
-uint16_t opt101_channel_frequency_detection_counter[OPT101_CHANNELS];
 volatile uint8_t opt101_readings[OPT101_CHANNELS];
 uint8_t opt101_readings_high[OPT101_CHANNELS];
 uint8_t opt101_readings_low[OPT101_CHANNELS];
@@ -123,7 +122,6 @@ void opt101_sensor_Init(void)
     opt101_reading_counter = 0;
     opt101_duplicate_frames_counter = 0;
     opt101_premature_frames_counter = 0;
-    memset((void *)opt101_channel_frequency_detection_counter, 0, sizeof(opt101_channel_frequency_detection_counter));
 
     memset((void *)opt101_readings_last, 0, sizeof(opt101_readings_last));
     #ifdef OPT101_FILTER_ADC_SIGNAL
@@ -172,7 +170,6 @@ void opt101_sensor_PrintStats(void)
             opt101_ss_premature_frames_counter = opt101_premature_frames_counter;
             for (int ch = 0; ch < OPT101_CHANNELS; ch++)
             {
-                opt101_ss_channel_frequency_detection_counter[ch] = opt101_channel_frequency_detection_counter[ch];
                 opt101_ss_readings[ch] = opt101_readings[ch];
                 opt101_ss_readings_high[ch] = opt101_readings_high[ch];
                 opt101_ss_readings_low[ch] = opt101_readings_low[ch];
@@ -180,6 +177,7 @@ void opt101_sensor_PrintStats(void)
             }
             opt101_sensor_UpdateThresholds();
             opt101_sensor_ClearStats();
+            break;
         case 1*OPT101_STATS_SERIAL_OUTPUT_FREQUENCY:
             Serial.print("+stats general reading_counter:");
             Serial.print(opt101_ss_reading_counter);
@@ -387,7 +385,6 @@ void opt101_sensor_CheckReadings(void)
                     else {
                         ir_signal_process_opt101(opt101_detected_signal_start_eye, false);
                     }
-                    opt101_channel_frequency_detection_counter[opt101_detected_signal_start_eye] += 1;
                     opt101_initiated_sending_ir_signal = true;
                     break;
                 }
@@ -518,7 +515,6 @@ void opt101_sensor_ClearStats(void)
     opt101_reading_counter = 0;
     opt101_duplicate_frames_counter = 0;
     opt101_premature_frames_counter = 0;
-    memset((void *)opt101_channel_frequency_detection_counter, 0, sizeof(opt101_channel_frequency_detection_counter));
     memset((void *)opt101_readings_high, 0, sizeof(opt101_readings_high));
     memset((void *)opt101_readings_low, 255, sizeof(opt101_readings_low));
 }

@@ -394,31 +394,33 @@ class PageflipGLWindow(threading.Thread):
 
     def __destroy_overlay_boxes(self):
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.__overlay_box_black_vertex_buffer)
-        gl.glDeleteBuffers(1, self.__overlay_box_black_vertex_buffer)
+        gl.glDeleteBuffers(1, int(self.__overlay_box_black_vertex_buffer))
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.__overlay_box_white_left_vertex_buffer)
-        gl.glDeleteBuffers(1, self.__overlay_box_white_left_vertex_buffer)
+        gl.glDeleteBuffers(1, int(self.__overlay_box_white_left_vertex_buffer))
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
         gl.glBindBuffer(
             gl.GL_ARRAY_BUFFER, self.__overlay_box_white_right_vertex_buffer
         )
-        gl.glDeleteBuffers(1, self.__overlay_box_white_right_vertex_buffer)
+        gl.glDeleteBuffers(1, int(self.__overlay_box_white_right_vertex_buffer))
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
         gl.glBindBuffer(
             gl.GL_ARRAY_BUFFER, self.__overlay_box_calibration_reticule_vertex_buffer
         )
-        gl.glDeleteBuffers(1, self.__overlay_box_calibration_reticule_vertex_buffer)
+        gl.glDeleteBuffers(
+            1, int(self.__overlay_box_calibration_reticule_vertex_buffer)
+        )
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.__overlay_box_black_color_buffer)
-        gl.glDeleteBuffers(1, self.__overlay_box_black_color_buffer)
+        gl.glDeleteBuffers(1, int(self.__overlay_box_black_color_buffer))
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.__overlay_box_white_color_buffer)
-        gl.glDeleteBuffers(1, self.__overlay_box_white_color_buffer)
+        gl.glDeleteBuffers(1, int(self.__overlay_box_white_color_buffer))
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
         gl.glBindBuffer(
             gl.GL_ARRAY_BUFFER, self.__overlay_box_calibration_reticule_color_buffer
         )
-        gl.glDeleteBuffers(1, self.__overlay_box_calibration_reticule_color_buffer)
+        gl.glDeleteBuffers(1, int(self.__overlay_box_calibration_reticule_color_buffer))
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
 
     def __update_overlay_boxes(self):
