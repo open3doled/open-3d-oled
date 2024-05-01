@@ -23,6 +23,7 @@ DEFAULT_WHITEBOX_VERTICAL_POSITION = "0"
 DEFAULT_WHITEBOX_HORIZONTAL_POSITION = "0"
 DEFAULT_WHITEBOX_SIZE = "13"
 DEFAULT_WHITEBOX_HORIZONTAL_SPACING = "23"
+DEFAULT_BLACKBOX_BORDER = "10"
 DEFAULT_CALIBRATION_MODE = False
 DEFAULT_DISPLAY_OSD_TIMESTAMP = False
 DEFAULT_DISABLE_3D_ON_MOUSE_MOVE_UNDER_WINDOWS = True
@@ -60,6 +61,8 @@ class DisplaySettingsDialog:
         self.whitebox_horizontal_spacing_variable.set(
             DEFAULT_WHITEBOX_HORIZONTAL_SPACING
         )
+        self.blackbox_border_variable = tkinter.StringVar(parent)
+        self.blackbox_border_variable.set(DEFAULT_BLACKBOX_BORDER)
         self.calibration_mode_variable = tkinter.BooleanVar(parent)
         self.calibration_mode_variable.set(DEFAULT_CALIBRATION_MODE)
         self.display_osd_timestamp_variable = tkinter.BooleanVar(parent)
@@ -318,6 +321,25 @@ class DisplaySettingsDialog:
         self.whitebox_size_frame.grid(row=row_count, column=0, sticky="w")
         row_count += 1
 
+        self.blackbox_border_frame = tkinter.Frame(top)
+        self.blackbox_border_label = tkinter.Label(
+            self.blackbox_border_frame, text="Blackbox Border: "
+        )
+        self.blackbox_border_label.pack(padx=5, side=tkinter.LEFT)
+        self.blackbox_border_entry = tkinter.Entry(
+            self.blackbox_border_frame,
+            textvariable=self.blackbox_border_variable,
+        )
+        self.blackbox_border_entry.pack(padx=5, side=tkinter.LEFT)
+        self.blackbox_border_tooltip = idlelib.tooltip.Hovertip(
+            self.blackbox_border_frame,
+            f"The width of the black border that blocks the underlying movie content from interferring with detection of the trigger whiteboxes.  \nIt is roughly equivalent to mm when display size is correctly configured. \n(default {DEFAULT_BLACKBOX_BORDER})",
+            hover_delay=100,
+        )
+        # self.blackbox_border_frame.pack()
+        self.blackbox_border_frame.grid(row=row_count, column=0, sticky="w")
+        row_count += 1
+
         self.calibration_mode_frame = tkinter.Frame(top)
         self.calibration_mode_label = tkinter.Label(
             self.calibration_mode_frame, text="Calibration Mode: "
@@ -442,6 +464,7 @@ class DisplaySettingsDialog:
                 "whitebox_horizontal_position": self.whitebox_horizontal_position_variable.get(),
                 "whitebox_size": self.whitebox_size_variable.get(),
                 "whitebox_horizontal_spacing": self.whitebox_horizontal_spacing_variable.get(),
+                "blackbox_border": self.blackbox_border_variable.get(),
                 "calibration_mode": self.calibration_mode_variable.get(),
                 "display_osd_timestamp": self.display_osd_timestamp_variable.get(),
                 "disable_3d_on_mouse_move_under_windows": self.disable_3d_on_mouse_move_under_windows_variable.get(),
@@ -504,6 +527,9 @@ class DisplaySettingsDialog:
                 "whitebox_horizontal_spacing", DEFAULT_WHITEBOX_HORIZONTAL_SPACING
             )
         )
+        self.blackbox_border_variable.set(
+            settings.get("blackbox_border", DEFAULT_BLACKBOX_BORDER)
+        )
         self.calibration_mode_variable.set(
             settings.get("calibration_mode", DEFAULT_CALIBRATION_MODE)
         )
@@ -554,6 +580,9 @@ class DisplaySettingsDialog:
             )
             self.main_app.pageflipglsink.set_property(
                 "whitebox-size", self.whitebox_size_variable.get()
+            )
+            self.main_app.pageflipglsink.set_property(
+                "blackbox-border", self.blackbox_border_variable.get()
             )
             self.main_app.pageflipglsink.set_property(
                 "display-osd-timestamp", self.display_osd_timestamp_variable.get()
