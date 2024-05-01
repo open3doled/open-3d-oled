@@ -338,6 +338,11 @@ class StartVideoDialog:
             default_selection = 1
         else:
             return
+        default_config_right_eye = (
+            StartVideoDialog.get_video_history_default_settings()["right_eye"]
+        )
+        if default_config_right_eye in new_menu_options:
+            default_selection = new_menu_options.index(default_config_right_eye)
         menu = self.right_eye_option_menu["menu"]
         menu.delete(0, "end")
         for menu_option in new_menu_options:
