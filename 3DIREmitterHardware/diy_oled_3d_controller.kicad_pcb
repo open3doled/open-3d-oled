@@ -1881,7 +1881,7 @@
 				)
 			)
 		)
-		(property "Value" "100nF"
+		(property "Value" "47pF"
 			(at 0 1.43 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -2204,7 +2204,7 @@
 				)
 			)
 		)
-		(property "Value" "100nF"
+		(property "Value" "47pF"
 			(at 0 1.43 -90)
 			(layer "F.Fab")
 			(hide yes)
@@ -3005,7 +3005,7 @@
 				)
 			)
 		)
-		(property "Value" "10k"
+		(property "Value" "510k"
 			(at 0 1.43 -90)
 			(layer "F.Fab")
 			(hide yes)
@@ -8642,7 +8642,7 @@
 				)
 			)
 		)
-		(property "Value" "10k"
+		(property "Value" "510k"
 			(at 0 1.43 90)
 			(layer "F.Fab")
 			(hide yes)

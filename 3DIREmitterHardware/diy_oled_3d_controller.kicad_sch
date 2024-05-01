@@ -6648,7 +6648,7 @@
 				(justify right)
 			)
 		)
-		(property "Value" "10k"
+		(property "Value" "510k"
 			(at 199.39 31.7499 0)
 			(effects
 				(font
@@ -7354,7 +7354,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "100nF"
+		(property "Value" "47pF"
 			(at 208.28 63.4999 0)
 			(effects
 				(font
@@ -8750,7 +8750,7 @@
 				(justify right)
 			)
 		)
-		(property "Value" "10k"
+		(property "Value" "510k"
 			(at 199.39 63.4999 0)
 			(effects
 				(font
@@ -9250,7 +9250,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "100nF"
+		(property "Value" "47pF"
 			(at 208.28 31.7499 0)
 			(effects
 				(font
