@@ -610,22 +610,32 @@ class StartVideoDialog:
             ".*[_\-\.](((full)|(f))[_\-\.]?)((ou)|(tab))[_\-\.].*", filename, re.I
         ):
             return "over-and-under-full"
+        partial_match = False
         half_or_not = True
         if re.match(".*[_\-\.]((full)|f)[_\-\.].*", filename):
             half_or_not = False
+            partial_match = True
         if re.match(".*[_\-\.]((half)|h)[_\-\.].*", filename):
             half_or_not = True
+            partial_match = True
         side_by_side_or_over_and_under = True
         if re.match(
             ".*[_\-\.]((ou)|(over[_\-\.]?(and)?[_\-\.]?under)|(tab)|(top[_\-\.]?(and)?[_\-\.]?bottom))[_\-\.].*",
             filename,
         ):
             side_by_side_or_over_and_under = False
+            partial_match = True
         if re.match(
             ".*[_\-\.]((sbs)|(side[_\-\.]?(by)?[_\-\.]?side))[_\-\.].*", filename
         ):
             side_by_side_or_over_and_under = True
-        return f"{'side-by-side' if side_by_side_or_over_and_under else 'over-and-under'}-{'half' if half_or_not else 'full'}"
+            partial_match = True
+        if partial_match:
+            return f"{'side-by-side' if side_by_side_or_over_and_under else 'over-and-under'}-{'half' if half_or_not else 'full'}"
+        else:
+            return StartVideoDialog.get_video_history_default_settings()[
+                "frame_packing"
+            ]
 
     @staticmethod
     def get_video_history_default_settings():
