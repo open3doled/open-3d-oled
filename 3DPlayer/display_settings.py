@@ -284,7 +284,7 @@ class DisplaySettingsDialog:
 
         self.whitebox_horizontal_spacing_frame = tkinter.Frame(top)
         self.whitebox_horizontal_spacing_label = tkinter.Label(
-            self.whitebox_horizontal_spacing_frame, text="Whitebox Horozontal Spacing: "
+            self.whitebox_horizontal_spacing_frame, text="Whitebox Horizontal Spacing: "
         )
         self.whitebox_horizontal_spacing_label.pack(padx=5, side=tkinter.LEFT)
         self.whitebox_horizontal_spacing_entry = tkinter.Entry(
