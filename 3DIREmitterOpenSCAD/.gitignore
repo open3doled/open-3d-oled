@@ -1,3 +1,7 @@
 *.x3g
 *.3mf
 *.gcode
+0105a.stl
+0201a.json
+0201a_base.stl
+0201a_cover_*.stl
