@@ -152,9 +152,10 @@ Not Working (Untested)
 8) Now when you use the program on a screen with High DPI scaling the software should function with all necessary elements at the correct size.
 ```
 * HDMI bitstream audio passthrough may have issues on some computers, if you are having difficulty it is recommended to disable HDMI audio passthrough and confirm the audio works on your local PC.
-* For test videos beyond the calibration videos below are some recommendations
+* For test videos beyond the calibration videos below are some recommendations (note the mvc mkv files will only work under PotPlayer currently).
 ```
    http://bbb3d.renderfarming.net/download.html
+   https://kodi.wiki/view/Samples#3D_Test_Clips
 ```
 * If gstreamer cannot initiate playback on a playback pipeline it will timeout after 15 seconds.
 * GStreamer has difficulty processing matroska packed videos with multi-language audio streams that have 5.1 or 7.1 channel audio, removing all but the language you want from the file can solve playback issues. This can be performed with ffmpeg as follows.
