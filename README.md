@@ -15,7 +15,24 @@ In the future custom firmware images that are optimized for software pageflippin
 * If you are using Panasonic Gen3 (TY-EW3D3XX) glasses, ONLY use a micro-usb power cable (like the one included), do not use a micro-usb cable with data lines or you will destroy the right shutter element  from DC bias.
 * I didn't design the hardware for these glasses so unfortunately I cannot fix this issue, anything more than 1-2 seconds risks damaging them so always check the shutter elements when you plug them in and unplug it quickly, just incase you are using the wrong cable. (please be careful).
 
-## Installation Instructions:
+## Getting Started
+
+### Configuring TV or Monitor
+* Set your TV to 1080p 120hz (this system should work with 4K 120hz but hasn't been tested yet)
+* If you are using an AMD graphics card and your TV switches to ALLM (adaptive low latency mode) you will need to disable ALLM as detailed in the FAQ below.
+* On LG TV's you need to set OLED Motion Pro to the maximum value.
+* On Sony TV's you need to set Motion Flow Clearness setting to MAX
+* If you are using a high refresh rate monitor you will benefit from looking into QFT (HDMI quick frame transport) see [instructions](3DPlayer/settings/viewsonic_xg2431/how_to_setup_custom_resolution_with_quick_frame_transport.txt).
+
+### Calibration and Playback
+* Linux
+ * Install 3DPlayer as described below.
+* Windows
+ * If you are using a display and glasses for which both an emitter_settings.json and display_settings.json file is available under the settings folder you can skip installing 3DPlayer and use [PotPlayer](PotPlayer/README.md) directly.
+ * It is still recommended to install the 3DPlayer if you have time to ensure optimal calibration.
+ * If either your glasses or display don't have a settings.json file you will need to install 3DPlayer as described below to perform calibration of the emitter and screen parameters.
+
+## 3DPlayer Installation Instructions:
 
 ### Ubuntu Install:
 * First time installation
@@ -57,14 +74,6 @@ If running windows 11 or 10 with DPI scaling be sure to disable it as follows.
 3) At the very bottom check the box next to the text "Override high DPI scaling behavior. Scaling performed: Application"
 4) Click OK on this sub dialog as well as the parent one
 
-## Getting Started
-
-### Configuring TV and Computer
-* Set your TV to 1080p 120hz (this system should work with 4K 120hz but hasn't been tested yet)
-* If you are using an AMD graphics card and your TV switches to ALLM (adaptive low latency mode) you will need to disable ALLM as detailed in the FAQ below.
-* On LG TV's you need to set OLED Motion Pro to the maximum value.
-* On Sony TV's you need to set Motion Flow Clearness setting to MAX
-
 ### Calibration
 
 * Put the sensor bar on the top right corner of your TV and connect it to the PC you will be using to play your 3D videos.
@@ -101,6 +110,10 @@ Windows (in command prompt):
 3d_player.exe --video-path ./videos/ghosting_test_video_1080p_red_left_blue_right_side_by_side_full.mp4 --frame-packing side-by-side-full --right-eye right --display-resolution 1920x1080
 3d_player.exe --video-path "C:\open-3d-oled\3DPlayer\videos\ghosting_test_video_1080p_red_left_blue_right_side_by_side_full.mp4" --frame-packing side-by-side-full --right-eye right --display-resolution 1920x1080
 ```
+
+## PotPlayer
+For those who want the best and most versatile playback performnce on Windows it is recommended to use [PotPlayer](PotPlayer/README.md). 
+Click [here](PotPlayer/README.md) for instructions on how to setup and PotPlayer.
     
 ## FAQ, Useful Commands and Tips
 * Supported TVs
@@ -123,7 +136,8 @@ Not Working (Untested)
  - LG C3/G3 OLED (Missing 120hz BFI)
 ```
 * If you are using a non OLED display or a display for which settings are not already available it is recommended that you set "OPT101 Ignore All Duplicates" to 1 under Emitter Settings. This will ensure the highest possibility the emitter can synchronize to your TV, at the cost of not being able to detect duplicate frames and inform the glasses to resynchornize immediately. It will typically result in a resynchronization delay of 1-2 frames on a duplicate frame, you may be able to get satisfactory results without using this by tuning "OPT101 Block Signal Detection Delay" and "OPT101 Block N Subsequent Duplicates" to match your display characteristics.
-* If you are using an LCD you will want to use HDMI QFT "Quick Frame Transport" to force a long blanking interval between frames. You basically run the monitor clock at for example 240hz but only send 120hz of data. That way 50% of the time the monitor will not be updating the physical screen. During this time the shutter glasses will open and show an image with minimal ghosting.
+* If you are using an LCD you will want to use HDMI QFT "Quick Frame Transport" (if available) to force a long blanking interval between frames. You basically run the monitor clock at for example 240hz but only send 120hz of data. That way 50% of the time the monitor will not be updating the physical screen. During this time the shutter glasses will open and show an image with minimal ghosting. Take a look at these [instructions](3DPlayer/settings/viewsonic_xg2431/how_to_setup_custom_resolution_with_quick_frame_transport.txt) for more details of how to enable this.
+```
 * If you display supports BFI and it is an LCD make sure the BFI is phase synchronized to the actual refresh rate. I do not believe this is actually done on many monitors. Even Viewsonic XG2431 doesn't phase synchronize it and you need to do this manually using the blurbusters tool. Unless the BFI/strobing is phase synchronized you may be better to just turn it off.
 * Performance is best on Linux (tested on Ubuntu 20.04 an 22.04) followed by Windows 10 then Windows 11. I haven't tested on Windows 7.
 * On Windows 11 when using a 4k display sometimes Windows decides to use "Active Signal Mode" resolution of 4k and have a "Display Resolution" of 1080p. This confuses the software so make sure your "Active signal mode" and "Display Resolution" match at either 1080P or 4K. Most users will not want to change this as it will cause text to be tiny on your PC but there is a workaround where this setting can be applied only to the 3d_player software, the following steps detail that process.
