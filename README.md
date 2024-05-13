@@ -26,11 +26,11 @@ In the future custom firmware images that are optimized for software pageflippin
 
 ### Calibration and Playback
 * Linux
- * Install 3DPlayer as described below.
+  * Install 3DPlayer as described below.
 * Windows
- * If you are using a display and glasses for which both an emitter_settings.json and display_settings.json file is available under the settings folder you can skip installing 3DPlayer and use [PotPlayer](PotPlayer/README.md) directly.
- * It is still recommended to install the 3DPlayer if you have time to ensure optimal calibration.
- * If either your glasses or display don't have a settings.json file you will need to install 3DPlayer as described below to perform calibration of the emitter and screen parameters.
+  * If you are using a display and glasses for which both an emitter_settings.json and display_settings.json file is available under the settings folder you can skip installing 3DPlayer and use [PotPlayer](PotPlayer/README.md) directly.
+  * It is still recommended to install the 3DPlayer if you have time to ensure optimal calibration.
+  * If either your glasses or display don't have a settings.json file you will need to install 3DPlayer as described below to perform calibration of the emitter and screen parameters.
 
 ## 3DPlayer Installation Instructions:
 
@@ -87,8 +87,8 @@ If running windows 11 or 10 with DPI scaling be sure to disable it as follows.
 * Click the "Open a video file for playback" icon button on the main toolbar, then click the "Select" button next to "Video File" and from the videos directory choose the file "test_video_red_left_blue_right.mp4" then click "Open"
 * Use F11 or the "Toggle fullscreen" icon button on the main toolbar to make the video fullscreen if it does not automatically go fullscreen
 * Perform calibration using the onscreen callibration instructions paying consideration to the following points
- * Position the emitter and trigger boxes.
- * Adjust timing with a goal of either optimizing for zero ghosting (with some minor vignetting at top and bottom) or vignetting (with some minor ghosting at top and bottom).
+  * Position the emitter and trigger boxes.
+  * Adjust timing with a goal of either optimizing for zero ghosting (with some minor vignetting at top and bottom) or vignetting (with some minor ghosting at top and bottom).
 * When you are happy with the calibration settings you can press the escape key to close the video or F11 to minimize the playback window.
 * Next navigate back to the emitter settings window, you should see that "Frame Delay" and "Frame Duration" have no been updated to the optimized values obtained during calibration.
 * Click "Save Settings to EEPROM" to make these settings persist next time your power up the 3d emitter.
@@ -185,46 +185,46 @@ Not Working (Untested)
 
 ### Windows Developer Install:
 ```
- - install msys2 (https://stackoverflow.com/questions/37460073/msys-vs-mingw-internal-environment-variables)
- - follow steps at https://pygobject.readthedocs.io/en/latest/getting_started.html
- - open ucrt64 shell
- - pacman -S git
- - git clone https://github.com/open3doled/open-3d-oled.git 
- - due to potential issues with the latest msys2 packages not working a copy of the latest working pacman database files are provided it is recommended you copy them over if you are having difficulty getting a build to work
-  - cp -rf open-3d-oled/3DPlayer/building/msys2_pacman_db_files/* /var/lib/pacman/sync
- - pacman -Su (you can use "pacman -Suy" here to update your database files if you are trying to build using the latest packages otherwise omit the y option) (you will need to restart your ucrt64 shell after this)
- - pacman -Su
- - pacman -S mingw-w64-ucrt-x86_64-gtk4 mingw-w64-ucrt-x86_64-python3 mingw-w64-ucrt-x86_64-python3-pip mingw-w64-ucrt-x86_64-python3-gobject mingw-w64-ucrt-x86_64-python-pygame mingw-w64-ucrt-x86_64-python-pyopengl mingw-w64-ucrt-x86_64-python-pyopengl-accelerate mingw-w64-ucrt-x86_64-python-numpy mingw-w64-ucrt-x86_64-python-cffi mingw-w64-ucrt-x86_64-python-wheel mingw-w64-ucrt-x86_64-python-pillow mingw-w64-ucrt-x86_64-python-pyusb mingw-w64-ucrt-x86_64-python-pyserial 
- - pacman -S mingw-w64-ucrt-x86_64-gstreamer mingw-w64-ucrt-x86_64-gst-devtools mingw-w64-ucrt-x86_64-gst-plugins-base mingw-w64-ucrt-x86_64-gst-plugin-gtk mingw-w64-ucrt-x86_64-gst-plugins-bad mingw-w64-ucrt-x86_64-gst-plugins-bad-libs mingw-w64-ucrt-x86_64-gst-plugins-good mingw-w64-ucrt-x86_64-gst-plugins-ugly mingw-w64-ucrt-x86_64-gst-python mingw-w64-ucrt-x86_64-gst-libav
- - pacman -S mingw-w64-ucrt-x86_64-python-psutil
- - pip install pysrt cairosvg pyinstaller pysdl2
- - building libgstpython.dll (https://gstreamer.freedesktop.org/documentation/installing/building-from-source-using-meson.html?gi-language=python)
-  - pacman -S git mingw-w64-ucrt-x86_64-meson-python mingw-w64-ucrt-x86_64-cc mingw-w64-ucrt-x86_64-meson mingw-w64-ucrt-x86_64-ninja mingw-w64-ucrt-x86_64-pkg-config mingw-w64-ucrt-x86_64-pygobject-devel mingw-w64-ucrt-x86_64-python
-  - git clone https://gitlab.freedesktop.org/gstreamer/gstreamer.git
-  - cd gstreamer
-  - git checkout 1.22.9
-  - cd subprojects/gst-python/
-  - meson build
-  - cd build
-  - ninja
-  - cp plugin/libgstpython.dll /ucrt64/lib/gstreamer-1.0/libgstpython.dll
- - cd open-3d-oled/3DPlayer
- - fix to ensure gst-plugin-scanner.exe builds a valid gstreamer plugin cache including our python plugin.
-  - export PYTHONLEGACYWINDOWSDLLLOADING=1
- - test the application
-  - python3 3d_player.py
+  - install msys2 (https://stackoverflow.com/questions/37460073/msys-vs-mingw-internal-environment-variables)
+  - follow steps at https://pygobject.readthedocs.io/en/latest/getting_started.html
+  - open ucrt64 shell
+  - pacman -S git
+  - git clone https://github.com/open3doled/open-3d-oled.git 
+  - due to potential issues with the latest msys2 packages not working a copy of the latest working pacman database files are provided it is recommended you copy them over if you are having difficulty getting a build to work
+    - cp -rf open-3d-oled/3DPlayer/building/msys2_pacman_db_files/* /var/lib/pacman/sync
+  - pacman -Su (you can use "pacman -Suy" here to update your database files if you are trying to build using the latest packages otherwise omit the y option) (you will need to restart your ucrt64 shell after this)
+  - pacman -Su
+  - pacman -S mingw-w64-ucrt-x86_64-gtk4 mingw-w64-ucrt-x86_64-python3 mingw-w64-ucrt-x86_64-python3-pip mingw-w64-ucrt-x86_64-python3-gobject mingw-w64-ucrt-x86_64-python-pygame mingw-w64-ucrt-x86_64-python-pyopengl mingw-w64-ucrt-x86_64-python-pyopengl-accelerate mingw-w64-ucrt-x86_64-python-numpy mingw-w64-ucrt-x86_64-python-cffi mingw-w64-ucrt-x86_64-python-wheel mingw-w64-ucrt-x86_64-python-pillow mingw-w64-ucrt-x86_64-python-pyusb mingw-w64-ucrt-x86_64-python-pyserial 
+  - pacman -S mingw-w64-ucrt-x86_64-gstreamer mingw-w64-ucrt-x86_64-gst-devtools mingw-w64-ucrt-x86_64-gst-plugins-base mingw-w64-ucrt-x86_64-gst-plugin-gtk mingw-w64-ucrt-x86_64-gst-plugins-bad mingw-w64-ucrt-x86_64-gst-plugins-bad-libs mingw-w64-ucrt-x86_64-gst-plugins-good mingw-w64-ucrt-x86_64-gst-plugins-ugly mingw-w64-ucrt-x86_64-gst-python mingw-w64-ucrt-x86_64-gst-libav
+  - pacman -S mingw-w64-ucrt-x86_64-python-psutil
+  - pip install pysrt cairosvg pyinstaller pysdl2
+  - building libgstpython.dll (https://gstreamer.freedesktop.org/documentation/installing/building-from-source-using-meson.html?gi-language=python)
+    - pacman -S git mingw-w64-ucrt-x86_64-meson-python mingw-w64-ucrt-x86_64-cc mingw-w64-ucrt-x86_64-meson mingw-w64-ucrt-x86_64-ninja mingw-w64-ucrt-x86_64-pkg-config mingw-w64-ucrt-x86_64-pygobject-devel mingw-w64-ucrt-x86_64-python
+    - git clone https://gitlab.freedesktop.org/gstreamer/gstreamer.git
+    - cd gstreamer
+    - git checkout 1.22.9
+    - cd subprojects/gst-python/
+    - meson build
+    - cd build
+    - ninja
+    - cp plugin/libgstpython.dll /ucrt64/lib/gstreamer-1.0/libgstpython.dll
+  - cd open-3d-oled/3DPlayer
+  - fix to ensure gst-plugin-scanner.exe builds a valid gstreamer plugin cache including our python plugin.
+    - export PYTHONLEGACYWINDOWSDLLLOADING=1
+  - test the application
+    - python3 3d_player.py
+   
   
+  - if you run into issues where it says "Unable to find/initialize GStreamer plugin GSTPageflipGLSink." try deleting the gstreamer plugin registry
+    - rm "C:\Users\[USERNAME]\AppData\Local\Microsoft\Windows\INetCache\gstreamer-1.0\registry.x86_64-mingw.bin"
  
- - if you run into issues where it says "Unable to find/initialize GStreamer plugin GSTPageflipGLSink." try deleting the gstreamer plugin registry
-  - rm "C:\Users\[USERNAME]\AppData\Local\Microsoft\Windows\INetCache\gstreamer-1.0\registry.x86_64-mingw.bin"
- 
- - If you run into issues about "ImportError('DLL load failed while importing _gi: The specified module could not be found.'))" try either of the following
-  - export PYTHONLEGACYWINDOWSDLLLOADING=1
-  - mv /ucrt64/libexec/gstreamer-1.0/gst-plugin-scanner.exe /ucrt64/libexec/gstreamer-1.0/gst-plugin-scanner.exe.bak
-  
- - If the application fails with an error about Gst bad types make sure you don't have reminants from a pyinstaller build still around
-  - rm -rf ~/open-3d-oled/3DPlayer/build
-  - rm -rf ~/open-3d-oled/3DPlayer/dist
+  - If you run into issues about "ImportError('DLL load failed while importing _gi: The specified module could not be found.'))" try either of the following
+    - export PYTHONLEGACYWINDOWSDLLLOADING=1
+    - mv /ucrt64/libexec/gstreamer-1.0/gst-plugin-scanner.exe /ucrt64/libexec/gstreamer-1.0/gst-plugin-scanner.exe.bak
+   
+  - If the application fails with an error about Gst bad types make sure you don't have reminants from a pyinstaller build still around
+    - rm -rf ~/open-3d-oled/3DPlayer/build
+    - rm -rf ~/open-3d-oled/3DPlayer/dist
 ```
   
 ### Windows Standalone Application Build Instructions:

@@ -19,11 +19,11 @@ Additionally it includes optional plugins to improve video quality using SVP mot
 
 ### Install AVISynth+
 * First download and install the main AVISynth 2.6 32bit software
- * Download from https://www.videohelp.com/software/Avisynth
- * Install with default settings
+  * Download from https://www.videohelp.com/software/Avisynth
+  * Install with default settings
 * Next install AVISynth 2.6 MT replacement plugin for improved performance
- * Download from https://forum.doom9.org/showthread.php?t=148782
- * Extract avisynth.dll from the 7zip file over your file in C:\Windows\SysWOW64
+  * Download from https://forum.doom9.org/showthread.php?t=148782
+  * Extract avisynth.dll from the 7zip file over your file in C:\Windows\SysWOW64
 
 ### Install PotPlayer
 Download and install PotPlayer 32 bit from
@@ -35,20 +35,20 @@ When it completes PotPlayer will auto-launch by default (unless you disabled it)
 ## PotPlayer 3D Setup
 * Open up Preferences by hitting F5
 * Navigate to "Video"
- * Change "Fullscreen exclusive mode" to "Enable: A little slow (gui support)"
+  * Change "Fullscreen exclusive mode" to "Enable: A little slow (gui support)"
 * Navigate to "Video -> 3D Mode" 
- * Select the checkbox next to "Enable H.264 MVC 3D Decoder"
- * Change "Output Mode" to "Synthesized View: SBS at full resolution"
- * Change "3D Video Mode" to "Enable 3D Video Mode"
- * Change "Input (Source)" to "SBS (Side by Side)"
- * Check "Full resolution"
- * Change "Output (Screen)" to "Shutter Glasses (Page Flipping)"
- * Check "Auto detect 3D input format (based on filename suffixes ...)"
-* Navigate to "Video -> AVI Synth"
- * Check "Enable AviSynth processing"
- * Click on "Load script -> Load script from a file"
- * Select the file "trigger_box_overlay.avs" from this folder and "Open"
- * Change the parameters at the top of the script to match those from 3d player TV Settings that you obtained from calibration.
+  * Select the checkbox next to "Enable H.264 MVC 3D Decoder"
+  * Change "Output Mode" to "Synthesized View: SBS at full resolution"
+  * Change "3D Video Mode" to "Enable 3D Video Mode"
+  * Change "Input (Source)" to "SBS (Side by Side)"
+  * Check "Full resolution"
+  * Change "Output (Screen)" to "Shutter Glasses (Page Flipping)"
+  * Check "Auto detect 3D input format (based on filename suffixes ...)"
+ * Navigate to "Video -> AVI Synth"
+  * Check "Enable AviSynth processing"
+  * Click on "Load script -> Load script from a file"
+  * Select the file "trigger_box_overlay.avs" from this folder and "Open"
+  * Change the parameters at the top of the script to match those from 3d player TV Settings that you obtained from calibration.
 ```
 # these are the same values from 3d player under the display settings
 display_size  = 24
@@ -66,7 +66,7 @@ assume_for_half = "half_sbs" # "half_sbs" ? "half_tab"
 
 ## Playing 3D Blu-rays
 * Start Xreveal (or DVDFab Passkey) if it isn't already running.
-1) Open -> Open Blu-ray
+* Open -> Open Blu-ray
 
 ## Subtitles
 Currently it isn't possible to get stereo subtitles to work 
