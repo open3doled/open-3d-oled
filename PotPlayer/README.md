@@ -47,7 +47,7 @@ When it completes PotPlayer will auto-launch by default (unless you disabled it)
 * Navigate to "Video -> AVI Synth"
   * Check "Enable AviSynth processing"
   * Click on "Load script -> Load script from a file"
-  * Select the file "trigger_box_overlay.avs" from this folder and "Open"
+  * Select the file "[trigger_box_overlay.avs](/PotPlayer/trigger_box_overlay.avs)" from this folder and "Open"
   * Change the parameters at the top of the script to match those from 3d player TV Settings that you obtained from calibration.
 ```
 # these are the same values from 3d player under the display settings
