@@ -1554,6 +1554,14 @@ class PageflipGLWindow(threading.Thread):
                 and self.__disable_3d_on_mouse_move_under_windows
             ):
                 overlay_box_white_vertex_buffer = None
+                if self.__left_or_bottom_page:
+                    subtitle_depth_shift = (
+                        0 if self.__calibration_mode else self.__subtitle_depth
+                    )
+                else:
+                    subtitle_depth_shift = (
+                        0 if self.__calibration_mode else -self.__subtitle_depth
+                    )
             else:
                 if self.__right_eye in ("right", "top"):
                     if self.__left_or_bottom_page:
