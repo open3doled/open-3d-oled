@@ -63,6 +63,7 @@ blackbox_border = 7
 # assume half is sbs or tab (when we get a half tab or half sbs video we can't tell which is which)
 assume_for_half = "half_sbs" # "half_sbs" ? "half_tab"
 ```
+  * The "assume_for_half" parameter is used to define the default oreintation side-by-side top-and-bottom when half width or half height content will be played as there is no way to make this determination from the resolution alone.
 
 ## Playing 3D Blu-rays
 * Start Xreveal (or DVDFab Passkey) if it isn't already running.
