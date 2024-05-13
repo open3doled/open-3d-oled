@@ -7,7 +7,7 @@ The setup of such a system is provided in the steps below.
 
 ## Add Support for Blu-ray On the Fly Playback (Optional)
 * Install Xreveal from https://www.xreveal.com/how-to-use-xreveal.html (this is the recommended technique as it is 100% free to use)
-* If you are not comfortable using Xreveal DVDFab Passkey lite also works until the trial runs out, at which point you will only be able to play older 3d blu-ray until you buy a license.
+* DVDFab Passkey lite also works until the trial runs out, at which point you will only be able to play older 3d blu-ray until you buy a license.
 
 ## Install PotPlayer via ThreeDeeJay Installer Script (Includes all AVISynth and MVC Plugins)
 The following github repository has a prebuilt installer that will allow you to install PotPlayer with AVISynth and basic MVC/Bluray support.
@@ -44,7 +44,7 @@ When it completes PotPlayer will auto-launch by default (unless you disabled it)
   * Check "Full resolution"
   * Change "Output (Screen)" to "Shutter Glasses (Page Flipping)"
   * Check "Auto detect 3D input format (based on filename suffixes ...)"
- * Navigate to "Video -> AVI Synth"
+* Navigate to "Video -> AVI Synth"
   * Check "Enable AviSynth processing"
   * Click on "Load script -> Load script from a file"
   * Select the file "trigger_box_overlay.avs" from this folder and "Open"
