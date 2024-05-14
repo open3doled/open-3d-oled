@@ -141,7 +141,6 @@ Not Working (Untested)
 * If you display supports BFI and it is an LCD make sure the BFI is phase synchronized to the actual refresh rate. I do not believe this is actually done on many monitors. Even Viewsonic XG2431 doesn't phase synchronize it and you need to do this manually using the blurbusters tool. Unless the BFI/strobing is phase synchronized you may be better to just turn it off.
 * Performance is best on Linux (tested on Ubuntu 20.04 an 22.04) followed by Windows 10 then Windows 11. I haven't tested on Windows 7.
 * On Windows 11 when using a 4k display sometimes Windows decides to use "Active Signal Mode" resolution of 4k and have a "Display Resolution" of 1080p. This confuses the software so make sure your "Active signal mode" and "Display Resolution" match at either 1080P or 4K. Most users will not want to change this as it will cause text to be tiny on your PC but there is a workaround where this setting can be applied only to the 3d_player software, the following steps detail that process.
-```
 1) right click on the 3d_player.exe and goto "Properties"
 2) select the compatabillity tab from the top
 3) down near the bottom click the button "Change high DPI settings"
