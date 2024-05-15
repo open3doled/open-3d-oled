@@ -1,7 +1,7 @@
 # Open3DOLED - PotPlayer
 
 ## Introduction
-PPotPlayer is a windows media player that support H264 MVC decoding and also supports Direct3D9 Ex Flip Mode and Overlay.
+PotPlayer is a windows media player that support H264 MVC decoding and also supports Direct3D9 Ex Flip Mode and Overlay.
 This provides the optimal set of tools to allow you to play 3D Blurays directly from discs with zero flicker due to dropped frames.
 The setup of such a system is provided in the steps below.
 
