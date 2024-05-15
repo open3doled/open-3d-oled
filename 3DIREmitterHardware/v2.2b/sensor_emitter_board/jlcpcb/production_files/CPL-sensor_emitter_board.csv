@@ -1,0 +1,8 @@
+Designator,Val,Package,Mid X,Mid Y,Rotation,Layer
+C3,47pF,C_0603_1608Metric_Pad1.08x0.95mm_HandSolder,110.0,-104.8625,90.0,top
+C4,47pF,C_0603_1608Metric_Pad1.08x0.95mm_HandSolder,99.5,-103.5375,-90.0,top
+Q1,AO3400A,SOT-23,112.05,-96.9375,-90.0,top
+R1,1000,R_0603_1608Metric_Pad0.98x0.95mm_HandSolder,112.0875,-93.5,180.0,top
+R2,510k,R_0603_1608Metric_Pad0.98x0.95mm_HandSolder,112.0,-104.9125,-90.0,top
+R3,510k,R_0603_1608Metric_Pad0.98x0.95mm_HandSolder,97.5,-103.5875,90.0,top
+U4,MCP6022-I_SN,SOIC127P599X175-8N,104.5,-104.675,0.0,top
