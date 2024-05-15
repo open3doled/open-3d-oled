@@ -4,13 +4,13 @@
 
 /*
 *
-* 3D IR Emitter Mount
+* 3D IR Emitter Mount V1.1
 *
 * Version 0101a: first attempt
-* Version 0102a: lots of changes
-* Version 0103a: added optional spacer for ir cut filter 10x10x0.55mm https://www.aliexpress.com/item/1005002502760553.html
-* Version 0104a: revised ir cut filter to be on inside with no adhesive and minimal black backing
-* Version 0105a: added alignment markers for calibration assistance mode
+* Version 0101b: lots of changes
+* Version 0101c: added optional spacer for ir cut filter 10x10x0.55mm https://www.aliexpress.com/item/1005002502760553.html
+* Version 0101e: revised ir cut filter to be on inside with no adhesive and minimal black backing
+* Version 0101d: added alignment markers for calibration assistance mode
 * 
 * Todo:
 *  - 
