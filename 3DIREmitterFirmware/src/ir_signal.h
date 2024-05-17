@@ -20,10 +20,12 @@ typedef enum {
   SIGNAL_MODE_RIGHT_AND_LEFT,
   SIGNAL_MODE_RIGHT_ONLY,
   SIGNAL_MODE_LEFT_ONLY,
+  SIGNAL_OPEN_RIGHT_CLOSE_LEFT,
+  SIGNAL_OPEN_LEFT_CLOSE_RIGHT,
 } ir_signal_type;
 
 
-extern uint8_t ir_glasses_selected;
+extern volatile uint8_t ir_glasses_selected;
 extern volatile uint16_t ir_frame_duration;
 extern volatile uint16_t ir_frame_delay; 
 extern volatile uint16_t ir_signal_spacing;

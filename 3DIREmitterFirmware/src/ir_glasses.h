@@ -11,7 +11,7 @@
 // Token patterns from this paper, but corrected, 2012-28-woods-helliwell-cross-compatibility_of_shutter_glasses.pdf
 
 #define MAX_IR_SIGNAL_TIMINGS 15
-#define NUM_IR_SIGNAL_TYPES 10
+#define NUM_IR_SIGNAL_TYPES 12
 
 typedef struct
 {
@@ -24,6 +24,23 @@ typedef struct
 typedef struct
 {
   uint8_t signal_count;
+  /*
+    Valid Signal Indices:
+      0: [DUMMY]
+      1: [SIGNAL_OPEN_RIGHT]
+      2: [SIGNAL_CLOSE_RIGHT]
+      3: [SIGNAL_OPEN_LEFT]
+      4: [SIGNAL_CLOSE_LEFT]
+      3: [SIGNAL_OPEN_LEFT]
+      4: [SIGNAL_CLOSE_LEFT]
+      5: [SIGNAL_OPEN_RIGHT_FAST_SWAP]
+      6: [SIGNAL_OPEN_LEFT_FAST_SWAP]
+      7: [SIGNAL_MODE_RIGHT_AND_LEFT]
+      8: [SIGNAL_MODE_RIGHT_ONLY]
+      9: [SIGNAL_MODE_LEFT_ONLY]
+      10: [SIGNAL_OPEN_RIGHT_CLOSE_LEFT]
+      11: [SIGNAL_OPEN_LEFT_CLOSE_RIGHT]
+  */
   uint8_t signal_index[NUM_IR_SIGNAL_TYPES];
   ir_signal_t signals[];
 } ir_glasses_signal_library_t;
@@ -33,13 +50,13 @@ const ir_glasses_signal_library_t ir_glasses_samsung07 = {
     /*
     // Needed to hard code this below due to compiler limitation.
     .signal_index = {
-      [SIGNAL_OPEN_RIGHT] = 0,
+      [SIGNAL_OPEN_RIGHT_CLOSE_LEFT] = 0,
       // You can skip the entries for signals that are not present in the library
     },
     //*/
-    .signal_index = {255, 0, 255, 255, 255, 255, 255, 255, 255, 255},
+    .signal_index = {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 255},
     .signals = {
-        // open_right_signal
+        // open_right_close_left_signal
         {
             .mode = 0, // haven't measured to check (there's only one token so it doesn't matter)
             .token_length = 66,
@@ -51,20 +68,20 @@ const ir_glasses_signal_library_t ir_glasses_xpand = {
     /*
     // Needed to hard code this below due to compiler limitation.
     .signal_index = {
-      [SIGNAL_OPEN_RIGHT] = 0,
-      [SIGNAL_OPEN_LEFT] = 1,
+      [SIGNAL_OPEN_RIGHT_CLOSE_LEFT] = 0,
+      [SIGNAL_OPEN_LEFT_CLOSE_RIGHT] = 1,
       // You can skip the entries for signals that are not present in the library
     },
     //*/
-    .signal_index = {255, 0, 255, 1, 255, 255, 255, 255, 255, 255},
+    .signal_index = {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 1},
     .signals = {
-        // open_right_signal
+        // open_right_close_left_signal
         {
             .mode = 0, // haven't measured to check (token lengths are roughly the same though so it shouldn't matter)
             .token_length = 94,
             .size = 5,
             .timings = {18, 20, 18, 20, 18}},
-        // open_left_signal
+        // open_left_close_right_signal
         {
             .mode = 0,
             .token_length = 96,
@@ -85,7 +102,7 @@ const ir_glasses_signal_library_t ir_glasses_3dvision = {
       // You can skip the entries for signals that are not present in the library
     },
     //*/
-    .signal_index = {255, 0, 1, 2, 3, 255, 255, 255, 255, 255},
+    .signal_index = {255, 0, 1, 2, 3, 255, 255, 255, 255, 255, 255, 255},
     .signals = {
         // open_right_signal
         {
@@ -117,20 +134,20 @@ const ir_glasses_signal_library_t ir_glasses_sharp = {
     /*
     // Needed to hard code this below due to compiler limitation.
     .signal_index = {
-      [SIGNAL_OPEN_RIGHT] = 0,
-      [SIGNAL_OPEN_LEFT] = 1,
+      [SIGNAL_OPEN_RIGHT_CLOSE_LEFT] = 0,
+      [SIGNAL_OPEN_LEFT_CLOSE_RIGHT] = 1,
       // You can skip the entries for signals that are not present in the library
     },
     //*/
-    .signal_index = {255, 0, 255, 1, 255, 255, 255, 255, 255, 255},
+    .signal_index = {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 1},
     .signals = {
-        // open_right_signal
+        // open_right_close_left_signal
         {
             .mode = 0, // haven't measured to check
             .token_length = 540,
             .size = 15,
             .timings = {20, 20, 20, 20, 20, 80, 20, 140, 20, 20, 20, 80, 20, 20, 20}},
-        // open_left_signal
+        // open_left_close_right_signal
         {
             .mode = 0,
             .token_length = 440,
@@ -151,7 +168,7 @@ const ir_glasses_signal_library_t ir_glasses_sony = {
       // You can skip the entries for signals that are not present in the library
     },
     //*/
-    .signal_index = {255, 0, 1, 2, 3, 255, 255, 255, 255, 255},
+    .signal_index = {255, 0, 1, 2, 3, 255, 255, 255, 255, 255, 255, 255},
     .signals = {
         // open_right_signal
         {
@@ -198,7 +215,7 @@ const ir_glasses_signal_library_t ir_glasses_panasonic = {
     // 3, 2, 1, 0 (inverted duty cycle dark vs light)
     // 3, 0, 1, 2 (left 90% dark right 90% dark)
     // 3, 1, 0, 2 (left 90% dark right 90% light)
-    .signal_index = {255, 0, 1, 2, 3},
+    .signal_index = {255, 0, 1, 2, 3, 255, 255, 255, 255, 255, 255, 255},
     .signals = {
         // open_right_signal
         {
@@ -243,7 +260,7 @@ const ir_glasses_signal_library_t ir_glasses_panasonic_custom = {
       // You can skip the entries for signals that are not present in the library
     },
     //*/
-    .signal_index = {255, 0, 1, 2, 3, 4, 5, 6, 7, 8},
+    .signal_index = {255, 0, 1, 2, 3, 4, 5, 6, 7, 8, 255, 255},
     .signals = {
         // open_right_signal
         {

@@ -8,7 +8,7 @@
 #include "ir_signal.h"
 #include "ir_glasses.h"
 
-uint8_t ir_glasses_selected = 6;
+volatile uint8_t ir_glasses_selected = 6;
 volatile uint16_t ir_frame_duration = IR_FRAME_DURATION;
 volatile uint16_t ir_frame_delay = IR_FRAME_DELAY;
 volatile uint16_t ir_signal_spacing = IR_SIGNAL_SPACING;
@@ -18,6 +18,8 @@ volatile bool ir_led_token_active = false;
 #endif
 
 const ir_glasses_signal_library_t* ir_glasses_selected_library;
+const ir_glasses_signal_library_t* ir_glasses_selected_library_sub_ir_signal_schedule_send_request;
+const ir_glasses_signal_library_t* ir_glasses_selected_library_sub_ir_signal_send;
 volatile ir_signal_type ir_signal_send_circular_queue[SIGNAL_SEND_QUEUE_SIZE];
 volatile uint8_t ir_signal_send_circular_queue_position = 0;
 volatile uint8_t ir_signal_send_circular_queue_end = 0;
@@ -96,25 +98,29 @@ void ir_signal_init() {
 */
 void ir_signal_send(ir_signal_type signal) {
 	uint8_t signal_index;
-	ir_glasses_selected_library = ir_glasses_available[ir_glasses_selected];
-	signal_index = ir_glasses_selected_library->signal_index[signal];
-	if (signal_index != 255 && signal_index < ir_glasses_selected_library->signal_count) {
-
+	ir_glasses_selected_library_sub_ir_signal_send = ir_glasses_selected_library_sub_ir_signal_schedule_send_request;
+	signal_index = ir_glasses_selected_library_sub_ir_signal_send->signal_index[signal];
+	if (signal_index != 255 && signal_index < ir_glasses_selected_library_sub_ir_signal_send->signal_count) {
+    ir_signal_send_current_signal = signal;
+		ir_signal_send_current_definition = &(ir_glasses_selected_library_sub_ir_signal_send->signals[signal_index]);
+    ir_signal_send_current_timings = ir_signal_send_current_definition->timings;
+		ir_signal_send_current_token_position = 1;
+		ir_signal_send_current_token_length = ir_signal_send_current_definition->size;
 		#ifdef ENABLE_DEBUG_PIN_OUTPUTS
-		if (signal == SIGNAL_OPEN_LEFT || signal == SIGNAL_OPEN_LEFT_FAST_SWAP)
+    if (signal == SIGNAL_OPEN_LEFT || signal == SIGNAL_OPEN_LEFT_CLOSE_RIGHT || signal == SIGNAL_OPEN_LEFT_FAST_SWAP)
 		{
 			bitSet(PORT_DEBUG_ACTIVATE_LEFT_D7, DEBUG_ACTIVATE_LEFT_D7);
 		}
-		else if (signal == SIGNAL_CLOSE_LEFT)
+		else if (signal == SIGNAL_OPEN_RIGHT_CLOSE_LEFT || signal == SIGNAL_CLOSE_LEFT)
 		{
 			bitClear(PORT_DEBUG_ACTIVATE_LEFT_D7, DEBUG_ACTIVATE_LEFT_D7);
 		  bitClear(PORT_DEBUG_PORT_D15, DEBUG_PORT_D15);
 		}
-		else if (signal == SIGNAL_OPEN_RIGHT || signal == SIGNAL_OPEN_RIGHT_FAST_SWAP)
+		if (signal == SIGNAL_OPEN_RIGHT || signal == SIGNAL_OPEN_RIGHT_CLOSE_LEFT || signal == SIGNAL_OPEN_RIGHT_FAST_SWAP)
 		{
 			bitSet(PORT_DEBUG_ACTIVATE_RIGHT_D8, DEBUG_ACTIVATE_RIGHT_D8);
 		}
-		else if (signal == SIGNAL_CLOSE_RIGHT)
+		else if (signal == SIGNAL_OPEN_LEFT_CLOSE_RIGHT || signal == SIGNAL_CLOSE_RIGHT)
 		{
 			bitClear(PORT_DEBUG_ACTIVATE_RIGHT_D8, DEBUG_ACTIVATE_RIGHT_D8);
 		  bitClear(PORT_DEBUG_PORT_D15, DEBUG_PORT_D15);
@@ -131,25 +137,41 @@ void ir_signal_send(ir_signal_type signal) {
     #endif
     #endif
     #endif
-    ir_signal_send_current_signal = signal;
-		ir_signal_send_current_definition = &(ir_glasses_selected_library->signals[signal_index]);
-    ir_signal_send_current_timings = ir_signal_send_current_definition->timings;
-		ir_signal_send_current_token_position = 1;
-		ir_signal_send_current_token_length = ir_signal_send_current_definition->size;
 		cli();
     TC4H = 0;
 		TCNT4 = 0;
     TC4H = 0x03; // set timer4 top value to 1023
     OCR4C = 0xFF;
     ir_signal_send_current_token_timing = ir_signal_send_current_timings[0];
-		TC4H = (ir_signal_send_current_token_timing >> 8) & 0xFF; // High byte of 10-bit value
-		OCR4A = ir_signal_send_current_token_timing & 0xFF; // Low byte of 10-bit value
-		bitSet(TIMSK4, OCIE4A); // Enable IR pulse falling edge interrupt
+    if (ir_signal_send_current_token_timing > 0) {
+      TC4H = (ir_signal_send_current_token_timing >> 8) & 0xFF; // High byte of 10-bit value
+      OCR4A = ir_signal_send_current_token_timing & 0xFF; // Low byte of 10-bit value
+      bitSet(TIMSK4, OCIE4A); // Enable IR pulse falling edge interrupt
+      bitSet(PORT_LED_IR_D3, LED_IR_D3);
+    } 
+    else {
+      if (ir_signal_send_current_token_position < ir_signal_send_current_token_length) {
+        ir_signal_send_current_token_timing += ir_signal_send_current_timings[ir_signal_send_current_token_position++];
+        TC4H = (ir_signal_send_current_token_timing >> 8) & 0xFF; // High byte of 10-bit value
+        OCR4B = ir_signal_send_current_token_timing & 0xFF; // Low byte of 10-bit value
+        bitSet(TIMSK4, OCIE4B); // Enable rising edge interrupt
+      } else {
+        ir_signal_send_current_token_timing += ir_signal_spacing;
+        TC4H = (ir_signal_send_current_token_timing >> 8) & 0xFF; // High byte of 10-bit value
+        OCR4D = ir_signal_send_current_token_timing & 0xFF; // Low byte of 10-bit value
+        bitSet(TIMSK4, OCIE4D); // Enable signal spacing period interrupt
+        #ifdef OPT101_ENABLE_IGNORE_DURING_IR
+        ir_led_token_active = false;
+        //#ifdef OPT101_ENABLE_IGNORE_DURING_IR_DEBUG_PIN_D2
+        //bitClear(PORT_DEBUG_PORT_D2, DEBUG_PORT_D2); // IR LED token ended
+        //#endif
+        #endif
+      }
+    }
 		TIFR4 = 0xFF; // Clear pending interrupts if any
 		TCCR4B = _BV(CS42) | _BV(CS40); // prescaler 16x
 		//TCCR4B = _BV(CS42); // prescaler 8x
 		sei();
-    bitSet(PORT_LED_IR_D3, LED_IR_D3);
 	} else {
 		// The selected glasses don't support the requested signal.
 		ir_signal_send_finished();
@@ -163,11 +185,13 @@ ISR(TIMER4_COMPA_vect) // IR pulse falling edge
 	if (ir_signal_send_current_token_position < ir_signal_send_current_token_length) {
     ir_signal_send_current_token_timing += ir_signal_send_current_timings[ir_signal_send_current_token_position++];
 		TC4H = (ir_signal_send_current_token_timing >> 8) & 0xFF; // High byte of 10-bit value
+	  bitSet(TIFR4, OCF4B); // Clear pending interrupt flags if any
 		OCR4B = ir_signal_send_current_token_timing & 0xFF; // Low byte of 10-bit value
 		bitSet(TIMSK4, OCIE4B); // Enable rising edge interrupt
 	} else {
 		ir_signal_send_current_token_timing += ir_signal_spacing;
 		TC4H = (ir_signal_send_current_token_timing >> 8) & 0xFF; // High byte of 10-bit value
+	  bitSet(TIFR4, OCF4D); // Clear pending interrupt flags if any
 		OCR4D = ir_signal_send_current_token_timing & 0xFF; // Low byte of 10-bit value
 		bitSet(TIMSK4, OCIE4D); // Enable signal spacing period interrupt
     #ifdef OPT101_ENABLE_IGNORE_DURING_IR
@@ -186,6 +210,7 @@ ISR(TIMER4_COMPB_vect) // IR pulse rising edge
 	ir_signal_send_current_token_timing += ir_signal_send_current_timings[ir_signal_send_current_token_position++];
 	if (TCNT4 < ir_signal_send_current_token_timing - 5) {
 		TC4H = (ir_signal_send_current_token_timing >> 8) & 0xFF; // High byte of 10-bit value
+	  bitSet(TIFR4, OCF4A); // Clear pending interrupt flags if any
 		OCR4A = ir_signal_send_current_token_timing & 0xFF; // Low byte of 10-bit value
 		bitSet(TIMSK4, OCIE4A); // Enable falling edge interrupt
 	}
@@ -194,6 +219,7 @@ ISR(TIMER4_COMPB_vect) // IR pulse rising edge
 		bitClear(PORT_LED_IR_D3, LED_IR_D3);
 		ir_signal_send_current_token_timing += ir_signal_spacing;
 		TC4H = (ir_signal_send_current_token_timing >> 8) & 0xFF; // High byte of 10-bit value
+	  bitSet(TIFR4, OCF4D); // Clear pending interrupt flags if any
 		OCR4D = ir_signal_send_current_token_timing & 0xFF; // Low byte of 10-bit value
 		bitSet(TIMSK4, OCIE4D); // Enable signal spacing period interrupt
 		#ifdef OPT101_ENABLE_IGNORE_DURING_IR
@@ -286,15 +312,16 @@ void ir_signal_schedule_send_request(ir_signal_type signal, uint16_t timer1_tcnt
   uint8_t scheduled_signal_index;
   const ir_signal_t* scheduled_signal_definition;
 
-  scheduled_signal_index = ir_glasses_selected_library->signal_index[signal];
-  if (scheduled_signal_index != 255 && scheduled_signal_index < ir_glasses_selected_library->signal_count) {
-    scheduled_signal_definition = &(ir_glasses_selected_library->signals[scheduled_signal_index]);
+  ir_glasses_selected_library_sub_ir_signal_schedule_send_request = ir_glasses_selected_library;
+  scheduled_signal_index = ir_glasses_selected_library_sub_ir_signal_schedule_send_request->signal_index[signal];
+  if (scheduled_signal_index != 255 && scheduled_signal_index < ir_glasses_selected_library_sub_ir_signal_schedule_send_request->signal_count) {
+    scheduled_signal_definition = &(ir_glasses_selected_library_sub_ir_signal_schedule_send_request->signals[scheduled_signal_index]);
     if (scheduled_signal_definition->mode == 1) {
       timer1_tcnt_target -= scheduled_signal_definition->token_length;
     }
   }
   
-  if (signal == SIGNAL_OPEN_LEFT || signal == SIGNAL_CLOSE_LEFT) {
+  if (signal == SIGNAL_OPEN_LEFT || signal == SIGNAL_CLOSE_LEFT || signal == SIGNAL_OPEN_LEFT_CLOSE_RIGHT) {
     if (ir_signal_next_timer1_compa_signal == SIGNAL_NONE) {
       cli();
       ir_signal_next_timer1_compa_signal = signal;
@@ -310,7 +337,7 @@ void ir_signal_schedule_send_request(ir_signal_type signal, uint16_t timer1_tcnt
       sei();
     }
   }
-  else if ((signal == SIGNAL_OPEN_RIGHT || signal == SIGNAL_CLOSE_RIGHT)) {
+  else if ((signal == SIGNAL_OPEN_RIGHT || signal == SIGNAL_CLOSE_RIGHT || signal == SIGNAL_OPEN_RIGHT_CLOSE_LEFT)) {
     if (ir_signal_next_timer1_compb_signal == SIGNAL_NONE) {
       cli();
       ir_signal_next_timer1_compb_signal = signal;
@@ -344,9 +371,9 @@ ISR(TIMER1_COMPA_vect)
     uint8_t scheduled_signal_index;
     const ir_signal_t* scheduled_signal_definition;
     uint16_t scheduled_signal_time_subtractor = 0;
-    scheduled_signal_index = ir_glasses_selected_library->signal_index[scheduled_signal];
-    if (scheduled_signal_index != 255 && scheduled_signal_index < ir_glasses_selected_library->signal_count) {
-      scheduled_signal_definition = &(ir_glasses_selected_library->signals[scheduled_signal_index]);
+    scheduled_signal_index = ir_glasses_selected_library_sub_ir_signal_schedule_send_request->signal_index[scheduled_signal];
+    if (scheduled_signal_index != 255 && scheduled_signal_index < ir_glasses_selected_library_sub_ir_signal_schedule_send_request->signal_count) {
+      scheduled_signal_definition = &(ir_glasses_selected_library_sub_ir_signal_schedule_send_request->signals[scheduled_signal_index]);
       if (scheduled_signal_definition->mode == 1) {
         scheduled_signal_time_subtractor = scheduled_signal_definition->token_length;
       }
@@ -374,9 +401,9 @@ ISR(TIMER1_COMPB_vect)
     uint8_t scheduled_signal_index;
     const ir_signal_t* scheduled_signal_definition;
     uint16_t scheduled_signal_time_subtractor = 0;
-    scheduled_signal_index = ir_glasses_selected_library->signal_index[scheduled_signal];
-    if (scheduled_signal_index != 255 && scheduled_signal_index < ir_glasses_selected_library->signal_count) {
-      scheduled_signal_definition = &(ir_glasses_selected_library->signals[scheduled_signal_index]);
+    scheduled_signal_index = ir_glasses_selected_library_sub_ir_signal_schedule_send_request->signal_index[scheduled_signal];
+    if (scheduled_signal_index != 255 && scheduled_signal_index < ir_glasses_selected_library_sub_ir_signal_schedule_send_request->signal_count) {
+      scheduled_signal_definition = &(ir_glasses_selected_library_sub_ir_signal_schedule_send_request->signals[scheduled_signal_index]);
       if (scheduled_signal_definition->mode == 1) {
         scheduled_signal_time_subtractor = scheduled_signal_definition->token_length;
       }
@@ -410,8 +437,19 @@ ISR(TIMER1_COMPC_vect)
  Schedule the open signal for the current frames eye.
 */
 void ir_signal_process_opt101(uint8_t left_eye, bool duplicate) {
+  ir_signal_type ir_desired_signal = (left_eye ^ ir_flip_eyes ? SIGNAL_OPEN_LEFT : SIGNAL_OPEN_RIGHT);
+  uint8_t desired_signal_index;
+  ir_glasses_selected_library = ir_glasses_available[ir_glasses_selected];
+  desired_signal_index = ir_glasses_selected_library->signal_index[ir_desired_signal];
+  if (desired_signal_index > ir_glasses_selected_library->signal_count || desired_signal_index == 255) {
+    ir_desired_signal = (left_eye ^ ir_flip_eyes ? SIGNAL_OPEN_LEFT_CLOSE_RIGHT : SIGNAL_OPEN_RIGHT_CLOSE_LEFT);
+    desired_signal_index = ir_glasses_selected_library->signal_index[ir_desired_signal];
+    if (desired_signal_index > ir_glasses_selected_library->signal_count || desired_signal_index == 255) {
+      return;
+    }
+  }
   cli();
   uint16_t current_tcnt1 = TCNT1;
   sei();
-  ir_signal_schedule_send_request(left_eye ^ ir_flip_eyes ? SIGNAL_OPEN_LEFT : SIGNAL_OPEN_RIGHT, current_tcnt1 + (ir_frame_delay << 1));
+  ir_signal_schedule_send_request(ir_desired_signal, current_tcnt1 + (ir_frame_delay << 1));
 }
