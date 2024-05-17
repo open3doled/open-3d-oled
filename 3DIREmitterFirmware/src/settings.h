@@ -146,10 +146,11 @@
 
 #define EEPROM_SETTING_ADDRESS 0
 #define EEPROM_SETTING_CHECKVALUE 0x3D3D3D3D
-#define EMITTER_VERSION 14
+#define EMITTER_VERSION 15
 
 /*
 Version History
+15 - Fixed handling of two token ir protocols
 14 - Removed all frequency analysis frame detection stuff for LCD's it was to complicated, and added ir_flip_eyes to support inverting the eye signals if frame_delay is triggering next frames eye instead
 13 - Improved sensor logging and added opt101_sensor_filter_mode
 12 - Added support for OPT101_IGNORE_ALL_DUPLICATES to help with displays with strange timings and PWM values
