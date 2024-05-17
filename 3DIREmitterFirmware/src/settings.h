@@ -134,15 +134,15 @@
 #define PORT_DEBUG_PORT_D15  PORTB
 
 /* Includes: */
-	#include <avr/io.h>
-	#include <avr/wdt.h>
-	#include <avr/power.h>
-	#include <avr/interrupt.h>
-	#include <avr/sfr_defs.h>
+  #include <avr/io.h>
+  #include <avr/wdt.h>
+  #include <avr/power.h>
+  #include <avr/interrupt.h>
+  #include <avr/sfr_defs.h>
     
 /* Util macros */
-	//#define bitSet(addr,bit) (addr |= (1<<bit))
-	//#define bitClear(addr,bit) (addr &= ~(1<<bit))
+  //#define bitSet(addr,bit) (addr |= (1<<bit))
+  //#define bitClear(addr,bit) (addr &= ~(1<<bit))
 
 #define EEPROM_SETTING_ADDRESS 0
 #define EEPROM_SETTING_CHECKVALUE 0x3D3D3D3D
@@ -158,24 +158,24 @@ Version History
 */
 
 struct EEPROMSettings {
-  uint32_t check_value;
-  uint8_t version;
-  uint8_t ir_glasses_selected;
-  uint16_t ir_frame_delay; 
-  uint16_t ir_frame_duration;
-  uint16_t ir_signal_spacing;
-  uint32_t opt101_block_signal_detection_delay;
-  uint32_t opt101_min_threshold_value_to_activate;
-  uint8_t opt101_detection_threshold;
-  uint8_t opt101_enable_ignore_during_ir;
-  uint8_t opt101_enable_duplicate_realtime_reporting;
-  uint8_t opt101_output_stats; // was opt101_enable_ignore_during_ir;
-  uint8_t opt101_block_n_subsequent_duplicates; // was opt101_enable_duplicate_realtime_reporting;
-  uint8_t opt101_ignore_all_duplicates; // was opt101_output_stats;
-  uint8_t opt101_sensor_filter_mode;
-  uint8_t ir_flip_eyes; // was opt101_block_n_subsequent_duplicates;
-  uint8_t empty_216; // was opt101_ignore_all_duplicates;
-  uint8_t empty_224; // was opt101_sensor_filter_mode;
+    uint32_t check_value;
+    uint8_t version;
+    uint8_t ir_glasses_selected;
+    uint16_t ir_frame_delay; 
+    uint16_t ir_frame_duration;
+    uint16_t ir_signal_spacing;
+    uint32_t opt101_block_signal_detection_delay;
+    uint32_t opt101_min_threshold_value_to_activate;
+    uint8_t opt101_detection_threshold;
+    uint8_t opt101_enable_ignore_during_ir;
+    uint8_t opt101_enable_duplicate_realtime_reporting;
+    uint8_t opt101_output_stats; // was opt101_enable_ignore_during_ir;
+    uint8_t opt101_block_n_subsequent_duplicates; // was opt101_enable_duplicate_realtime_reporting;
+    uint8_t opt101_ignore_all_duplicates; // was opt101_output_stats;
+    uint8_t opt101_sensor_filter_mode;
+    uint8_t ir_flip_eyes; // was opt101_block_n_subsequent_duplicates;
+    uint8_t empty_216; // was opt101_ignore_all_duplicates;
+    uint8_t empty_224; // was opt101_sensor_filter_mode;
 };
 
 #endif /* _SETTINGS_H_ */
