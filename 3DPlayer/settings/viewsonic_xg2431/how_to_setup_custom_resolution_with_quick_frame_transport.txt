@@ -33,27 +33,31 @@ Custom CVT Modelines:
 Format:
 custom followed by "name" pixel-mhz  hdisplay hsync_start hsync_end htotal  vdisplay vsync_start vsync_end vtotal  [±hsync] [±vsync] [interlace]
 
-1) 594 MHz @ 120hz (52% blanking) A
+1) 594 MHz @ 120hz (108.3% blanking) A
 xrandr --newmode "1920x1080_120.00_QFT"  594.00  1920 2008 2052 2200  1080 1084 1089 2250 +hsync +vsync
 xrandr --addmode HDMI-0 "1920x1080_120.00_QFT"
 
-2) 564.590 Mhz @ 120hz (53.5% blanking)
+2) 564.590 Mhz @ 120hz (114.8% blanking)
 xrandr --newmode "1920x1080_120.00_QFT"  564.59  1920 1943 1975 2030  1080 1137 1145 2320 +hsync +vsync
 xrandr --addmode HDMI-0 "1920x1080_120.00_QFT"
 
-3) 594 MHz Mhz @ 120hz (55.8% blanking) B
+3) 594 MHz Mhz @ 120hz (125.7% blanking) B
 xrandr --newmode "1920x1080_120.00_QFT"  594.00  1920 1943 1975 2030  1080 1084 1089 2438 +hsync +vsync
 xrandr --addmode HDMI-0 "1920x1080_120.00_QFT"
 
-4) 299.000MHz @ 120hz (12.0% blanking)
+4) 299.000MHz @ 120hz (13.6% blanking)
 xrandr --newmode "1920x1080_120.00_QFT"  299.00  1920 1943 1975 2030  1080 1084 1089 1227 +hsync +vsync
 xrandr --addmode HDMI-0 "1920x1080_120.00_QFT"
 
-5) 299.000MHz @ 100hz (26.7% blanking)
+5) 299.000MHz @ 100hz (36.3% blanking)
 xrandr --newmode "1920x1080_100.00_QFT"  299.00  1920 1943 1975 2030  1080 1084 1089 1472 +hsync +vsync
 xrandr --addmode HDMI-0 "1920x1080_100.00_QFT"
 
-6) 299.000MHz @ 90hz (34.0% blanking)
+5) 299.000MHz @ 96hz (42.0% blanking)
+xrandr --newmode "1920x1080_96.00_QFT"  299.00  1920 1943 1975 2030  1080 1084 1089 1534 +hsync +vsync
+xrandr --addmode HDMI-0 "1920x1080_96.00_QFT"
+
+6) 299.000MHz @ 90hz (51.5% blanking)
 xrandr --newmode "1920x1080_90.00_QFT"  299.00  1920 1943 1975 2030  1080 1084 1089 1636 +hsync +vsync
 xrandr --addmode HDMI-0 "1920x1080_90.00_QFT"
 
