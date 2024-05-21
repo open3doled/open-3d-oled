@@ -14,8 +14,8 @@
 #define OPT101_UPDATE_STAT_PERIOD 5000000 // in micros (frequency to update and optionally display stats for the opt101 sensor module)
 #define OPT101_FILTER_ADC_SIGNAL // This will adjust the code to function properly with the BPW34 photodiode which has no transimpedance amplifier and has an output voltage much closer to 150mV so it can be mistriggered by noise ir led triggering. (beta testers have reported this causes flickering on some pwm backlit displays (possibly because the flashing of the backlight is irratic, perhaps this needs to be a proper peramater disabling for now by default)) (only applies when setting variable is set as well)
 #ifndef ENABLE_DEBUG_PIN_OUTPUTS
-#define ENABLE_DEBUG_STATUS_LEDS // we are using the pads for the unused button footprints on D2, D4 and D5 to drive some status LEDs.
-#define ENABLE_DEBUG_STATUS_FLASH_D2_ON_STARTUP 10
+//#define ENABLE_DEBUG_STATUS_LEDS // we are using the pads for the unused button footprints on D2, D4 and D5 to drive some status LEDs.
+//#define ENABLE_DEBUG_STATUS_FLASH_D2_ON_STARTUP 10
 #endif
 #define NUMBER_OF_IR_PROTOCOLS 7
 
