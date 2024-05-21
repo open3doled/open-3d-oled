@@ -29,7 +29,7 @@ void setup()
     //Serial.begin(460800);
     Serial.println("+startup");
     bitSet(DDR_LED_IR_D3, LED_IR_D3);
-    //#ifdef ENABLE_DEBUG_PIN_OUTPUTS
+    #ifdef ENABLE_DEBUG_PIN_OUTPUTS
     //#if (defined(OPT101_ENABLE_IGNORE_DURING_IR) && defined(OPT101_ENABLE_IGNORE_DURING_IR_DEBUG_PIN_D2))
     bitSet(DDR_DEBUG_PORT_D2, DEBUG_PORT_D2);
     //#endif
@@ -43,7 +43,21 @@ void setup()
     bitSet(DDR_DEBUG_ACTIVATE_RIGHT_D8, DEBUG_ACTIVATE_RIGHT_D8);
     bitSet(DDR_DEBUG_DUPLICATE_FRAME_D16, DEBUG_DUPLICATE_FRAME_D16);
     bitSet(DDR_DEBUG_PREMATURE_FRAME_D14, DEBUG_PREMATURE_FRAME_D14);
-    //#endif
+    #endif
+    #ifdef ENABLE_DEBUG_STATUS_LEDS
+    bitSet(DDR_STATUS_LED_D2, STATUS_LED_D2);
+    bitSet(DDR_STATUS_LED_D4, STATUS_LED_D4);
+    bitSet(DDR_STATUS_LED_D5, STATUS_LED_D5);
+    #ifdef ENABLE_DEBUG_STATUS_FLASH_D2_ON_STARTUP
+    for (uint8_t i = 0; i < ENABLE_DEBUG_STATUS_FLASH_D2_ON_STARTUP; i++) 
+    {
+        bitSet(PORT_STATUS_LED_D2, STATUS_LED_D2);
+        delay(500);
+        bitClear(PORT_STATUS_LED_D2, STATUS_LED_D2);
+        delay(500);
+    }
+    #endif
+    #endif
     ir_signal_init();
     opt101_sensor_Init();
     EEPROMSettings eeprom_settings;

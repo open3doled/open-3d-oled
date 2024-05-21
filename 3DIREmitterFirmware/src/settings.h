@@ -5,7 +5,7 @@
 #ifndef _SETTINGS_H_
 #define _SETTINGS_H_
 
-#define ENABLE_DEBUG_PIN_OUTPUTS
+//#define ENABLE_DEBUG_PIN_OUTPUTS
 #define ENABLE_LOOP_TOGGLE_DEBUG_PIN_D9 // will toggle on/off every time the loop goes round
 #define OPT101_ENABLE_STREAM_READINGS_TO_SERIAL // adds code for command "10" to stream the opt101 readings for the left and right eye over serial to the computer (this is a debug mode, don't use at the same time as show stats or you will get garbled output)
 #define OPT101_ENABLE_IGNORE_DURING_IR // ignore opt101 sensor readings when LED is triggering due to power/light distortions that may cause opt101 sensor reading inconsistencies. (only applies when setting variable is set as well)
@@ -13,6 +13,10 @@
 #define OPT101_ENABLE_STATS // prints opt101 statistics every OPT101_UPDATE_STAT_PERIOD micros
 #define OPT101_UPDATE_STAT_PERIOD 5000000 // in micros (frequency to update and optionally display stats for the opt101 sensor module)
 #define OPT101_FILTER_ADC_SIGNAL // This will adjust the code to function properly with the BPW34 photodiode which has no transimpedance amplifier and has an output voltage much closer to 150mV so it can be mistriggered by noise ir led triggering. (beta testers have reported this causes flickering on some pwm backlit displays (possibly because the flashing of the backlight is irratic, perhaps this needs to be a proper peramater disabling for now by default)) (only applies when setting variable is set as well)
+#ifndef ENABLE_DEBUG_PIN_OUTPUTS
+#define ENABLE_DEBUG_STATUS_LEDS // we are using the pads for the unused button footprints on D2, D4 and D5 to drive some status LEDs.
+#define ENABLE_DEBUG_STATUS_FLASH_D2_ON_STARTUP 10
+#endif
 #define NUMBER_OF_IR_PROTOCOLS 7
 
 // defaults LCD 2560x1080 60hz
@@ -77,6 +81,9 @@
 #define DEBUG_PORT_D2      1
 #define DDR_DEBUG_PORT_D2  DDRD
 #define PORT_DEBUG_PORT_D2 PORTD
+#define STATUS_LED_D2       1
+#define DDR_STATUS_LED_D2   DDRD
+#define PORT_STATUS_LED_D2  PORTD
 
 // D3 (was D10)
 #define LED_IR_D3          0
@@ -87,11 +94,17 @@
 #define DEBUG_DETECTED_LEFT_D4        4
 #define DDR_DEBUG_DETECTED_LEFT_D4    DDRD
 #define PORT_DEBUG_DETECTED_LEFT_D4   PORTD
+#define STATUS_LED_D4       4
+#define DDR_STATUS_LED_D4   DDRD
+#define PORT_STATUS_LED_D4  PORTD
 
 // D5
 #define DEBUG_DETECTED_RIGHT_D5       6
 #define DDR_DEBUG_DETECTED_RIGHT_D5   DDRC
 #define PORT_DEBUG_DETECTED_RIGHT_D5  PORTC
+#define STATUS_LED_D5       6
+#define DDR_STATUS_LED_D5   DDRC
+#define PORT_STATUS_LED_D5  PORTC
 
 // D6
 #define DEBUG_PWM_READING_LEFT_D6       7
