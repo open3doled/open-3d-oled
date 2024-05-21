@@ -1,15 +1,15 @@
 # these are the same values from 3d player under the display settings
-display_size  = 24
-whitebox_brightness = 255
-whitebox_corner_position = "top_left"
-whitebox_vertical_position = -4
-whitebox_horizontal_position = -3
-whitebox_horizontal_spacing = 17
-whitebox_size = 13
-blackbox_border = 7
+display_size  = {display_size}
+whitebox_brightness = {whitebox_brightness}
+whitebox_corner_position = "{whitebox_corner_position}"
+whitebox_vertical_position = {whitebox_vertical_position}
+whitebox_horizontal_position = {whitebox_horizontal_position}
+whitebox_horizontal_spacing = {whitebox_horizontal_spacing}
+whitebox_size = {whitebox_size}
+blackbox_border = {blackbox_border}
 
 # assume half is sbs or tab (when we get a half tab or half sbs video we can't tell which is which)
-assume_for_half = "half_sbs" # "half_sbs" ? "half_tab"
+assume_for_half = "{assume_for_half}" # "half_sbs" ? "half_tab"
 
 # main script starts here
 clip = potplayer_source()
@@ -22,9 +22,9 @@ scale_y = (layout == "half_tab" ? 0.5 : 1.0)
 display_resolution_width = Int(clip.Width * (layout == "full_sbs" ? 0.5 : 1) * scale_x)
 display_resolution_height = Int(clip.Height * (layout == "full_tab" ? 0.5 : 1) * scale_y)
 
-function RoundInt(Float input) {
+function RoundInt(Float input) {{
     return Int(Float(input))
-}
+}}
 
 blackbox_blur_gradient_offset_ppc = 5
 whitebox_blur_gradient_offset_ppc = 2

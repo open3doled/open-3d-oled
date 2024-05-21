@@ -46,13 +46,14 @@ The setup of such a system is provided in the steps below.
 * Navigate to "Video -> AVI Synth"
   * Check "Enable AviSynth processing"
   * Click on "Load script -> Load script from a file"
-  * Select the file "[trigger_box_overlay.avs](/PotPlayer/trigger_box_overlay.avs)" from this folder and "Open"
-  * Change the parameters at the top of the script to match those from 3d player TV Settings that you obtained from calibration.
+  * If you have our native 3DPlayer installed you can generate the required scirpt by clicking "Generate PotPlayer AVISynth Script" under "Display Settings", then use the generated script with already populated parameters in place of the one discussed in teh following two steps.
+  * Select either the file "[trigger_box_overlay.avs](/PotPlayer/trigger_box_overlay.avs)" from this folder or the one you generated from 3DPlayer and click "Open"
+  * If you are using the standard template file instead of the custom generated one change the parameters at the top of the script to match those from 3d player TV Settings that you obtained from calibration, or tweak them manually until the trigger boxes are a satisfactory size and position.
 ```
 # these are the same values from 3d player under the display settings
 display_size  = 24
 whitebox_brightness = 255
-whitebox_position = "top_left" # currently only top_left is supported and this value is ignored
+whitebox_position = "top_left"
 whitebox_vertical_position = -4
 whitebox_horizontal_position = -3
 whitebox_horizontal_spacing = 17

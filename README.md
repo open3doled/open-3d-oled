@@ -31,6 +31,7 @@ In the future custom firmware images that are optimized for software pageflippin
   * If you are using a display and glasses for which both an emitter_settings.json and display_settings.json file is available under the settings folder you can skip installing 3DPlayer and use [PotPlayer](PotPlayer/README.md) directly.
   * It is still recommended to install the 3DPlayer if you have time to ensure optimal calibration.
   * If either your glasses or display don't have a settings.json file you will need to install 3DPlayer as described below to perform calibration of the emitter and screen parameters.
+  * Once calibration if you intend to use PotPlayer is complete save the required AVI-Synth script by clicking "Generate PotPlayer AVISynth Script" under "Display Settings", then load this script into PotPlayer.
 
 ## 3DPlayer Installation Instructions:
 

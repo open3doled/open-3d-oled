@@ -1297,7 +1297,7 @@ class EmitterSettingsDialog:
         file_name = tkinter.filedialog.asksaveasfilename(
             title="Save Emitter Settings to Disk",
             initialdir=os.path.join(self.main_app.base_path, "settings"),
-            filetypes=[("Emitter Settings FIle", "*.emitter_settings.json")],
+            filetypes=[("Emitter Settings File", "*.emitter_settings.json")],
             defaultextension=".emitter_settings.json",
         )
         if file_name:
@@ -1328,7 +1328,7 @@ class EmitterSettingsDialog:
         file_name = tkinter.filedialog.askopenfilename(
             title="Load Emitter Settings from Disk",
             initialdir=os.path.join(self.main_app.base_path, "settings"),
-            filetypes=[("Emitter Settings FIle", "*.emitter_settings.json")],
+            filetypes=[("Emitter Settings File", "*.emitter_settings.json")],
         )
         if file_name:
             f = open(file_name, "r")

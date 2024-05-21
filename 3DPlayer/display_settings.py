@@ -2,6 +2,7 @@ import os
 import json
 import tkinter  # @UnusedImport
 import tkinter.filedialog
+import tkinter.messagebox
 import idlelib.tooltip
 
 DECODER_PREFERENCE_DEFAULT = "default (GStreamers first choice)"
@@ -403,9 +404,9 @@ class DisplaySettingsDialog:
         )
         row_count += 1
 
-        self.action_button_frame_2 = tkinter.Frame(top)
+        self.action_button_frame_1 = tkinter.Frame(top)
         self.save_settings_to_disk_button = tkinter.Button(
-            self.action_button_frame_2,
+            self.action_button_frame_1,
             text="Save Settings to Disk",
             command=self.click_save_visible_settings_to_disk,
         )
@@ -416,7 +417,7 @@ class DisplaySettingsDialog:
             hover_delay=100,
         )
         self.load_settings_from_disk_button = tkinter.Button(
-            self.action_button_frame_2,
+            self.action_button_frame_1,
             text="Load Settings from Disk",
             command=self.click_load_visisble_settings_from_disk,
         )
@@ -426,6 +427,10 @@ class DisplaySettingsDialog:
             "Loads the display settings from the JSON file specified to the UI.",
             hover_delay=100,
         )
+        self.action_button_frame_1.grid(row=row_count, column=0, sticky="w")
+        row_count += 1
+
+        self.action_button_frame_2 = tkinter.Frame(top)
         self.apply_settings_to_active_video_button = tkinter.Button(
             self.action_button_frame_2,
             text="Apply Settings to Active Video",
@@ -437,16 +442,31 @@ class DisplaySettingsDialog:
             "Apply settings to an active video if there is one running.",
             hover_delay=100,
         )
+        self.generate_potplayer_avisynth_script_button = tkinter.Button(
+            self.action_button_frame_2,
+            text="Generate PotPlayer AVISynth Script",
+            command=self.click_generate_potplayer_avisynth_script,
+        )
+        self.generate_potplayer_avisynth_script_button.pack(padx=5, side=tkinter.LEFT)
+        self.generate_potplayer_avisynth_script_button_tooltip = idlelib.tooltip.Hovertip(
+            self.generate_potplayer_avisynth_script_button,
+            "Generate an AVISynth script for PotPlayer to display trigger boxes matching these settings.",
+            hover_delay=100,
+        )
+        self.action_button_frame_2.grid(row=row_count, column=0, sticky="w")
+        row_count += 1
+
+        self.action_button_frame_3 = tkinter.Frame(top)
         self.close_button = tkinter.Button(
-            self.action_button_frame_2, text="Close", command=self.click_close
+            self.action_button_frame_3, text="Close", command=self.click_close
         )
         self.close_button.pack(padx=5, side=tkinter.LEFT)
         self.close_button_tooltip = idlelib.tooltip.Hovertip(
             self.close_button,
-            "Closes this window.",
+            "Closes this window (settings will be auto saved to the defaults).",
             hover_delay=100,
         )
-        self.action_button_frame_2.grid(row=row_count, column=0, sticky="w")
+        self.action_button_frame_3.grid(row=row_count, column=0, sticky="w")
         row_count += 1
 
     def save_settings_to_file(self, file_name):
@@ -478,7 +498,7 @@ class DisplaySettingsDialog:
         file_name = tkinter.filedialog.asksaveasfilename(
             title="Save Display Settings to Disk",
             initialdir=os.path.join(self.main_app.base_path, "settings"),
-            filetypes=[("Display Settings FIle", "*.display_settings.json")],
+            filetypes=[("Display Settings File", "*.display_settings.json")],
             defaultextension=".display_settings.json",
         )
         if file_name:
@@ -591,6 +611,43 @@ class DisplaySettingsDialog:
                 "disable-3d-on-mouse-move-under-windows",
                 self.disable_3d_on_mouse_move_under_windows_variable.get(),
             )
+
+    def click_generate_potplayer_avisynth_script(self):
+        file_name = tkinter.filedialog.asksaveasfilename(
+            title="Generate and Save PotPlayer AVISynth Script to Disk",
+            initialdir=os.path.join(self.main_app.base_path, "settings"),
+            filetypes=[("AVISynth Script", "*.avs")],
+            defaultextension=".avs",
+        )
+        if file_name:
+            default_half_sbs_or_tab_to_sbs = tkinter.messagebox.askyesno(
+                title="Default Half Size to SBS or TAB",
+                message="When we encounter half SBS/TAB content which should we assume it to be?\nClick 'yes' to default to half-sbs\nClick 'no' to default to half-tab.",
+            )
+            settings = {
+                "display_size": self.display_size_variable.get(),
+                "whitebox_brightness": self.whitebox_brightness_variable.get(),
+                "whitebox_corner_position": self.whitebox_corner_position_variable.get(),
+                "whitebox_vertical_position": self.whitebox_vertical_position_variable.get(),
+                "whitebox_horizontal_position": self.whitebox_horizontal_position_variable.get(),
+                "whitebox_horizontal_spacing": self.whitebox_horizontal_spacing_variable.get(),
+                "whitebox_size": self.whitebox_size_variable.get(),
+                "blackbox_border": self.blackbox_border_variable.get(),
+                "assume_for_half": (
+                    "half_sbs" if default_half_sbs_or_tab_to_sbs else "half_tab"
+                ),  # "half_sbs" ? "half_tab"
+            }
+            with open(
+                os.path.join(
+                    self.main_app.base_path,
+                    "settings",
+                    "trigger_box_overlay.avs.template",
+                ),
+                "r",
+            ) as avs_template:
+                with open(file_name, "w") as avs_output:
+                    avs_file_data = str.format(avs_template.read(), **settings)
+                    avs_output.write(avs_file_data)
 
     def autosave_active_settings(self):
         self.save_settings_to_file(
