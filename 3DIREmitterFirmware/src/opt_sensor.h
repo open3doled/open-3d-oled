@@ -16,6 +16,7 @@ extern uint8_t opt_sensor_ignore_all_duplicates;
 extern uint8_t opt_sensor_filter_mode;
 extern uint8_t opt_sensor_min_threshold_value_to_activate;
 extern uint8_t opt_sensor_detection_threshold_high;
+extern uint8_t opt_sensor_detection_threshold_low;
 extern uint8_t opt_sensor_enable_ignore_during_ir;
 extern uint8_t opt_sensor_enable_duplicate_realtime_reporting;
 extern uint8_t opt_sensor_output_stats;

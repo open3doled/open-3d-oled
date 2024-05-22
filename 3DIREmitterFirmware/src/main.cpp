@@ -82,7 +82,7 @@ void setup()
             }
             if (eeprom_settings.version >= 12) 
             {
-                opt_sensor_ignore_all_duplicates = eeprom_settings.empty_216;
+                opt_sensor_ignore_all_duplicates = eeprom_settings.opt_sensor_detection_threshold_low;
             }
             if (eeprom_settings.version >= 13)
             {
@@ -105,6 +105,7 @@ void setup()
             opt_sensor_ignore_all_duplicates = eeprom_settings.opt_sensor_ignore_all_duplicates;
             opt_sensor_filter_mode = eeprom_settings.opt_sensor_filter_mode;
             ir_flip_eyes = eeprom_settings.ir_flip_eyes;
+            opt_sensor_detection_threshold_low = eeprom_settings.opt_sensor_detection_threshold_low;
         }
 
         Serial.println("eeprom read_settings");
@@ -171,6 +172,11 @@ void loop()
             *   the level (as a value between 1-255) above which an increasing light intensity is detected as the beggining of a new frame, 
             *   setting this lower will make the device aware of new frames earlier but also increase the likelihood of duplicate frame
             *   detection if the light intensity doesn't fall below this threshold before the opt_sensor_block_signal_detection_delay completes.
+            *   (default 128)
+            * 15) opt_sensor_detection_threshold_low - 
+            *   the level (as a value between 1-255) below which the opposite trigger sensor must be before any triggers are detected.
+            *   Setting this lower will ensure the device doesn't trigger while watching regular non stereoscopid content,
+            *   but if set too low may result in the unit not triggering when it should (default 32).
             * 13) opt_sensor_filter_mode -
             *   this is used to apply custom filtering to the ADC readings to try and eliminate spurious noise currently there are only two modes.
             *   0 - off, 1 - check that the last three readings are trending in the same direction
@@ -182,7 +188,7 @@ void loop()
             * 10) opt_sensor_output_stats -
             *   output statistics (if built with OPT_SENSOR_ENABLE_STATS) relating to how the opt_sensor module is processing all lines start with "+stats " followed by specific statistics.
             */
-            for (uint8_t p = 0; p < 18; p++) 
+            for (uint8_t p = 0; p < 19; p++) 
             {
                 end = input.indexOf(",", start);
                 if (end == 255) 
@@ -255,6 +261,10 @@ void loop()
                         {
                             ir_flip_eyes = temp;
                         }
+                        else if (p == 15) 
+                        {
+                            opt_sensor_detection_threshold_low = temp;
+                        }
                     }
                     else if (command == 7 && p == 1 && temp >= 0 && temp < 3) // update glasses mode
                     {
@@ -288,7 +298,8 @@ void loop()
                             opt_sensor_block_n_subsequent_duplicates,
                             opt_sensor_ignore_all_duplicates,
                             opt_sensor_filter_mode,
-                            ir_flip_eyes
+                            ir_flip_eyes,
+                            opt_sensor_detection_threshold_low
                         };
                         EEPROM.put(EEPROM_SETTING_ADDRESS, eeprom_settings);
                         Serial.println("OK");
@@ -336,7 +347,9 @@ void loop()
                 Serial.print(",");
                 Serial.print(opt_sensor_filter_mode);
                 Serial.print(",");
-                Serial.println(ir_flip_eyes);
+                Serial.print(ir_flip_eyes);
+                Serial.print(",");
+                Serial.println(opt_sensor_detection_threshold_low);
                 Serial.println("OK");
             }
             input = String();

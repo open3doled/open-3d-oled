@@ -113,10 +113,10 @@ class EmitterSerialLineReader(serial.threaded.LineReader):
 
             opt_duplicate_frame_left = 1 if (raw_bytes[0] & 0x20) else 0
             opt_ignore_duplicate_left = 1 if (raw_bytes[0] & 0x10) else 0
-            opt_reading_above_threshold_left = 1 if (raw_bytes[0] & 0x08) else 0
+            opt_reading_triggered_left = 1 if (raw_bytes[0] & 0x08) else 0
             opt_duplicate_frame_right = 1 if (raw_bytes[0] & 0x04) else 0
             opt_ignore_duplicate_right = 1 if (raw_bytes[0] & 0x02) else 0
-            opt_reading_above_threshold_right = 1 if (raw_bytes[0] & 0x01) else 0
+            opt_reading_triggered_right = 1 if (raw_bytes[0] & 0x01) else 0
             opt_readings_active = 1 if (raw_bytes[1] & 0x08) else 0
             opt_detected_signal_start_eye = 1 if (raw_bytes[1] & 0x04) else 0
             opt_initiated_sending_ir_signal = 1 if (raw_bytes[1] & 0x02) else 0
@@ -131,21 +131,21 @@ class EmitterSerialLineReader(serial.threaded.LineReader):
                     right_sent_ir = 1
             left_duplicate_detected = 0
             left_duplicate_ignored = 0
-            if opt_reading_above_threshold_left:
+            if opt_reading_triggered_left:
                 left_duplicate_detected = opt_duplicate_frame_left
                 if left_duplicate_detected:
                     left_duplicate_ignored = opt_ignore_duplicate_left
             right_duplicate_detected = 0
             right_duplicate_ignored = 0
-            if opt_reading_above_threshold_right:
+            if opt_reading_triggered_right:
                 right_duplicate_detected = opt_duplicate_frame_right
                 if right_duplicate_detected:
                     right_duplicate_ignored = opt_ignore_duplicate_right
             self.debug_stream_file.write(
                 f"{opt_current_time},{left_sensor},{right_sensor},{duplicate_frames_in_a_row_counter},"
                 f"{opt_block_signal_detection_until},{opt_readings_active},"
-                f"{opt_reading_above_threshold_left},{left_duplicate_detected},{left_duplicate_ignored},{left_sent_ir},"
-                f"{opt_reading_above_threshold_right},{right_duplicate_detected},{right_duplicate_ignored},{right_sent_ir}\n"
+                f"{opt_reading_triggered_left},{left_duplicate_detected},{left_duplicate_ignored},{left_sent_ir},"
+                f"{opt_reading_triggered_right},{right_duplicate_detected},{right_duplicate_ignored},{right_sent_ir}\n"
             )
         else:
             print("event received:", event)
@@ -1435,8 +1435,8 @@ class EmitterSettingsDialog:
                 self.main_app.emitter_serial.line_reader.debug_stream_file.write(
                     "opt_current_time,left_sensor,right_sensor,duplicate_frames_in_a_row_counter,"
                     "opt_block_signal_detection_until,opt_readings_active,"
-                    "opt_reading_above_threshold_left,left_duplicate_detected,left_duplicate_ignored,left_sent_ir,"
-                    "opt_reading_above_threshold_right,right_duplicate_detected,right_duplicate_ignored,right_sent_ir\n"
+                    "opt_reading_triggered_left,left_duplicate_detected,left_duplicate_ignored,left_sent_ir,"
+                    "opt_reading_triggered_right,right_duplicate_detected,right_duplicate_ignored,right_sent_ir\n"
                 )
 
             self.main_app.emitter_serial.line_reader.debug_opt_enable_stream_readings_to_serial = (

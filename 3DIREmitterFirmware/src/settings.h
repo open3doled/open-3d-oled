@@ -188,7 +188,7 @@ struct EEPROMSettings {
     uint8_t opt_sensor_ignore_all_duplicates; // was opt_sensor_output_stats;
     uint8_t opt_sensor_filter_mode;
     uint8_t ir_flip_eyes; // was opt_sensor_block_n_subsequent_duplicates;
-    uint8_t empty_216; // was opt_sensor_ignore_all_duplicates;
+    uint8_t opt_sensor_detection_threshold_low; // was opt_sensor_ignore_all_duplicates;
     uint8_t empty_224; // was opt_sensor_filter_mode;
 };
 
