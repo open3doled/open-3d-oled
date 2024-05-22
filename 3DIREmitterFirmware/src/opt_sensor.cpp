@@ -43,6 +43,7 @@ bool opt_sensor_initiated_sending_ir_signal = false;
 volatile uint8_t opt_sensor_channel = 0;
 bool opt_sensor_readings_active = false;
 bool opt_sensor_reading_triggered[OPT_SENSOR_CHANNELS];
+uint8_t opt_sensor_reading_triggered_count[OPT_SENSOR_CHANNELS];
 bool opt_sensor_ignore_duplicate[OPT_SENSOR_CHANNELS];
 bool opt_sensor_duplicate_frame[OPT_SENSOR_CHANNELS];
 uint16_t opt_sensor_duplicate_frames_in_a_row_counter = 0;
@@ -114,6 +115,7 @@ void opt_sensor_Init(void)
     opt_sensor_channel = 0;
     opt_sensor_readings_active = false;
     memset((void *)opt_sensor_reading_triggered, 0, sizeof(opt_sensor_reading_triggered));
+    memset((void *)opt_sensor_reading_triggered_count, 0, sizeof(opt_sensor_reading_triggered_count));
     memset((void *)opt_sensor_ignore_duplicate, 0, sizeof(opt_sensor_ignore_duplicate));
     memset((void *)opt_sensor_duplicate_frame, 0, sizeof(opt_sensor_duplicate_frame));
     opt_sensor_duplicate_frames_in_a_row_counter = 0;
@@ -243,7 +245,7 @@ void opt_sensor_PrintStats(void)
             Serial.print(opt_sensor_ss_readings_low[1]);
             break;
         case 18*OPT_SENSOR_STATS_SERIAL_OUTPUT_FREQUENCY:
-            Serial.print(" thr:");
+            Serial.print(" thr_h:");
             Serial.print(opt_sensor_ss_readings_threshold_high[1]);
             break;
         case 19*OPT_SENSOR_STATS_SERIAL_OUTPUT_FREQUENCY:
@@ -300,18 +302,22 @@ void opt_sensor_CheckReadings(void)
         {
             other_channel = (c == 1 ? 0 : 1);
             uint8_t last_reading = opt_sensor_readings_last[c];
-            opt_sensor_reading_triggered[c] = false;
             if (opt_sensor_readings_active)
             {
-                if (last_reading < checked_readings[c] && 
-                    checked_readings[c] >= opt_sensor_readings_threshold_high[c] &&
+                if (checked_readings[c] >= opt_sensor_readings_threshold_high[c] &&
                     checked_readings[other_channel] <= opt_sensor_readings_threshold_low[other_channel])
                 {
-                    opt_sensor_reading_triggered[c] = true;
+                    opt_sensor_reading_triggered_count[c]++;
+                    opt_sensor_reading_triggered_count[other_channel] = 0;
+                }
+                else 
+                {
+                    opt_sensor_reading_triggered_count[c] = 0;
                 }
             }
-            if (opt_sensor_reading_triggered[c])
+            if (opt_sensor_reading_triggered_count[c] > OPT_TRIGGER_COUNT_THRESHOLD)
             {
+                opt_sensor_reading_triggered[c] = true;
                 if (opt_sensor_current_time == 0)
                 {
                     opt_sensor_current_time = micros();
@@ -374,15 +380,21 @@ void opt_sensor_CheckReadings(void)
                     #endif
                     opt_sensor_detected_signal_start_eye = c;
                     opt_sensor_detected_signal_start_eye_set = true;
-                    if (opt_sensor_duplicate_frame[c]) {
+                    if (opt_sensor_duplicate_frame[c]) 
+                    {
                         ir_signal_process_opt_sensor(opt_sensor_detected_signal_start_eye, true);
                     }
-                    else {
+                    else 
+                    {
                         ir_signal_process_opt_sensor(opt_sensor_detected_signal_start_eye, false);
                     }
                     opt_sensor_initiated_sending_ir_signal = true;
                     break;
                 }
+            }
+            else 
+            {
+                opt_sensor_reading_triggered[c] = false;
             }
         }
     }
@@ -440,7 +452,7 @@ void opt_sensor_CheckReadings(void)
         buffer[11] = 0x80 | ((opt_sensor_current_time >> 7) & 0x7f);
         buffer[12] = 0x80 | ((opt_sensor_current_time >> 0) & 0x7f);
         Serial.write(buffer, 15);
-        // We only really need to clear these here, as tehre values aren't used in between loops except for sensor logging.
+        // We only really need to clear these here, as their values aren't used in between loops except for sensor logging.
         opt_sensor_initiated_sending_ir_signal = false;
         opt_sensor_duplicate_frame[1] = false;
         opt_sensor_ignore_duplicate[1] = false;

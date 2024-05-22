@@ -9,6 +9,7 @@
 #define OPT_SENSOR_MIN_THRESHOLD_VALUE_TO_ACTIVATE 10 // IR LED was triggering shutters while testing
 //#define OPT_SENSOR_MIN_THRESHOLD_VALUE_TO_ACTIVATE 15
 #define OPT_SENSOR_STATS_SERIAL_OUTPUT_FREQUENCY 25
+#define OPT_TRIGGER_COUNT_THRESHOLD 2 // We need this many triggers in a row before sending the shutter glass signal based on the trigger boxes
 
 extern uint32_t opt_sensor_block_signal_detection_delay;
 extern uint8_t opt_sensor_block_n_subsequent_duplicates;

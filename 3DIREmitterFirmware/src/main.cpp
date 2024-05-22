@@ -105,7 +105,10 @@ void setup()
             opt_sensor_ignore_all_duplicates = eeprom_settings.opt_sensor_ignore_all_duplicates;
             opt_sensor_filter_mode = eeprom_settings.opt_sensor_filter_mode;
             ir_flip_eyes = eeprom_settings.ir_flip_eyes;
-            opt_sensor_detection_threshold_low = eeprom_settings.opt_sensor_detection_threshold_low;
+            if (eeprom_settings.version >= 16)
+            {
+                opt_sensor_detection_threshold_low = eeprom_settings.opt_sensor_detection_threshold_low;
+            }
         }
 
         Serial.println("eeprom read_settings");

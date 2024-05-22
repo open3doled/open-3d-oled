@@ -5,7 +5,7 @@
 #ifndef _SETTINGS_H_
 #define _SETTINGS_H_
 
-//#define ENABLE_DEBUG_PIN_OUTPUTS
+#define ENABLE_DEBUG_PIN_OUTPUTS
 #define ENABLE_LOOP_TOGGLE_DEBUG_PIN_D9 // will toggle on/off every time the loop goes round
 #define OPT_SENSOR_ENABLE_STREAM_READINGS_TO_SERIAL // adds code for command "10" to stream the opt_sensor readings for the left and right eye over serial to the computer (this is a debug mode, don't use at the same time as show stats or you will get garbled output)
 #define OPT_SENSOR_ENABLE_IGNORE_DURING_IR // ignore opt_sensor sensor readings when LED is triggering due to power/light distortions that may cause opt_sensor sensor reading inconsistencies. (only applies when setting variable is set as well)
@@ -159,10 +159,11 @@
 
 #define EEPROM_SETTING_ADDRESS 0
 #define EEPROM_SETTING_CHECKVALUE 0x3D3D3D3D
-#define EMITTER_VERSION 15
+#define EMITTER_VERSION 16
 
 /*
 Version History
+16 - Added detection threshold low option
 15 - Fixed handling of two token ir protocols
 14 - Removed all frequency analysis frame detection stuff for LCD's it was to complicated, and added ir_flip_eyes to support inverting the eye signals if frame_delay is triggering next frames eye instead
 13 - Improved sensor logging and added opt_sensor_filter_mode
