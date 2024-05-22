@@ -25,7 +25,8 @@ DEFAULT_OPT_BLOCK_SIGNAL_DETECTION_DELAY = "7500"
 DEFAULT_OPT_BLOCK_N_SUBSEQUENT_DUPLICATES = "0"
 DEFAULT_OPT_IGNORE_ALL_DUPLICATES = "0"
 DEFAULT_OPT_MIN_THRESHOLD_VALUE_TO_ACTIVATE = "10"
-DEFAULT_OPT_DETECTION_THRESHOLD = "128"
+DEFAULT_OPT_DETECTION_THRESHOLD_HIGH = "128"
+DEFAULT_OPT_DETECTION_THRESHOLD_LOW = "32"
 DEFAULT_OPT_ENABLE_IGNORE_DURING_IR = "0"
 DEFAULT_OPT_ENABLE_DUPLICATE_REALTIME_REPORTING = "0"
 DEFAULT_OPT_ENABLE_FREQUENCY_ANALYSIS_BASED_DUPLICATE_FRAME_DETECTION = "0"
@@ -641,7 +642,6 @@ class EmitterSettingsDialog:
             textvariable=self.setting_ir_flip_eyes_variable,
         )
         self.setting_ir_flip_eyes_entry.pack(padx=5, side=tkinter.LEFT)
-        self.setting_ir_flip_eyes_entry.config(state="disabled")
         self.setting_ir_flip_eyes_tooltip = idlelib.tooltip.Hovertip(
             self.setting_ir_flip_eyes_entry,
             "(set to 1 to enable) Set this to 1 if you want to flip left and right eyes, this is useful if you need to use a high frame_delay forcing this frame to actually trigger the glasses for the next frames opposite eye\n(default 0 disabled)",
@@ -695,9 +695,6 @@ class EmitterSettingsDialog:
             self.setting_opt_block_n_subsequent_duplicates_frame,
             textvariable=self.setting_opt_block_n_subsequent_duplicates_variable,
         )
-        self.setting_opt_block_n_subsequent_duplicates_entry.config(
-            state="disabled"
-        )  # we only enable it after we confirm the emitter firmware supports this parameter
         self.setting_opt_block_n_subsequent_duplicates_entry.pack(
             padx=5, side=tkinter.LEFT
         )
@@ -725,9 +722,6 @@ class EmitterSettingsDialog:
             self.setting_opt_ignore_all_duplicates_frame,
             textvariable=self.setting_opt_ignore_all_duplicates_variable,
         )
-        self.setting_opt_ignore_all_duplicates_entry.config(
-            state="disabled"
-        )  # we only enable it after we confirm the emitter firmware supports this parameter
         self.setting_opt_ignore_all_duplicates_entry.pack(padx=5, side=tkinter.LEFT)
         self.setting_opt_ignore_all_duplicates_tooltip = idlelib.tooltip.Hovertip(
             self.setting_opt_ignore_all_duplicates_entry,
@@ -770,27 +764,52 @@ class EmitterSettingsDialog:
         )
         row_count += 1
 
-        self.setting_opt_detection_threshold_frame = tkinter.Frame(top)
-        self.setting_opt_detection_threshold_variable = tkinter.StringVar(top)
-        self.setting_opt_detection_threshold_variable.set(
-            DEFAULT_OPT_DETECTION_THRESHOLD
+        self.setting_opt_detection_threshold_high_frame = tkinter.Frame(top)
+        self.setting_opt_detection_threshold_high_variable = tkinter.StringVar(top)
+        self.setting_opt_detection_threshold_high_variable.set(
+            DEFAULT_OPT_DETECTION_THRESHOLD_HIGH
         )
-        self.setting_opt_detection_threshold_label = tkinter.Label(
-            self.setting_opt_detection_threshold_frame,
-            text="OPT Detection Threshold: ",
+        self.setting_opt_detection_threshold_high_label = tkinter.Label(
+            self.setting_opt_detection_threshold_high_frame,
+            text="OPT Detection Threshold High: ",
         )
-        self.setting_opt_detection_threshold_label.pack(padx=5, side=tkinter.LEFT)
-        self.setting_opt_detection_threshold_entry = tkinter.Entry(
-            self.setting_opt_detection_threshold_frame,
-            textvariable=self.setting_opt_detection_threshold_variable,
+        self.setting_opt_detection_threshold_high_label.pack(padx=5, side=tkinter.LEFT)
+        self.setting_opt_detection_threshold_high_entry = tkinter.Entry(
+            self.setting_opt_detection_threshold_high_frame,
+            textvariable=self.setting_opt_detection_threshold_high_variable,
         )
-        self.setting_opt_detection_threshold_entry.pack(padx=5, side=tkinter.LEFT)
-        self.setting_opt_detection_threshold_tooltip = idlelib.tooltip.Hovertip(
-            self.setting_opt_detection_threshold_entry,
+        self.setting_opt_detection_threshold_high_entry.pack(padx=5, side=tkinter.LEFT)
+        self.setting_opt_detection_threshold_high_tooltip = idlelib.tooltip.Hovertip(
+            self.setting_opt_detection_threshold_high_entry,
             "(as a value between 1-255) the level above which an increasing light intensity is detected as the beggining of a new frame, \nsetting this lower will make the device aware of new frames earlier but also increase the likelihood of duplicate \nframe detection if the light intensity doesn't fall below this threshold before the opt_block_signal_detection_delay \ncompletes.",
             hover_delay=100,
         )
-        self.setting_opt_detection_threshold_frame.grid(
+        self.setting_opt_detection_threshold_high_frame.grid(
+            row=row_count, column=0, sticky="w"
+        )
+        row_count += 1
+
+        self.setting_opt_detection_threshold_low_frame = tkinter.Frame(top)
+        self.setting_opt_detection_threshold_low_variable = tkinter.StringVar(top)
+        self.setting_opt_detection_threshold_low_variable.set(
+            DEFAULT_OPT_DETECTION_THRESHOLD_LOW
+        )
+        self.setting_opt_detection_threshold_low_label = tkinter.Label(
+            self.setting_opt_detection_threshold_low_frame,
+            text="OPT Detection Threshold Low: ",
+        )
+        self.setting_opt_detection_threshold_low_label.pack(padx=5, side=tkinter.LEFT)
+        self.setting_opt_detection_threshold_low_entry = tkinter.Entry(
+            self.setting_opt_detection_threshold_low_frame,
+            textvariable=self.setting_opt_detection_threshold_low_variable,
+        )
+        self.setting_opt_detection_threshold_low_entry.pack(padx=5, side=tkinter.LEFT)
+        self.setting_opt_detection_threshold_low_tooltip = idlelib.tooltip.Hovertip(
+            self.setting_opt_detection_threshold_low_entry,
+            "(as a value between 1-255) the level above which an increasing light intensity is detected as the beggining of a new frame, \nsetting this lower will make the device aware of new frames earlier but also increase the likelihood of duplicate \nframe detection if the light intensity doesn't fall below this threshold before the opt_block_signal_detection_delay \ncompletes.",
+            hover_delay=100,
+        )
+        self.setting_opt_detection_threshold_low_frame.grid(
             row=row_count, column=0, sticky="w"
         )
         row_count += 1
@@ -902,7 +921,6 @@ class EmitterSettingsDialog:
             textvariable=self.setting_opt_sensor_filter_mode_variable,
         )
         self.setting_opt_sensor_filter_mode_entry.pack(padx=5, side=tkinter.LEFT)
-        self.setting_opt_sensor_filter_mode_entry.config(state="disabled")
         self.setting_opt_sensor_filter_mode_tooltip = idlelib.tooltip.Hovertip(
             self.setting_opt_sensor_filter_mode_entry,
             "(0=Disable (default), 1=Mode 1) (Mode 1: check that the last three readings are trending in the same direction) \n(this may be useful in helping to eliminate the effect of noise caused by IR leds or low signal to noise from the optical sensor.) \n(Only available from firmware version 13 onwards)",
@@ -1056,7 +1074,7 @@ class EmitterSettingsDialog:
                         ir_signal_spacing,
                         opt_block_signal_detection_delay,
                         opt_min_threshold_value_to_activate,
-                        opt_detection_threshold,
+                        opt_detection_threshold_high,
                         opt_detection_threshold_repeated_high,  # @UnusedVariable
                         opt_detection_threshold_repeated_low,  # @UnusedVariable
                         opt_enable_ignore_during_ir,
@@ -1078,8 +1096,8 @@ class EmitterSettingsDialog:
                     self.setting_opt_min_threshold_value_to_activate_variable.set(
                         opt_min_threshold_value_to_activate
                     )
-                    self.setting_opt_detection_threshold_variable.set(
-                        opt_detection_threshold
+                    self.setting_opt_detection_threshold_high_variable.set(
+                        opt_detection_threshold_high
                     )
                     self.setting_opt_enable_ignore_during_ir_variable.set(
                         opt_enable_ignore_during_ir
@@ -1137,7 +1155,7 @@ class EmitterSettingsDialog:
                         ir_signal_spacing,
                         opt_block_signal_detection_delay,
                         opt_min_threshold_value_to_activate,
-                        opt_detection_threshold,
+                        opt_detection_threshold_high,
                         opt_enable_ignore_during_ir,
                         opt_enable_duplicate_realtime_reporting,
                         opt_output_stats,
@@ -1160,8 +1178,8 @@ class EmitterSettingsDialog:
                     self.setting_opt_min_threshold_value_to_activate_variable.set(
                         opt_min_threshold_value_to_activate
                     )
-                    self.setting_opt_detection_threshold_variable.set(
-                        opt_detection_threshold
+                    self.setting_opt_detection_threshold_high_variable.set(
+                        opt_detection_threshold_high
                     )
                     self.setting_opt_enable_ignore_during_ir_variable.set(
                         opt_enable_ignore_during_ir
@@ -1190,6 +1208,20 @@ class EmitterSettingsDialog:
                     self.setting_opt_ignore_all_duplicates_entry.config(state="normal")
                     self.setting_opt_sensor_filter_mode_entry.config(state="normal")
                     self.setting_ir_flip_eyes_entry.config(state="normal")
+                    if self.emitter_firmware_version_int >= 16:
+                        self.setting_opt_detection_threshold_low_variable.set(
+                            parameters[15]
+                        )
+                        self.setting_opt_detection_threshold_low_entry.config(
+                            state="normal"
+                        )
+                    else:
+                        self.setting_opt_detection_threshold_low_variable.set(
+                            DEFAULT_OPT_DETECTION_THRESHOLD_LOW
+                        )
+                        self.setting_opt_detection_threshold_low_entry.config(
+                            state="disabled"
+                        )
 
     def serial_port_click_connect(self):
         if self.main_app.emitter_serial:
@@ -1230,7 +1262,7 @@ class EmitterSettingsDialog:
                     f"{self.setting_ir_signal_spacing_variable.get()},"
                     f"{self.setting_opt_block_signal_detection_delay_variable.get()},"
                     f"{self.setting_opt_min_threshold_value_to_activate_variable.get()},"
-                    f"{self.setting_opt_detection_threshold_variable.get()},"
+                    f"{self.setting_opt_detection_threshold_high_variable.get()},"
                     f"{DEFAULT_OPT_DETECTION_THRESHOLD_REPEATED_HIGH},"
                     f"{DEFAULT_OPT_DETECTION_THRESHOLD_REPEATED_LOW},"
                     f"{self.setting_opt_enable_ignore_during_ir_variable.get()},"
@@ -1255,7 +1287,7 @@ class EmitterSettingsDialog:
                     f"{self.setting_ir_signal_spacing_variable.get()},"
                     f"{self.setting_opt_block_signal_detection_delay_variable.get()},"
                     f"{self.setting_opt_min_threshold_value_to_activate_variable.get()},"
-                    f"{self.setting_opt_detection_threshold_variable.get()},"
+                    f"{self.setting_opt_detection_threshold_high_variable.get()},"
                     f"{self.setting_opt_enable_ignore_during_ir_variable.get()},"
                     f"{self.setting_opt_enable_duplicate_realtime_reporting_variable.get()},"
                     f"{self.setting_opt_output_stats_variable.get()},"
@@ -1264,6 +1296,10 @@ class EmitterSettingsDialog:
                     f"{self.setting_opt_sensor_filter_mode_variable.get()},"
                     f"{self.setting_ir_flip_eyes_variable.get()}"
                 )
+                if self.emitter_firmware_version_int >= 16:
+                    command += (
+                        f",{self.setting_opt_detection_threshold_low_variable.get()}"
+                    )
 
             print(command)
             self.main_app.emitter_serial.line_reader.command(command)
@@ -1294,7 +1330,8 @@ class EmitterSettingsDialog:
                     "opt_ignore_all_duplicates": self.setting_opt_ignore_all_duplicates_variable.get(),
                     "opt_sensor_filter_mode_variable": self.setting_opt_sensor_filter_mode_variable.get(),
                     "opt_min_threshold_value_to_activate": self.setting_opt_min_threshold_value_to_activate_variable.get(),
-                    "opt_detection_threshold": self.setting_opt_detection_threshold_variable.get(),
+                    "opt_detection_threshold_high": self.setting_opt_detection_threshold_high_variable.get(),
+                    "opt_detection_threshold_low": self.setting_opt_detection_threshold_low_variable.get(),
                     "opt_enable_ignore_during_ir": self.setting_opt_enable_ignore_during_ir_variable.get(),
                     "opt_enable_duplicate_realtime_reporting": self.setting_opt_enable_duplicate_realtime_reporting_variable.get(),
                     "opt_output_stats": self.setting_opt_output_stats_variable.get(),
@@ -1350,12 +1387,18 @@ class EmitterSettingsDialog:
                     ),
                 )
             )
-            self.setting_opt_detection_threshold_variable.set(
+            self.setting_opt_detection_threshold_high_variable.set(
                 settings.get(
-                    "opt_detection_threshold",
+                    "opt_detection_threshold_high",
                     settings.get(
-                        "opt101_detection_threshold", DEFAULT_OPT_DETECTION_THRESHOLD
+                        "opt101_detection_threshold",
+                        DEFAULT_OPT_DETECTION_THRESHOLD_HIGH,
                     ),
+                )
+            )
+            self.setting_opt_detection_threshold_low_variable.set(
+                settings.get(
+                    "opt_detection_threshold_low", DEFAULT_OPT_DETECTION_THRESHOLD_LOW
                 )
             )
             self.setting_opt_enable_ignore_during_ir_variable.set(
