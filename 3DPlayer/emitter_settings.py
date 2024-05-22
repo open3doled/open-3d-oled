@@ -21,18 +21,18 @@ DEFAULT_IR_FRAME_DELAY = "500"
 DEFAULT_IR_FRAME_DURATION = "7000"
 DEFAULT_IR_SIGNAL_SPACING = "30"
 DEFAULT_IR_FLIP_EYES = "0"
-DEFAULT_OPT101_BLOCK_SIGNAL_DETECTION_DELAY = "7500"
-DEFAULT_OPT101_BLOCK_N_SUBSEQUENT_DUPLICATES = "0"
-DEFAULT_OPT101_IGNORE_ALL_DUPLICATES = "0"
-DEFAULT_OPT101_MIN_THRESHOLD_VALUE_TO_ACTIVATE = "10"
-DEFAULT_OPT101_DETECTION_THRESHOLD = "128"
-DEFAULT_OPT101_ENABLE_IGNORE_DURING_IR = "0"
-DEFAULT_OPT101_ENABLE_DUPLICATE_REALTIME_REPORTING = "0"
-DEFAULT_OPT101_ENABLE_FREQUENCY_ANALYSIS_BASED_DUPLICATE_FRAME_DETECTION = "0"
-DEFAULT_OPT101_DETECTION_THRESHOLD_REPEATED_HIGH = "224"
-DEFAULT_OPT101_DETECTION_THRESHOLD_REPEATED_LOW = "32"
-DEFAULT_OPT101_OUTPUT_STATS = "0"
-DEFAULT_OPT101_SENSOR_FILTER_MODE = "0"
+DEFAULT_OPT_BLOCK_SIGNAL_DETECTION_DELAY = "7500"
+DEFAULT_OPT_BLOCK_N_SUBSEQUENT_DUPLICATES = "0"
+DEFAULT_OPT_IGNORE_ALL_DUPLICATES = "0"
+DEFAULT_OPT_MIN_THRESHOLD_VALUE_TO_ACTIVATE = "10"
+DEFAULT_OPT_DETECTION_THRESHOLD = "128"
+DEFAULT_OPT_ENABLE_IGNORE_DURING_IR = "0"
+DEFAULT_OPT_ENABLE_DUPLICATE_REALTIME_REPORTING = "0"
+DEFAULT_OPT_ENABLE_FREQUENCY_ANALYSIS_BASED_DUPLICATE_FRAME_DETECTION = "0"
+DEFAULT_OPT_DETECTION_THRESHOLD_REPEATED_HIGH = "224"
+DEFAULT_OPT_DETECTION_THRESHOLD_REPEATED_LOW = "32"
+DEFAULT_OPT_OUTPUT_STATS = "0"
+DEFAULT_OPT_SENSOR_FILTER_MODE = "0"
 
 
 class EmitterSerialLineReader(serial.threaded.LineReader):
@@ -49,7 +49,7 @@ class EmitterSerialLineReader(serial.threaded.LineReader):
         self.total_duplicate_frames = 0
         self.total_premature_frames = 0
         self.debug_stream_file = None
-        self.debug_opt101_enable_stream_readings_to_serial = 0
+        self.debug_opt_enable_stream_readings_to_serial = 0
         self.responses = queue.Queue()
         self.events = queue.Queue()
         self._event_thread = threading.Thread(target=self._run_event)
@@ -96,11 +96,11 @@ class EmitterSerialLineReader(serial.threaded.LineReader):
                 )
         elif (
             event.startswith("+o ")
-            and self.debug_opt101_enable_stream_readings_to_serial == 1
+            and self.debug_opt_enable_stream_readings_to_serial == 1
         ):
             # self.debug_stream.file.write(f"{event.split(" ")[1]}\n")
             raw_bytes = event.split(" ")[1].encode("iso-8859-1")
-            opt101_current_time = (
+            opt_current_time = (
                 (raw_bytes[9] & 0x7F)
                 | ((raw_bytes[8] & 0x7F) << 7)
                 | ((raw_bytes[7] & 0x7F) << 14)
@@ -111,41 +111,41 @@ class EmitterSerialLineReader(serial.threaded.LineReader):
             right_sensor = ((raw_bytes[4] & 0x60) >> 5) | ((raw_bytes[3] & 0x3F) << 2)
             duplicate_frames_in_a_row_counter = raw_bytes[2] & 0x7F
 
-            opt101_duplicate_frame_left = 1 if (raw_bytes[0] & 0x20) else 0
-            opt101_ignore_duplicate_left = 1 if (raw_bytes[0] & 0x10) else 0
-            opt101_reading_above_threshold_left = 1 if (raw_bytes[0] & 0x08) else 0
-            opt101_duplicate_frame_right = 1 if (raw_bytes[0] & 0x04) else 0
-            opt101_ignore_duplicate_right = 1 if (raw_bytes[0] & 0x02) else 0
-            opt101_reading_above_threshold_right = 1 if (raw_bytes[0] & 0x01) else 0
-            opt101_readings_active = 1 if (raw_bytes[1] & 0x08) else 0
-            opt101_detected_signal_start_eye = 1 if (raw_bytes[1] & 0x04) else 0
-            opt101_initiated_sending_ir_signal = 1 if (raw_bytes[1] & 0x02) else 0
-            opt101_block_signal_detection_until = 1 if (raw_bytes[1] & 0x01) else 0
+            opt_duplicate_frame_left = 1 if (raw_bytes[0] & 0x20) else 0
+            opt_ignore_duplicate_left = 1 if (raw_bytes[0] & 0x10) else 0
+            opt_reading_above_threshold_left = 1 if (raw_bytes[0] & 0x08) else 0
+            opt_duplicate_frame_right = 1 if (raw_bytes[0] & 0x04) else 0
+            opt_ignore_duplicate_right = 1 if (raw_bytes[0] & 0x02) else 0
+            opt_reading_above_threshold_right = 1 if (raw_bytes[0] & 0x01) else 0
+            opt_readings_active = 1 if (raw_bytes[1] & 0x08) else 0
+            opt_detected_signal_start_eye = 1 if (raw_bytes[1] & 0x04) else 0
+            opt_initiated_sending_ir_signal = 1 if (raw_bytes[1] & 0x02) else 0
+            opt_block_signal_detection_until = 1 if (raw_bytes[1] & 0x01) else 0
 
             left_sent_ir = 0
             right_sent_ir = 0
-            if opt101_initiated_sending_ir_signal:
-                if opt101_detected_signal_start_eye:
+            if opt_initiated_sending_ir_signal:
+                if opt_detected_signal_start_eye:
                     left_sent_ir = 1
                 else:
                     right_sent_ir = 1
             left_duplicate_detected = 0
             left_duplicate_ignored = 0
-            if opt101_reading_above_threshold_left:
-                left_duplicate_detected = opt101_duplicate_frame_left
+            if opt_reading_above_threshold_left:
+                left_duplicate_detected = opt_duplicate_frame_left
                 if left_duplicate_detected:
-                    left_duplicate_ignored = opt101_ignore_duplicate_left
+                    left_duplicate_ignored = opt_ignore_duplicate_left
             right_duplicate_detected = 0
             right_duplicate_ignored = 0
-            if opt101_reading_above_threshold_right:
-                right_duplicate_detected = opt101_duplicate_frame_right
+            if opt_reading_above_threshold_right:
+                right_duplicate_detected = opt_duplicate_frame_right
                 if right_duplicate_detected:
-                    right_duplicate_ignored = opt101_ignore_duplicate_right
+                    right_duplicate_ignored = opt_ignore_duplicate_right
             self.debug_stream_file.write(
-                f"{opt101_current_time},{left_sensor},{right_sensor},{duplicate_frames_in_a_row_counter},"
-                f"{opt101_block_signal_detection_until},{opt101_readings_active},"
-                f"{opt101_reading_above_threshold_left},{left_duplicate_detected},{left_duplicate_ignored},{left_sent_ir},"
-                f"{opt101_reading_above_threshold_right},{right_duplicate_detected},{right_duplicate_ignored},{right_sent_ir}\n"
+                f"{opt_current_time},{left_sensor},{right_sensor},{duplicate_frames_in_a_row_counter},"
+                f"{opt_block_signal_detection_until},{opt_readings_active},"
+                f"{opt_reading_above_threshold_left},{left_duplicate_detected},{left_duplicate_ignored},{left_sent_ir},"
+                f"{opt_reading_above_threshold_right},{right_duplicate_detected},{right_duplicate_ignored},{right_sent_ir}\n"
             )
         else:
             print("event received:", event)
@@ -650,151 +650,147 @@ class EmitterSettingsDialog:
         self.setting_ir_flip_eyes_frame.grid(row=row_count, column=0, sticky="w")
         row_count += 1
 
-        self.setting_opt101_block_signal_detection_delay_frame = tkinter.Frame(top)
-        self.setting_opt101_block_signal_detection_delay_variable = tkinter.StringVar(
-            top
+        self.setting_opt_block_signal_detection_delay_frame = tkinter.Frame(top)
+        self.setting_opt_block_signal_detection_delay_variable = tkinter.StringVar(top)
+        self.setting_opt_block_signal_detection_delay_variable.set(
+            DEFAULT_OPT_BLOCK_SIGNAL_DETECTION_DELAY
         )
-        self.setting_opt101_block_signal_detection_delay_variable.set(
-            DEFAULT_OPT101_BLOCK_SIGNAL_DETECTION_DELAY
+        self.setting_opt_block_signal_detection_delay_label = tkinter.Label(
+            self.setting_opt_block_signal_detection_delay_frame,
+            text="OPT Block Signal Detection Delay: ",
         )
-        self.setting_opt101_block_signal_detection_delay_label = tkinter.Label(
-            self.setting_opt101_block_signal_detection_delay_frame,
-            text="OPT101 Block Signal Detection Delay: ",
-        )
-        self.setting_opt101_block_signal_detection_delay_label.pack(
+        self.setting_opt_block_signal_detection_delay_label.pack(
             padx=5, side=tkinter.LEFT
         )
-        self.setting_opt101_block_signal_detection_delay_entry = tkinter.Entry(
-            self.setting_opt101_block_signal_detection_delay_frame,
-            textvariable=self.setting_opt101_block_signal_detection_delay_variable,
+        self.setting_opt_block_signal_detection_delay_entry = tkinter.Entry(
+            self.setting_opt_block_signal_detection_delay_frame,
+            textvariable=self.setting_opt_block_signal_detection_delay_variable,
         )
-        self.setting_opt101_block_signal_detection_delay_entry.pack(
+        self.setting_opt_block_signal_detection_delay_entry.pack(
             padx=5, side=tkinter.LEFT
         )
-        self.setting_opt101_block_signal_detection_delay_tooltip = idlelib.tooltip.Hovertip(
-            self.setting_opt101_block_signal_detection_delay_entry,
+        self.setting_opt_block_signal_detection_delay_tooltip = idlelib.tooltip.Hovertip(
+            self.setting_opt_block_signal_detection_delay_entry,
             "(in microseconds) how long to wait after a high tv signal on left or right before allowing another high tv signal \non either channel this is useful to eliminating false triggers when the tv signal is decreasing in a noisy fashion. \nthis is best set to slighly lower than the target refresh rate (about 80-90%). \n(when used in conjunction with a PWM backlit display this should be set to a value 80-90% of the PWM backlight cycle time.)",
             hover_delay=100,
         )
-        self.setting_opt101_block_signal_detection_delay_frame.grid(
+        self.setting_opt_block_signal_detection_delay_frame.grid(
             row=row_count, column=0, sticky="w"
         )
         row_count += 1
 
-        self.setting_opt101_block_n_subsequent_duplicates_frame = tkinter.Frame(top)
-        self.setting_opt101_block_n_subsequent_duplicates_variable = tkinter.StringVar(
+        self.setting_opt_block_n_subsequent_duplicates_frame = tkinter.Frame(top)
+        self.setting_opt_block_n_subsequent_duplicates_variable = tkinter.StringVar(top)
+        self.setting_opt_block_n_subsequent_duplicates_variable.set(
+            DEFAULT_OPT_BLOCK_N_SUBSEQUENT_DUPLICATES
+        )
+        self.setting_opt_block_n_subsequent_duplicates_label = tkinter.Label(
+            self.setting_opt_block_n_subsequent_duplicates_frame,
+            text="OPT Block N Subsequent Duplicates: ",
+        )
+        self.setting_opt_block_n_subsequent_duplicates_label.pack(
+            padx=5, side=tkinter.LEFT
+        )
+        self.setting_opt_block_n_subsequent_duplicates_entry = tkinter.Entry(
+            self.setting_opt_block_n_subsequent_duplicates_frame,
+            textvariable=self.setting_opt_block_n_subsequent_duplicates_variable,
+        )
+        self.setting_opt_block_n_subsequent_duplicates_entry.config(
+            state="disabled"
+        )  # we only enable it after we confirm the emitter firmware supports this parameter
+        self.setting_opt_block_n_subsequent_duplicates_entry.pack(
+            padx=5, side=tkinter.LEFT
+        )
+        self.setting_opt_block_n_subsequent_duplicates_tooltip = idlelib.tooltip.Hovertip(
+            self.setting_opt_block_n_subsequent_duplicates_entry,
+            "(number of detections to block) on displays that use a PWM backlight one needs to block fake duplicate frames \nfor at least the first math.ceiling((PWM frequency)/framerate) otherwise a PWM pulse may incorrectly \nbe detected as the next duplicate frame causing the unit to lose proper synchronization. \nWhen using this setting one should set 'OPT Block Signal Detection Delay' to a \nvalue 80-90% of the PWM backlight cycle time. \nThis feature is only availble from emitter firmware version 10 \n(default 0).",
+            hover_delay=100,
+        )
+        self.setting_opt_block_n_subsequent_duplicates_frame.grid(
+            row=row_count, column=0, sticky="w"
+        )
+        row_count += 1
+
+        self.setting_opt_ignore_all_duplicates_frame = tkinter.Frame(top)
+        self.setting_opt_ignore_all_duplicates_variable = tkinter.StringVar(top)
+        self.setting_opt_ignore_all_duplicates_variable.set(
+            DEFAULT_OPT_IGNORE_ALL_DUPLICATES
+        )
+        self.setting_opt_ignore_all_duplicates_label = tkinter.Label(
+            self.setting_opt_ignore_all_duplicates_frame,
+            text="OPT Ignore All Duplicates: ",
+        )
+        self.setting_opt_ignore_all_duplicates_label.pack(padx=5, side=tkinter.LEFT)
+        self.setting_opt_ignore_all_duplicates_entry = tkinter.Entry(
+            self.setting_opt_ignore_all_duplicates_frame,
+            textvariable=self.setting_opt_ignore_all_duplicates_variable,
+        )
+        self.setting_opt_ignore_all_duplicates_entry.config(
+            state="disabled"
+        )  # we only enable it after we confirm the emitter firmware supports this parameter
+        self.setting_opt_ignore_all_duplicates_entry.pack(padx=5, side=tkinter.LEFT)
+        self.setting_opt_ignore_all_duplicates_tooltip = idlelib.tooltip.Hovertip(
+            self.setting_opt_ignore_all_duplicates_entry,
+            "(0=Disable, 1=Enable) On displays with too much jitter where setting OPT Block Signal Detection Delay and/or \nOPT Block N Subsequent Duplicates does not eliminate false dulicate detection due to strange PWM characteristics \nor variable brightness periods, it may be best to ignore any detected duplicates. This will mean that glasses only \nattempt resynchronization when the alternate eye trigger is sent by the display. (If you are using a display without some form of BFI it is highly recommended you enable this)",
+            hover_delay=100,
+        )
+        self.setting_opt_ignore_all_duplicates_frame.grid(
+            row=row_count, column=0, sticky="w"
+        )
+        row_count += 1
+
+        self.setting_opt_min_threshold_value_to_activate_frame = tkinter.Frame(top)
+        self.setting_opt_min_threshold_value_to_activate_variable = tkinter.StringVar(
             top
         )
-        self.setting_opt101_block_n_subsequent_duplicates_variable.set(
-            DEFAULT_OPT101_BLOCK_N_SUBSEQUENT_DUPLICATES
+        self.setting_opt_min_threshold_value_to_activate_variable.set(
+            DEFAULT_OPT_MIN_THRESHOLD_VALUE_TO_ACTIVATE
         )
-        self.setting_opt101_block_n_subsequent_duplicates_label = tkinter.Label(
-            self.setting_opt101_block_n_subsequent_duplicates_frame,
-            text="OPT101 Block N Subsequent Duplicates: ",
+        self.setting_opt_min_threshold_value_to_activate_label = tkinter.Label(
+            self.setting_opt_min_threshold_value_to_activate_frame,
+            text="OPT Min Threshold Value To Activate: ",
         )
-        self.setting_opt101_block_n_subsequent_duplicates_label.pack(
+        self.setting_opt_min_threshold_value_to_activate_label.pack(
             padx=5, side=tkinter.LEFT
         )
-        self.setting_opt101_block_n_subsequent_duplicates_entry = tkinter.Entry(
-            self.setting_opt101_block_n_subsequent_duplicates_frame,
-            textvariable=self.setting_opt101_block_n_subsequent_duplicates_variable,
+        self.setting_opt_min_threshold_value_to_activate_entry = tkinter.Entry(
+            self.setting_opt_min_threshold_value_to_activate_frame,
+            textvariable=self.setting_opt_min_threshold_value_to_activate_variable,
         )
-        self.setting_opt101_block_n_subsequent_duplicates_entry.config(
-            state="disabled"
-        )  # we only enable it after we confirm the emitter firmware supports this parameter
-        self.setting_opt101_block_n_subsequent_duplicates_entry.pack(
+        self.setting_opt_min_threshold_value_to_activate_entry.pack(
             padx=5, side=tkinter.LEFT
         )
-        self.setting_opt101_block_n_subsequent_duplicates_tooltip = idlelib.tooltip.Hovertip(
-            self.setting_opt101_block_n_subsequent_duplicates_entry,
-            "(number of detections to block) on displays that use a PWM backlight one needs to block fake duplicate frames \nfor at least the first math.ceiling((PWM frequency)/framerate) otherwise a PWM pulse may incorrectly \nbe detected as the next duplicate frame causing the unit to lose proper synchronization. \nWhen using this setting one should set 'OPT101 Block Signal Detection Delay' to a \nvalue 80-90% of the PWM backlight cycle time. \nThis feature is only availble from emitter firmware version 10 \n(default 0).",
-            hover_delay=100,
-        )
-        self.setting_opt101_block_n_subsequent_duplicates_frame.grid(
-            row=row_count, column=0, sticky="w"
-        )
-        row_count += 1
-
-        self.setting_opt101_ignore_all_duplicates_frame = tkinter.Frame(top)
-        self.setting_opt101_ignore_all_duplicates_variable = tkinter.StringVar(top)
-        self.setting_opt101_ignore_all_duplicates_variable.set(
-            DEFAULT_OPT101_IGNORE_ALL_DUPLICATES
-        )
-        self.setting_opt101_ignore_all_duplicates_label = tkinter.Label(
-            self.setting_opt101_ignore_all_duplicates_frame,
-            text="OPT101 Ignore All Duplicates: ",
-        )
-        self.setting_opt101_ignore_all_duplicates_label.pack(padx=5, side=tkinter.LEFT)
-        self.setting_opt101_ignore_all_duplicates_entry = tkinter.Entry(
-            self.setting_opt101_ignore_all_duplicates_frame,
-            textvariable=self.setting_opt101_ignore_all_duplicates_variable,
-        )
-        self.setting_opt101_ignore_all_duplicates_entry.config(
-            state="disabled"
-        )  # we only enable it after we confirm the emitter firmware supports this parameter
-        self.setting_opt101_ignore_all_duplicates_entry.pack(padx=5, side=tkinter.LEFT)
-        self.setting_opt101_ignore_all_duplicates_tooltip = idlelib.tooltip.Hovertip(
-            self.setting_opt101_ignore_all_duplicates_entry,
-            "(0=Disable, 1=Enable) On displays with too much jitter where setting OPT101 Block Signal Detection Delay and/or \nOPT101 Block N Subsequent Duplicates does not eliminate false dulicate detection due to strange PWM characteristics \nor variable brightness periods, it may be best to ignore any detected duplicates. This will mean that glasses only \nattempt resynchronization when the alternate eye trigger is sent by the display. (If you are using a display without some form of BFI it is highly recommended you enable this)",
-            hover_delay=100,
-        )
-        self.setting_opt101_ignore_all_duplicates_frame.grid(
-            row=row_count, column=0, sticky="w"
-        )
-        row_count += 1
-
-        self.setting_opt101_min_threshold_value_to_activate_frame = tkinter.Frame(top)
-        self.setting_opt101_min_threshold_value_to_activate_variable = (
-            tkinter.StringVar(top)
-        )
-        self.setting_opt101_min_threshold_value_to_activate_variable.set(
-            DEFAULT_OPT101_MIN_THRESHOLD_VALUE_TO_ACTIVATE
-        )
-        self.setting_opt101_min_threshold_value_to_activate_label = tkinter.Label(
-            self.setting_opt101_min_threshold_value_to_activate_frame,
-            text="OPT101 Min Threshold Value To Activate: ",
-        )
-        self.setting_opt101_min_threshold_value_to_activate_label.pack(
-            padx=5, side=tkinter.LEFT
-        )
-        self.setting_opt101_min_threshold_value_to_activate_entry = tkinter.Entry(
-            self.setting_opt101_min_threshold_value_to_activate_frame,
-            textvariable=self.setting_opt101_min_threshold_value_to_activate_variable,
-        )
-        self.setting_opt101_min_threshold_value_to_activate_entry.pack(
-            padx=5, side=tkinter.LEFT
-        )
-        self.setting_opt101_min_threshold_value_to_activate_tooltip = idlelib.tooltip.Hovertip(
-            self.setting_opt101_min_threshold_value_to_activate_entry,
+        self.setting_opt_min_threshold_value_to_activate_tooltip = idlelib.tooltip.Hovertip(
+            self.setting_opt_min_threshold_value_to_activate_entry,
             "(as a value between 1-255) The light intensities highest threshold value in a given threshold update cycle must exceed this value before \nthe emitter will turn on.  This setting is used to stop the emitter turning on when the TV is turned off. \nTo low a value will cause it to turn on when the screen is black and trigger sporatically. \nTo high a value will mean that it never turns on. \n(default 10)",
             hover_delay=100,
         )
-        self.setting_opt101_min_threshold_value_to_activate_frame.grid(
+        self.setting_opt_min_threshold_value_to_activate_frame.grid(
             row=row_count, column=0, sticky="w"
         )
         row_count += 1
 
-        self.setting_opt101_detection_threshold_frame = tkinter.Frame(top)
-        self.setting_opt101_detection_threshold_variable = tkinter.StringVar(top)
-        self.setting_opt101_detection_threshold_variable.set(
-            DEFAULT_OPT101_DETECTION_THRESHOLD
+        self.setting_opt_detection_threshold_frame = tkinter.Frame(top)
+        self.setting_opt_detection_threshold_variable = tkinter.StringVar(top)
+        self.setting_opt_detection_threshold_variable.set(
+            DEFAULT_OPT_DETECTION_THRESHOLD
         )
-        self.setting_opt101_detection_threshold_label = tkinter.Label(
-            self.setting_opt101_detection_threshold_frame,
-            text="OPT101 Detection Threshold: ",
+        self.setting_opt_detection_threshold_label = tkinter.Label(
+            self.setting_opt_detection_threshold_frame,
+            text="OPT Detection Threshold: ",
         )
-        self.setting_opt101_detection_threshold_label.pack(padx=5, side=tkinter.LEFT)
-        self.setting_opt101_detection_threshold_entry = tkinter.Entry(
-            self.setting_opt101_detection_threshold_frame,
-            textvariable=self.setting_opt101_detection_threshold_variable,
+        self.setting_opt_detection_threshold_label.pack(padx=5, side=tkinter.LEFT)
+        self.setting_opt_detection_threshold_entry = tkinter.Entry(
+            self.setting_opt_detection_threshold_frame,
+            textvariable=self.setting_opt_detection_threshold_variable,
         )
-        self.setting_opt101_detection_threshold_entry.pack(padx=5, side=tkinter.LEFT)
-        self.setting_opt101_detection_threshold_tooltip = idlelib.tooltip.Hovertip(
-            self.setting_opt101_detection_threshold_entry,
-            "(as a value between 1-255) the level above which an increasing light intensity is detected as the beggining of a new frame, \nsetting this lower will make the device aware of new frames earlier but also increase the likelihood of duplicate \nframe detection if the light intensity doesn't fall below this threshold before the opt101_block_signal_detection_delay \ncompletes.",
+        self.setting_opt_detection_threshold_entry.pack(padx=5, side=tkinter.LEFT)
+        self.setting_opt_detection_threshold_tooltip = idlelib.tooltip.Hovertip(
+            self.setting_opt_detection_threshold_entry,
+            "(as a value between 1-255) the level above which an increasing light intensity is detected as the beggining of a new frame, \nsetting this lower will make the device aware of new frames earlier but also increase the likelihood of duplicate \nframe detection if the light intensity doesn't fall below this threshold before the opt_block_signal_detection_delay \ncompletes.",
             hover_delay=100,
         )
-        self.setting_opt101_detection_threshold_frame.grid(
+        self.setting_opt_detection_threshold_frame.grid(
             row=row_count, column=0, sticky="w"
         )
         row_count += 1
@@ -807,118 +803,112 @@ class EmitterSettingsDialog:
         row_count += 1
 
         debug_row_count = 0
-        self.setting_opt101_enable_ignore_during_ir_frame = tkinter.Frame(
+        self.setting_opt_enable_ignore_during_ir_frame = tkinter.Frame(
             self.experimental_and_debug_frame
         )
-        self.setting_opt101_enable_ignore_during_ir_variable = tkinter.StringVar(top)
-        self.setting_opt101_enable_ignore_during_ir_variable.set(
-            DEFAULT_OPT101_ENABLE_IGNORE_DURING_IR
+        self.setting_opt_enable_ignore_during_ir_variable = tkinter.StringVar(top)
+        self.setting_opt_enable_ignore_during_ir_variable.set(
+            DEFAULT_OPT_ENABLE_IGNORE_DURING_IR
         )
-        self.setting_opt101_enable_ignore_during_ir_label = tkinter.Label(
-            self.setting_opt101_enable_ignore_during_ir_frame,
+        self.setting_opt_enable_ignore_during_ir_label = tkinter.Label(
+            self.setting_opt_enable_ignore_during_ir_frame,
             text="Enable Ignore Frame Start During IR*: ",
         )
-        self.setting_opt101_enable_ignore_during_ir_label.pack(
-            padx=5, side=tkinter.LEFT
+        self.setting_opt_enable_ignore_during_ir_label.pack(padx=5, side=tkinter.LEFT)
+        self.setting_opt_enable_ignore_during_ir_entry = tkinter.Entry(
+            self.setting_opt_enable_ignore_during_ir_frame,
+            textvariable=self.setting_opt_enable_ignore_during_ir_variable,
         )
-        self.setting_opt101_enable_ignore_during_ir_entry = tkinter.Entry(
-            self.setting_opt101_enable_ignore_during_ir_frame,
-            textvariable=self.setting_opt101_enable_ignore_during_ir_variable,
-        )
-        self.setting_opt101_enable_ignore_during_ir_entry.pack(
-            padx=5, side=tkinter.LEFT
-        )
-        self.setting_opt101_enable_ignore_during_ir_tooltip = idlelib.tooltip.Hovertip(
-            self.setting_opt101_enable_ignore_during_ir_entry,
-            "(experimental) disable the opt101 sensor detection during the time when ir signals are being emitted. \nthis stops reflections of IR signals OR voltage ripples on vcc from incorrectly triggering frame start signals.",
+        self.setting_opt_enable_ignore_during_ir_entry.pack(padx=5, side=tkinter.LEFT)
+        self.setting_opt_enable_ignore_during_ir_tooltip = idlelib.tooltip.Hovertip(
+            self.setting_opt_enable_ignore_during_ir_entry,
+            "(experimental) disable the opt sensor detection during the time when ir signals are being emitted. \nthis stops reflections of IR signals OR voltage ripples on vcc from incorrectly triggering frame start signals.",
             hover_delay=100,
         )
-        self.setting_opt101_enable_ignore_during_ir_frame.grid(
+        self.setting_opt_enable_ignore_during_ir_frame.grid(
             row=debug_row_count, column=0, sticky="w"
         )
         debug_row_count += 1
 
-        self.setting_opt101_enable_duplicate_realtime_reporting_frame = tkinter.Frame(
+        self.setting_opt_enable_duplicate_realtime_reporting_frame = tkinter.Frame(
             self.experimental_and_debug_frame
         )
-        self.setting_opt101_enable_duplicate_realtime_reporting_variable = (
+        self.setting_opt_enable_duplicate_realtime_reporting_variable = (
             tkinter.StringVar(top)
         )
-        self.setting_opt101_enable_duplicate_realtime_reporting_variable.set(
-            DEFAULT_OPT101_ENABLE_DUPLICATE_REALTIME_REPORTING
+        self.setting_opt_enable_duplicate_realtime_reporting_variable.set(
+            DEFAULT_OPT_ENABLE_DUPLICATE_REALTIME_REPORTING
         )
-        self.setting_opt101_enable_duplicate_realtime_reporting_label = tkinter.Label(
-            self.setting_opt101_enable_duplicate_realtime_reporting_frame,
+        self.setting_opt_enable_duplicate_realtime_reporting_label = tkinter.Label(
+            self.setting_opt_enable_duplicate_realtime_reporting_frame,
             text="Enable Duplicate Realtime Reporting: ",
         )
-        self.setting_opt101_enable_duplicate_realtime_reporting_label.pack(
+        self.setting_opt_enable_duplicate_realtime_reporting_label.pack(
             padx=5, side=tkinter.LEFT
         )
-        self.setting_opt101_enable_duplicate_realtime_reporting_entry = tkinter.Entry(
-            self.setting_opt101_enable_duplicate_realtime_reporting_frame,
-            textvariable=self.setting_opt101_enable_duplicate_realtime_reporting_variable,
+        self.setting_opt_enable_duplicate_realtime_reporting_entry = tkinter.Entry(
+            self.setting_opt_enable_duplicate_realtime_reporting_frame,
+            textvariable=self.setting_opt_enable_duplicate_realtime_reporting_variable,
         )
-        self.setting_opt101_enable_duplicate_realtime_reporting_entry.pack(
+        self.setting_opt_enable_duplicate_realtime_reporting_entry.pack(
             padx=5, side=tkinter.LEFT
         )
-        self.setting_opt101_enable_duplicate_realtime_reporting_tooltip = idlelib.tooltip.Hovertip(
-            self.setting_opt101_enable_duplicate_realtime_reporting_entry,
+        self.setting_opt_enable_duplicate_realtime_reporting_tooltip = idlelib.tooltip.Hovertip(
+            self.setting_opt_enable_duplicate_realtime_reporting_entry,
             "When enabled (set to 1) the emitter will send a signal to the PC every time it detects a duplicate frame. This can be useful during calibration to see if the emitter thinks the pc is sending duplicate frames. \n(This will not work unless you have a display with some form of BFI and have tuned 'block signal detection delay appropriately'. \nIf you are relying on 'ignore all duplicates' this will not work)",
             hover_delay=100,
         )
-        self.setting_opt101_enable_duplicate_realtime_reporting_frame.grid(
+        self.setting_opt_enable_duplicate_realtime_reporting_frame.grid(
             row=debug_row_count, column=0, sticky="w"
         )
         debug_row_count += 1
 
-        self.setting_opt101_output_stats_frame = tkinter.Frame(
+        self.setting_opt_output_stats_frame = tkinter.Frame(
             self.experimental_and_debug_frame
         )
-        self.setting_opt101_output_stats_variable = tkinter.StringVar(top)
-        self.setting_opt101_output_stats_variable.set(DEFAULT_OPT101_OUTPUT_STATS)
-        self.setting_opt101_output_stats_label = tkinter.Label(
-            self.setting_opt101_output_stats_frame, text="OPT101 Output Stats: "
+        self.setting_opt_output_stats_variable = tkinter.StringVar(top)
+        self.setting_opt_output_stats_variable.set(DEFAULT_OPT_OUTPUT_STATS)
+        self.setting_opt_output_stats_label = tkinter.Label(
+            self.setting_opt_output_stats_frame, text="OPT Output Stats: "
         )
-        self.setting_opt101_output_stats_label.pack(padx=5, side=tkinter.LEFT)
-        self.setting_opt101_output_stats_entry = tkinter.Entry(
-            self.setting_opt101_output_stats_frame,
-            textvariable=self.setting_opt101_output_stats_variable,
+        self.setting_opt_output_stats_label.pack(padx=5, side=tkinter.LEFT)
+        self.setting_opt_output_stats_entry = tkinter.Entry(
+            self.setting_opt_output_stats_frame,
+            textvariable=self.setting_opt_output_stats_variable,
         )
-        self.setting_opt101_output_stats_entry.pack(padx=5, side=tkinter.LEFT)
-        self.setting_opt101_output_stats_tooltip = idlelib.tooltip.Hovertip(
-            self.setting_opt101_output_stats_entry,
-            '(0=Disable, 1=Enable) output statistics (if built with OPT101_ENABLE_STATS) relating to how the opt101 module is processing all lines start with \n"+stats " followed by specific statistics. Turn this off when not experimenting as it may degrade timing accuracy when serial communication occurs',
+        self.setting_opt_output_stats_entry.pack(padx=5, side=tkinter.LEFT)
+        self.setting_opt_output_stats_tooltip = idlelib.tooltip.Hovertip(
+            self.setting_opt_output_stats_entry,
+            '(0=Disable, 1=Enable) output statistics (if built with OPT_ENABLE_STATS) relating to how the opt module is processing all lines start with \n"+stats " followed by specific statistics. Turn this off when not experimenting as it may degrade timing accuracy when serial communication occurs',
             hover_delay=100,
         )
-        self.setting_opt101_output_stats_frame.grid(
+        self.setting_opt_output_stats_frame.grid(
             row=debug_row_count, column=0, sticky="w"
         )
         debug_row_count += 1
 
-        self.setting_opt101_sensor_filter_mode_frame = tkinter.Frame(
+        self.setting_opt_sensor_filter_mode_frame = tkinter.Frame(
             self.experimental_and_debug_frame
         )
-        self.setting_opt101_sensor_filter_mode_variable = tkinter.StringVar(top)
-        self.setting_opt101_sensor_filter_mode_variable.set(
-            DEFAULT_OPT101_SENSOR_FILTER_MODE
+        self.setting_opt_sensor_filter_mode_variable = tkinter.StringVar(top)
+        self.setting_opt_sensor_filter_mode_variable.set(DEFAULT_OPT_SENSOR_FILTER_MODE)
+        self.setting_opt_sensor_filter_mode_label = tkinter.Label(
+            self.setting_opt_sensor_filter_mode_frame,
+            text="OPT Sensor Filter Mode: ",
         )
-        self.setting_opt101_sensor_filter_mode_label = tkinter.Label(
-            self.setting_opt101_sensor_filter_mode_frame,
-            text="OPT101 Sensor Filter Mode: ",
+        self.setting_opt_sensor_filter_mode_label.pack(padx=5, side=tkinter.LEFT)
+        self.setting_opt_sensor_filter_mode_entry = tkinter.Entry(
+            self.setting_opt_sensor_filter_mode_frame,
+            textvariable=self.setting_opt_sensor_filter_mode_variable,
         )
-        self.setting_opt101_sensor_filter_mode_label.pack(padx=5, side=tkinter.LEFT)
-        self.setting_opt101_sensor_filter_mode_entry = tkinter.Entry(
-            self.setting_opt101_sensor_filter_mode_frame,
-            textvariable=self.setting_opt101_sensor_filter_mode_variable,
-        )
-        self.setting_opt101_sensor_filter_mode_entry.pack(padx=5, side=tkinter.LEFT)
-        self.setting_opt101_sensor_filter_mode_entry.config(state="disabled")
-        self.setting_opt101_sensor_filter_mode_tooltip = idlelib.tooltip.Hovertip(
-            self.setting_opt101_sensor_filter_mode_entry,
+        self.setting_opt_sensor_filter_mode_entry.pack(padx=5, side=tkinter.LEFT)
+        self.setting_opt_sensor_filter_mode_entry.config(state="disabled")
+        self.setting_opt_sensor_filter_mode_tooltip = idlelib.tooltip.Hovertip(
+            self.setting_opt_sensor_filter_mode_entry,
             "(0=Disable (default), 1=Mode 1) (Mode 1: check that the last three readings are trending in the same direction) \n(this may be useful in helping to eliminate the effect of noise caused by IR leds or low signal to noise from the optical sensor.) \n(Only available from firmware version 13 onwards)",
             hover_delay=100,
         )
-        self.setting_opt101_sensor_filter_mode_frame.grid(
+        self.setting_opt_sensor_filter_mode_frame.grid(
             row=debug_row_count, column=0, sticky="w"
         )
         debug_row_count += 1
@@ -933,28 +923,26 @@ class EmitterSettingsDialog:
         )
         debug_row_count += 1
 
-        self.setting_opt101_debug_frame = tkinter.Frame(
-            self.experimental_and_debug_frame
-        )
-        self.setting_opt101_enable_stream_readings_to_serial_toggle_button = (
+        self.setting_opt_debug_frame = tkinter.Frame(self.experimental_and_debug_frame)
+        self.setting_opt_enable_stream_readings_to_serial_toggle_button = (
             tkinter.Button(
-                self.setting_opt101_debug_frame,
-                text="Toggle OPT101 Enable Stream Readings To Serial",
-                command=self.click_opt101_enable_stream_readings_to_serial_toggle,
+                self.setting_opt_debug_frame,
+                text="Toggle OPT Enable Stream Readings To Serial",
+                command=self.click_opt_enable_stream_readings_to_serial_toggle,
             )
         )
-        self.setting_opt101_enable_stream_readings_to_serial_toggle_button.config(
+        self.setting_opt_enable_stream_readings_to_serial_toggle_button.config(
             state="disabled"
         )
-        self.setting_opt101_enable_stream_readings_to_serial_toggle_button.pack(
+        self.setting_opt_enable_stream_readings_to_serial_toggle_button.pack(
             padx=5, side=tkinter.LEFT
         )
-        self.setting_opt101_enable_stream_readings_to_serial_toggle_button_tooltip = idlelib.tooltip.Hovertip(
-            self.setting_opt101_enable_stream_readings_to_serial_toggle_button,
-            "toggles logging of opt101 sensor readings to a file for analysis and debugging (if built with OPT101_ENABLE_STREAM_READINGS_TO_SERIAL)",
+        self.setting_opt_enable_stream_readings_to_serial_toggle_button_tooltip = idlelib.tooltip.Hovertip(
+            self.setting_opt_enable_stream_readings_to_serial_toggle_button,
+            "toggles logging of opt sensor readings to a file for analysis and debugging (if built with OPT_ENABLE_STREAM_READINGS_TO_SERIAL)",
             hover_delay=100,
         )
-        self.setting_opt101_debug_frame.grid(row=debug_row_count, column=0, sticky="w")
+        self.setting_opt_debug_frame.grid(row=debug_row_count, column=0, sticky="w")
         debug_row_count += 1
 
         self.action_button_frame_1 = tkinter.Frame(top)
@@ -1022,11 +1010,11 @@ class EmitterSettingsDialog:
 
         if self.main_app.emitter_serial:
             if self.emitter_firmware_version_int >= 11:
-                self.setting_opt101_enable_stream_readings_to_serial_toggle_button.config(
+                self.setting_opt_enable_stream_readings_to_serial_toggle_button.config(
                     state="normal"
                 )
             else:
-                self.setting_opt101_enable_stream_readings_to_serial_toggle_button.config(
+                self.setting_opt_enable_stream_readings_to_serial_toggle_button.config(
                     state="disabled"
                 )
             self.setting_glasses_mode_button.config(state="normal")
@@ -1036,7 +1024,7 @@ class EmitterSettingsDialog:
             self.serial_port_disconnect_button.config(state="normal")
             self.save_settings_button.config(state="normal")
         else:
-            self.setting_opt101_enable_stream_readings_to_serial_toggle_button.config(
+            self.setting_opt_enable_stream_readings_to_serial_toggle_button.config(
                 state="disabled"
             )
             self.setting_glasses_mode_button.config(state="disabled")
@@ -1066,15 +1054,15 @@ class EmitterSettingsDialog:
                         ir_frame_delay,
                         ir_frame_duration,
                         ir_signal_spacing,
-                        opt101_block_signal_detection_delay,
-                        opt101_min_threshold_value_to_activate,
-                        opt101_detection_threshold,
-                        opt101_detection_threshold_repeated_high,  # @UnusedVariable
-                        opt101_detection_threshold_repeated_low,  # @UnusedVariable
-                        opt101_enable_ignore_during_ir,
-                        opt101_enable_duplicate_realtime_reporting,
-                        opt101_output_stats,
-                        opt101_enable_frequency_analysis_based_duplicate_frame_detection,  # @UnusedVariable
+                        opt_block_signal_detection_delay,
+                        opt_min_threshold_value_to_activate,
+                        opt_detection_threshold,
+                        opt_detection_threshold_repeated_high,  # @UnusedVariable
+                        opt_detection_threshold_repeated_low,  # @UnusedVariable
+                        opt_enable_ignore_during_ir,
+                        opt_enable_duplicate_realtime_reporting,
+                        opt_output_stats,
+                        opt_enable_frequency_analysis_based_duplicate_frame_detection,  # @UnusedVariable
                     ) = parameters[1:14]
 
                     self.setting_emitter_firmware_version_variable.set(
@@ -1084,63 +1072,59 @@ class EmitterSettingsDialog:
                     self.setting_ir_frame_delay_variable.set(ir_frame_delay)
                     self.setting_ir_frame_duration_variable.set(ir_frame_duration)
                     self.setting_ir_signal_spacing_variable.set(ir_signal_spacing)
-                    self.setting_opt101_block_signal_detection_delay_variable.set(
-                        opt101_block_signal_detection_delay
+                    self.setting_opt_block_signal_detection_delay_variable.set(
+                        opt_block_signal_detection_delay
                     )
-                    self.setting_opt101_min_threshold_value_to_activate_variable.set(
-                        opt101_min_threshold_value_to_activate
+                    self.setting_opt_min_threshold_value_to_activate_variable.set(
+                        opt_min_threshold_value_to_activate
                     )
-                    self.setting_opt101_detection_threshold_variable.set(
-                        opt101_detection_threshold
+                    self.setting_opt_detection_threshold_variable.set(
+                        opt_detection_threshold
                     )
-                    self.setting_opt101_enable_ignore_during_ir_variable.set(
-                        opt101_enable_ignore_during_ir
+                    self.setting_opt_enable_ignore_during_ir_variable.set(
+                        opt_enable_ignore_during_ir
                     )
-                    self.setting_opt101_enable_duplicate_realtime_reporting_variable.set(
-                        opt101_enable_duplicate_realtime_reporting
+                    self.setting_opt_enable_duplicate_realtime_reporting_variable.set(
+                        opt_enable_duplicate_realtime_reporting
                     )
-                    self.setting_opt101_output_stats_variable.set(opt101_output_stats)
+                    self.setting_opt_output_stats_variable.set(opt_output_stats)
                     if self.emitter_firmware_version_int > 9:
-                        self.setting_opt101_block_n_subsequent_duplicates_variable.set(
+                        self.setting_opt_block_n_subsequent_duplicates_variable.set(
                             parameters[14]
                         )
-                        self.setting_opt101_block_n_subsequent_duplicates_entry.config(
+                        self.setting_opt_block_n_subsequent_duplicates_entry.config(
                             state="normal"
                         )
                     if self.emitter_firmware_version_int >= 11:
-                        self.setting_opt101_enable_stream_readings_to_serial_toggle_button.config(
+                        self.setting_opt_enable_stream_readings_to_serial_toggle_button.config(
                             state="normal"
                         )
                     else:
-                        self.setting_opt101_enable_stream_readings_to_serial_toggle_button.config(
+                        self.setting_opt_enable_stream_readings_to_serial_toggle_button.config(
                             state="disabled"
                         )
                     if self.emitter_firmware_version_int >= 12:
-                        self.setting_opt101_ignore_all_duplicates_variable.set(
+                        self.setting_opt_ignore_all_duplicates_variable.set(
                             parameters[15]
                         )
-                        self.setting_opt101_ignore_all_duplicates_entry.config(
+                        self.setting_opt_ignore_all_duplicates_entry.config(
                             state="normal"
                         )
                     else:
-                        self.setting_opt101_ignore_all_duplicates_variable.set(
-                            DEFAULT_OPT101_IGNORE_ALL_DUPLICATES
+                        self.setting_opt_ignore_all_duplicates_variable.set(
+                            DEFAULT_OPT_IGNORE_ALL_DUPLICATES
                         )
-                        self.setting_opt101_ignore_all_duplicates_entry.config(
+                        self.setting_opt_ignore_all_duplicates_entry.config(
                             state="disabled"
                         )
                     if self.emitter_firmware_version_int >= 13:
-                        self.setting_opt101_sensor_filter_mode_variable.set(
-                            parameters[16]
-                        )
-                        self.setting_opt101_sensor_filter_mode_entry.config(
-                            state="normal"
-                        )
+                        self.setting_opt_sensor_filter_mode_variable.set(parameters[16])
+                        self.setting_opt_sensor_filter_mode_entry.config(state="normal")
                     else:
-                        self.setting_opt101_sensor_filter_mode_variable.set(
-                            DEFAULT_OPT101_SENSOR_FILTER_MODE
+                        self.setting_opt_sensor_filter_mode_variable.set(
+                            DEFAULT_OPT_SENSOR_FILTER_MODE
                         )
-                        self.setting_opt101_sensor_filter_mode_entry.config(
+                        self.setting_opt_sensor_filter_mode_entry.config(
                             state="disabled"
                         )
                     self.setting_ir_flip_eyes_variable.set(DEFAULT_IR_FLIP_EYES)
@@ -1151,15 +1135,15 @@ class EmitterSettingsDialog:
                         ir_frame_delay,
                         ir_frame_duration,
                         ir_signal_spacing,
-                        opt101_block_signal_detection_delay,
-                        opt101_min_threshold_value_to_activate,
-                        opt101_detection_threshold,
-                        opt101_enable_ignore_during_ir,
-                        opt101_enable_duplicate_realtime_reporting,
-                        opt101_output_stats,
-                        opt101_block_n_subsequent_duplicates,
-                        opt101_ignore_all_duplicates,
-                        opt101_sensor_filter_mode,
+                        opt_block_signal_detection_delay,
+                        opt_min_threshold_value_to_activate,
+                        opt_detection_threshold,
+                        opt_enable_ignore_during_ir,
+                        opt_enable_duplicate_realtime_reporting,
+                        opt_output_stats,
+                        opt_block_n_subsequent_duplicates,
+                        opt_ignore_all_duplicates,
+                        opt_sensor_filter_mode,
                         ir_flip_eyes,
                     ) = parameters[1:15]
 
@@ -1170,43 +1154,41 @@ class EmitterSettingsDialog:
                     self.setting_ir_frame_delay_variable.set(ir_frame_delay)
                     self.setting_ir_frame_duration_variable.set(ir_frame_duration)
                     self.setting_ir_signal_spacing_variable.set(ir_signal_spacing)
-                    self.setting_opt101_block_signal_detection_delay_variable.set(
-                        opt101_block_signal_detection_delay
+                    self.setting_opt_block_signal_detection_delay_variable.set(
+                        opt_block_signal_detection_delay
                     )
-                    self.setting_opt101_min_threshold_value_to_activate_variable.set(
-                        opt101_min_threshold_value_to_activate
+                    self.setting_opt_min_threshold_value_to_activate_variable.set(
+                        opt_min_threshold_value_to_activate
                     )
-                    self.setting_opt101_detection_threshold_variable.set(
-                        opt101_detection_threshold
+                    self.setting_opt_detection_threshold_variable.set(
+                        opt_detection_threshold
                     )
-                    self.setting_opt101_enable_ignore_during_ir_variable.set(
-                        opt101_enable_ignore_during_ir
+                    self.setting_opt_enable_ignore_during_ir_variable.set(
+                        opt_enable_ignore_during_ir
                     )
-                    self.setting_opt101_enable_duplicate_realtime_reporting_variable.set(
-                        opt101_enable_duplicate_realtime_reporting
+                    self.setting_opt_enable_duplicate_realtime_reporting_variable.set(
+                        opt_enable_duplicate_realtime_reporting
                     )
-                    self.setting_opt101_output_stats_variable.set(opt101_output_stats)
-                    self.setting_opt101_block_n_subsequent_duplicates_variable.set(
-                        opt101_block_n_subsequent_duplicates
+                    self.setting_opt_output_stats_variable.set(opt_output_stats)
+                    self.setting_opt_block_n_subsequent_duplicates_variable.set(
+                        opt_block_n_subsequent_duplicates
                     )
-                    self.setting_opt101_ignore_all_duplicates_variable.set(
-                        opt101_ignore_all_duplicates
+                    self.setting_opt_ignore_all_duplicates_variable.set(
+                        opt_ignore_all_duplicates
                     )
-                    self.setting_opt101_sensor_filter_mode_variable.set(
-                        opt101_sensor_filter_mode
+                    self.setting_opt_sensor_filter_mode_variable.set(
+                        opt_sensor_filter_mode
                     )
                     self.setting_ir_flip_eyes_variable.set(ir_flip_eyes)
 
-                    self.setting_opt101_block_n_subsequent_duplicates_entry.config(
+                    self.setting_opt_block_n_subsequent_duplicates_entry.config(
                         state="normal"
                     )
-                    self.setting_opt101_enable_stream_readings_to_serial_toggle_button.config(
+                    self.setting_opt_enable_stream_readings_to_serial_toggle_button.config(
                         state="normal"
                     )
-                    self.setting_opt101_ignore_all_duplicates_entry.config(
-                        state="normal"
-                    )
-                    self.setting_opt101_sensor_filter_mode_entry.config(state="normal")
+                    self.setting_opt_ignore_all_duplicates_entry.config(state="normal")
+                    self.setting_opt_sensor_filter_mode_entry.config(state="normal")
                     self.setting_ir_flip_eyes_entry.config(state="normal")
 
     def serial_port_click_connect(self):
@@ -1227,7 +1209,7 @@ class EmitterSettingsDialog:
         if self.main_app.emitter_serial:
             self.main_app.emitter_serial.close()
         self.main_app.emitter_serial = None
-        self.setting_opt101_enable_stream_readings_to_serial_toggle_button.config(
+        self.setting_opt_enable_stream_readings_to_serial_toggle_button.config(
             state="disabled"
         )
         self.setting_glasses_mode_button.config(state="disabled")
@@ -1246,26 +1228,24 @@ class EmitterSettingsDialog:
                     f"{self.setting_ir_frame_delay_variable.get()},"
                     f"{self.setting_ir_frame_duration_variable.get()},"
                     f"{self.setting_ir_signal_spacing_variable.get()},"
-                    f"{self.setting_opt101_block_signal_detection_delay_variable.get()},"
-                    f"{self.setting_opt101_min_threshold_value_to_activate_variable.get()},"
-                    f"{self.setting_opt101_detection_threshold_variable.get()},"
-                    f"{DEFAULT_OPT101_DETECTION_THRESHOLD_REPEATED_HIGH},"
-                    f"{DEFAULT_OPT101_DETECTION_THRESHOLD_REPEATED_LOW},"
-                    f"{self.setting_opt101_enable_ignore_during_ir_variable.get()},"
-                    f"{self.setting_opt101_enable_duplicate_realtime_reporting_variable.get()},"
-                    f"{self.setting_opt101_output_stats_variable.get()},"
-                    f"{DEFAULT_OPT101_ENABLE_FREQUENCY_ANALYSIS_BASED_DUPLICATE_FRAME_DETECTION}"
+                    f"{self.setting_opt_block_signal_detection_delay_variable.get()},"
+                    f"{self.setting_opt_min_threshold_value_to_activate_variable.get()},"
+                    f"{self.setting_opt_detection_threshold_variable.get()},"
+                    f"{DEFAULT_OPT_DETECTION_THRESHOLD_REPEATED_HIGH},"
+                    f"{DEFAULT_OPT_DETECTION_THRESHOLD_REPEATED_LOW},"
+                    f"{self.setting_opt_enable_ignore_during_ir_variable.get()},"
+                    f"{self.setting_opt_enable_duplicate_realtime_reporting_variable.get()},"
+                    f"{self.setting_opt_output_stats_variable.get()},"
+                    f"{DEFAULT_OPT_ENABLE_FREQUENCY_ANALYSIS_BASED_DUPLICATE_FRAME_DETECTION}"
                 )
                 if self.emitter_firmware_version_int >= 10:
-                    command += f",{self.setting_opt101_block_n_subsequent_duplicates_variable.get()}"
+                    command += f",{self.setting_opt_block_n_subsequent_duplicates_variable.get()}"
                 if self.emitter_firmware_version_int >= 12:
                     command += (
-                        f",{self.setting_opt101_ignore_all_duplicates_variable.get()}"
+                        f",{self.setting_opt_ignore_all_duplicates_variable.get()}"
                     )
                 if self.emitter_firmware_version_int >= 13:
-                    command += (
-                        f",{self.setting_opt101_sensor_filter_mode_variable.get()}"
-                    )
+                    command += f",{self.setting_opt_sensor_filter_mode_variable.get()}"
             else:
                 command = (
                     f"0,"
@@ -1273,15 +1253,15 @@ class EmitterSettingsDialog:
                     f"{self.setting_ir_frame_delay_variable.get()},"
                     f"{self.setting_ir_frame_duration_variable.get()},"
                     f"{self.setting_ir_signal_spacing_variable.get()},"
-                    f"{self.setting_opt101_block_signal_detection_delay_variable.get()},"
-                    f"{self.setting_opt101_min_threshold_value_to_activate_variable.get()},"
-                    f"{self.setting_opt101_detection_threshold_variable.get()},"
-                    f"{self.setting_opt101_enable_ignore_during_ir_variable.get()},"
-                    f"{self.setting_opt101_enable_duplicate_realtime_reporting_variable.get()},"
-                    f"{self.setting_opt101_output_stats_variable.get()},"
-                    f"{self.setting_opt101_block_n_subsequent_duplicates_variable.get()},"
-                    f"{self.setting_opt101_ignore_all_duplicates_variable.get()},"
-                    f"{self.setting_opt101_sensor_filter_mode_variable.get()},"
+                    f"{self.setting_opt_block_signal_detection_delay_variable.get()},"
+                    f"{self.setting_opt_min_threshold_value_to_activate_variable.get()},"
+                    f"{self.setting_opt_detection_threshold_variable.get()},"
+                    f"{self.setting_opt_enable_ignore_during_ir_variable.get()},"
+                    f"{self.setting_opt_enable_duplicate_realtime_reporting_variable.get()},"
+                    f"{self.setting_opt_output_stats_variable.get()},"
+                    f"{self.setting_opt_block_n_subsequent_duplicates_variable.get()},"
+                    f"{self.setting_opt_ignore_all_duplicates_variable.get()},"
+                    f"{self.setting_opt_sensor_filter_mode_variable.get()},"
                     f"{self.setting_ir_flip_eyes_variable.get()}"
                 )
 
@@ -1309,15 +1289,15 @@ class EmitterSettingsDialog:
                     "ir_frame_duration": self.setting_ir_frame_duration_variable.get(),
                     "ir_signal_spacing": self.setting_ir_signal_spacing_variable.get(),
                     "ir_flip_eyes": self.setting_ir_flip_eyes_variable.get(),
-                    "opt101_block_signal_detection_delay": self.setting_opt101_block_signal_detection_delay_variable.get(),
-                    "opt101_block_n_subsequent_duplicates": self.setting_opt101_block_n_subsequent_duplicates_variable.get(),
-                    "opt101_ignore_all_duplicates": self.setting_opt101_ignore_all_duplicates_variable.get(),
-                    "opt101_sensor_filter_mode_variable": self.setting_opt101_sensor_filter_mode_variable.get(),
-                    "opt101_min_threshold_value_to_activate": self.setting_opt101_min_threshold_value_to_activate_variable.get(),
-                    "opt101_detection_threshold": self.setting_opt101_detection_threshold_variable.get(),
-                    "opt101_enable_ignore_during_ir": self.setting_opt101_enable_ignore_during_ir_variable.get(),
-                    "opt101_enable_duplicate_realtime_reporting": self.setting_opt101_enable_duplicate_realtime_reporting_variable.get(),
-                    "opt101_output_stats": self.setting_opt101_output_stats_variable.get(),
+                    "opt_block_signal_detection_delay": self.setting_opt_block_signal_detection_delay_variable.get(),
+                    "opt_block_n_subsequent_duplicates": self.setting_opt_block_n_subsequent_duplicates_variable.get(),
+                    "opt_ignore_all_duplicates": self.setting_opt_ignore_all_duplicates_variable.get(),
+                    "opt_sensor_filter_mode_variable": self.setting_opt_sensor_filter_mode_variable.get(),
+                    "opt_min_threshold_value_to_activate": self.setting_opt_min_threshold_value_to_activate_variable.get(),
+                    "opt_detection_threshold": self.setting_opt_detection_threshold_variable.get(),
+                    "opt_enable_ignore_during_ir": self.setting_opt_enable_ignore_during_ir_variable.get(),
+                    "opt_enable_duplicate_realtime_reporting": self.setting_opt_enable_duplicate_realtime_reporting_variable.get(),
+                    "opt_output_stats": self.setting_opt_output_stats_variable.get(),
                 },
                 f,
                 indent=2,
@@ -1352,53 +1332,78 @@ class EmitterSettingsDialog:
                     DEFAULT_IR_FLIP_EYES,
                 )
             )
-            self.setting_opt101_block_signal_detection_delay_variable.set(
+            self.setting_opt_block_signal_detection_delay_variable.set(
                 settings.get(
-                    "opt101_block_signal_detection_delay",
-                    DEFAULT_OPT101_BLOCK_SIGNAL_DETECTION_DELAY,
+                    "opt_block_signal_detection_delay",
+                    settings.get(
+                        "opt101_block_signal_detection_delay",
+                        DEFAULT_OPT_BLOCK_SIGNAL_DETECTION_DELAY,
+                    ),
                 )
             )
-            self.setting_opt101_min_threshold_value_to_activate_variable.set(
+            self.setting_opt_min_threshold_value_to_activate_variable.set(
                 settings.get(
-                    "opt101_min_threshold_value_to_activate",
-                    DEFAULT_OPT101_MIN_THRESHOLD_VALUE_TO_ACTIVATE,
+                    "opt_min_threshold_value_to_activate",
+                    settings.get(
+                        "opt101_min_threshold_value_to_activate",
+                        DEFAULT_OPT_MIN_THRESHOLD_VALUE_TO_ACTIVATE,
+                    ),
                 )
             )
-            self.setting_opt101_detection_threshold_variable.set(
+            self.setting_opt_detection_threshold_variable.set(
                 settings.get(
-                    "opt101_detection_threshold", DEFAULT_OPT101_DETECTION_THRESHOLD
+                    "opt_detection_threshold",
+                    settings.get(
+                        "opt101_detection_threshold", DEFAULT_OPT_DETECTION_THRESHOLD
+                    ),
                 )
             )
-            self.setting_opt101_enable_ignore_during_ir_variable.set(
+            self.setting_opt_enable_ignore_during_ir_variable.set(
                 settings.get(
-                    "opt101_enable_ignore_during_ir",
-                    DEFAULT_OPT101_ENABLE_IGNORE_DURING_IR,
+                    "opt_enable_ignore_during_ir",
+                    settings.get(
+                        "opt101_enable_ignore_during_ir",
+                        DEFAULT_OPT_ENABLE_IGNORE_DURING_IR,
+                    ),
                 )
             )
-            self.setting_opt101_enable_duplicate_realtime_reporting_variable.set(
+            self.setting_opt_enable_duplicate_realtime_reporting_variable.set(
                 settings.get(
-                    "opt101_enable_duplicate_realtime_reporting",
-                    DEFAULT_OPT101_ENABLE_DUPLICATE_REALTIME_REPORTING,
+                    "opt_enable_duplicate_realtime_reporting",
+                    settings.get(
+                        "opt101_enable_duplicate_realtime_reporting",
+                        DEFAULT_OPT_ENABLE_DUPLICATE_REALTIME_REPORTING,
+                    ),
                 )
             )
-            self.setting_opt101_output_stats_variable.set(
-                settings.get("opt101_output_stats", DEFAULT_OPT101_OUTPUT_STATS)
+            self.setting_opt_output_stats_variable.set(
+                settings.get("opt_output_stats", DEFAULT_OPT_OUTPUT_STATS)
             )
-            self.setting_opt101_block_n_subsequent_duplicates_variable.set(
+            self.setting_opt_block_n_subsequent_duplicates_variable.set(
                 settings.get(
-                    "opt101_block_n_subsequent_duplicates",
-                    DEFAULT_OPT101_BLOCK_N_SUBSEQUENT_DUPLICATES,
+                    "opt_block_n_subsequent_duplicates",
+                    settings.get(
+                        "opt101_block_n_subsequent_duplicates",
+                        DEFAULT_OPT_BLOCK_N_SUBSEQUENT_DUPLICATES,
+                    ),
                 )
             )
-            self.setting_opt101_ignore_all_duplicates_variable.set(
+            self.setting_opt_ignore_all_duplicates_variable.set(
                 settings.get(
-                    "opt101_ignore_all_duplicates", DEFAULT_OPT101_IGNORE_ALL_DUPLICATES
+                    "opt_ignore_all_duplicates",
+                    settings.get(
+                        "opt101_ignore_all_duplicates",
+                        DEFAULT_OPT_IGNORE_ALL_DUPLICATES,
+                    ),
                 )
             )
-            self.setting_opt101_sensor_filter_mode_variable.set(
+            self.setting_opt_sensor_filter_mode_variable.set(
                 settings.get(
-                    "opt101_sensor_filter_mode",
-                    DEFAULT_OPT101_SENSOR_FILTER_MODE,
+                    "opt_sensor_filter_mode",
+                    settings.get(
+                        "opt101_sensor_filter_mode",
+                        DEFAULT_OPT_SENSOR_FILTER_MODE,
+                    ),
                 )
             )
 
@@ -1408,10 +1413,10 @@ class EmitterSettingsDialog:
             print(command)
             self.main_app.emitter_serial.line_reader.command(command)
 
-    def click_opt101_enable_stream_readings_to_serial_toggle(self):
+    def click_opt_enable_stream_readings_to_serial_toggle(self):
         if self.main_app.emitter_serial:
             new_value = (
-                self.main_app.emitter_serial.line_reader.debug_opt101_enable_stream_readings_to_serial
+                self.main_app.emitter_serial.line_reader.debug_opt_enable_stream_readings_to_serial
                 ^ 1
             )
             if new_value == 1:
@@ -1423,18 +1428,18 @@ class EmitterSettingsDialog:
                 self.main_app.emitter_serial.line_reader.debug_stream_file = open(
                     os.path.join(
                         self.main_app.base_path,
-                        f'{datetime.datetime.now().strftime("%Y-%m-%d_%H%M%S")}_debug_opt101_stream_readings.csv',
+                        f'{datetime.datetime.now().strftime("%Y-%m-%d_%H%M%S")}_debug_opt_stream_readings.csv',
                     ),
                     "wt",
                 )
                 self.main_app.emitter_serial.line_reader.debug_stream_file.write(
-                    "opt101_current_time,left_sensor,right_sensor,duplicate_frames_in_a_row_counter,"
-                    "opt101_block_signal_detection_until,opt101_readings_active,"
-                    "opt101_reading_above_threshold_left,left_duplicate_detected,left_duplicate_ignored,left_sent_ir,"
-                    "opt101_reading_above_threshold_right,right_duplicate_detected,right_duplicate_ignored,right_sent_ir\n"
+                    "opt_current_time,left_sensor,right_sensor,duplicate_frames_in_a_row_counter,"
+                    "opt_block_signal_detection_until,opt_readings_active,"
+                    "opt_reading_above_threshold_left,left_duplicate_detected,left_duplicate_ignored,left_sent_ir,"
+                    "opt_reading_above_threshold_right,right_duplicate_detected,right_duplicate_ignored,right_sent_ir\n"
                 )
 
-            self.main_app.emitter_serial.line_reader.debug_opt101_enable_stream_readings_to_serial = (
+            self.main_app.emitter_serial.line_reader.debug_opt_enable_stream_readings_to_serial = (
                 new_value
             )
 

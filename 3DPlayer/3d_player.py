@@ -1200,7 +1200,7 @@ if __name__ == "__main__":
                                 top_window.emitter_serial is not None
                                 and top_window.emitter_settings_dialog is not None
                             ):
-                                top_window.emitter_settings_dialog.click_opt101_enable_stream_readings_to_serial_toggle()
+                                top_window.emitter_settings_dialog.click_opt_enable_stream_readings_to_serial_toggle()
                         if "seek" in r:
                             top_window.perform_seek(r)
                         if "close" in r and "close" not in ignore_duplicate_actions:
