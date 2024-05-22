@@ -13,7 +13,7 @@ volatile uint16_t ir_frame_duration = IR_FRAME_DURATION;
 volatile uint16_t ir_frame_delay = IR_FRAME_DELAY;
 volatile uint16_t ir_signal_spacing = IR_SIGNAL_SPACING;
 volatile uint8_t ir_flip_eyes = 0;
-#ifdef OPT101_ENABLE_IGNORE_DURING_IR
+#ifdef OPT_SENSOR_ENABLE_IGNORE_DURING_IR
 volatile bool ir_led_token_active = false;
 #endif
 
@@ -49,7 +49,7 @@ void ir_signal_init() {
   ir_frame_delay = IR_FRAME_DELAY;
   ir_signal_spacing = IR_SIGNAL_SPACING;
   ir_flip_eyes = 0;
-  #ifdef OPT101_ENABLE_IGNORE_DURING_IR
+  #ifdef OPT_SENSOR_ENABLE_IGNORE_DURING_IR
   ir_led_token_active = false; 
   #endif
 
@@ -93,7 +93,7 @@ void ir_signal_init() {
 /* 
  This should take a specific signal and start the ir transmission immediately 
  It should be called from two places.
- 1) from ir_signal_process_opt101 when we detect a duplicate frame to send a fast switch signal.
+ 1) from ir_signal_process_opt_sensor when we detect a duplicate frame to send a fast switch signal.
  2) from the comparator isr used by ir_signal_schedule_send
 */
 void ir_signal_send(ir_signal_type signal) {
@@ -129,10 +129,10 @@ void ir_signal_send(ir_signal_type signal) {
       bitSet(PORT_DEBUG_PORT_D15, DEBUG_PORT_D15);
     }
     #endif
-    #ifdef OPT101_ENABLE_IGNORE_DURING_IR
+    #ifdef OPT_SENSOR_ENABLE_IGNORE_DURING_IR
     ir_led_token_active = true;
     #ifdef ENABLE_DEBUG_PIN_OUTPUTS
-    #ifdef OPT101_ENABLE_IGNORE_DURING_IR_DEBUG_PIN_D2
+    #ifdef OPT_SENSOR_ENABLE_IGNORE_DURING_IR_DEBUG_PIN_D2
     bitSet(PORT_DEBUG_PORT_D2, DEBUG_PORT_D2); // IR LED token started
     #endif
     #endif
@@ -160,9 +160,9 @@ void ir_signal_send(ir_signal_type signal) {
         TC4H = (ir_signal_send_current_token_timing >> 8) & 0xFF; // High byte of 10-bit value
         OCR4D = ir_signal_send_current_token_timing & 0xFF; // Low byte of 10-bit value
         bitSet(TIMSK4, OCIE4D); // Enable signal spacing period interrupt
-        #ifdef OPT101_ENABLE_IGNORE_DURING_IR
+        #ifdef OPT_SENSOR_ENABLE_IGNORE_DURING_IR
         ir_led_token_active = false;
-        //#ifdef OPT101_ENABLE_IGNORE_DURING_IR_DEBUG_PIN_D2
+        //#ifdef OPT_SENSOR_ENABLE_IGNORE_DURING_IR_DEBUG_PIN_D2
         //bitClear(PORT_DEBUG_PORT_D2, DEBUG_PORT_D2); // IR LED token ended
         //#endif
         #endif
@@ -194,9 +194,9 @@ ISR(TIMER4_COMPA_vect) // IR pulse falling edge
     bitSet(TIFR4, OCF4D); // Clear pending interrupt flags if any
     OCR4D = ir_signal_send_current_token_timing & 0xFF; // Low byte of 10-bit value
     bitSet(TIMSK4, OCIE4D); // Enable signal spacing period interrupt
-    #ifdef OPT101_ENABLE_IGNORE_DURING_IR
+    #ifdef OPT_SENSOR_ENABLE_IGNORE_DURING_IR
     ir_led_token_active = false;
-    //#ifdef OPT101_ENABLE_IGNORE_DURING_IR_DEBUG_PIN_D2
+    //#ifdef OPT_SENSOR_ENABLE_IGNORE_DURING_IR_DEBUG_PIN_D2
     //bitClear(PORT_DEBUG_PORT_D2, DEBUG_PORT_D2); // IR LED token ended
     //#endif
     #endif
@@ -222,9 +222,9 @@ ISR(TIMER4_COMPB_vect) // IR pulse rising edge
     bitSet(TIFR4, OCF4D); // Clear pending interrupt flags if any
     OCR4D = ir_signal_send_current_token_timing & 0xFF; // Low byte of 10-bit value
     bitSet(TIMSK4, OCIE4D); // Enable signal spacing period interrupt
-    #ifdef OPT101_ENABLE_IGNORE_DURING_IR
+    #ifdef OPT_SENSOR_ENABLE_IGNORE_DURING_IR
     ir_led_token_active = false;
-    //#ifdef OPT101_ENABLE_IGNORE_DURING_IR_DEBUG_PIN_D2
+    //#ifdef OPT_SENSOR_ENABLE_IGNORE_DURING_IR_DEBUG_PIN_D2
     //bitClear(PORT_DEBUG_PORT_D2, DEBUG_PORT_D2); // IR LED token ended
     //#endif
     #endif
@@ -299,7 +299,7 @@ void ir_signal_send_finished() {
  It should be called in two scenarios.
  1) It will be called from the comparator isr 
     (when an open signal is processed to queue the corresponding closing signal)
- 2) It will be called from ir_signal_process_opt101 when we detect a screen update to 
+ 2) It will be called from ir_signal_process_opt_sensor when we detect a screen update to 
     queue the next open signal.
     (below discusses how this will work)
 
@@ -436,7 +436,7 @@ ISR(TIMER1_COMPC_vect)
  Responsible for converting external state change parameters into the those parameters used internally.
  Schedule the open signal for the current frames eye.
 */
-void ir_signal_process_opt101(uint8_t left_eye, bool duplicate) {
+void ir_signal_process_opt_sensor(uint8_t left_eye, bool duplicate) {
   ir_signal_type ir_desired_signal = (left_eye ^ ir_flip_eyes ? SIGNAL_OPEN_LEFT : SIGNAL_OPEN_RIGHT);
   uint8_t desired_signal_index;
   ir_glasses_selected_library = ir_glasses_available[ir_glasses_selected];

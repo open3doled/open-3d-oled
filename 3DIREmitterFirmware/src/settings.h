@@ -7,12 +7,12 @@
 
 //#define ENABLE_DEBUG_PIN_OUTPUTS
 #define ENABLE_LOOP_TOGGLE_DEBUG_PIN_D9 // will toggle on/off every time the loop goes round
-#define OPT101_ENABLE_STREAM_READINGS_TO_SERIAL // adds code for command "10" to stream the opt101 readings for the left and right eye over serial to the computer (this is a debug mode, don't use at the same time as show stats or you will get garbled output)
-#define OPT101_ENABLE_IGNORE_DURING_IR // ignore opt101 sensor readings when LED is triggering due to power/light distortions that may cause opt101 sensor reading inconsistencies. (only applies when setting variable is set as well)
-//#define OPT101_ENABLE_IGNORE_DURING_IR_DEBUG_PIN_D2 // use the D2 pin to show when we disable opt101 reading because we are sending an active led token.
-#define OPT101_ENABLE_STATS // prints opt101 statistics every OPT101_UPDATE_STAT_PERIOD micros
-#define OPT101_UPDATE_STAT_PERIOD 5000000 // in micros (frequency to update and optionally display stats for the opt101 sensor module)
-#define OPT101_FILTER_ADC_SIGNAL // This will adjust the code to function properly with the BPW34 photodiode which has no transimpedance amplifier and has an output voltage much closer to 150mV so it can be mistriggered by noise ir led triggering. (beta testers have reported this causes flickering on some pwm backlit displays (possibly because the flashing of the backlight is irratic, perhaps this needs to be a proper peramater disabling for now by default)) (only applies when setting variable is set as well)
+#define OPT_SENSOR_ENABLE_STREAM_READINGS_TO_SERIAL // adds code for command "10" to stream the opt_sensor readings for the left and right eye over serial to the computer (this is a debug mode, don't use at the same time as show stats or you will get garbled output)
+#define OPT_SENSOR_ENABLE_IGNORE_DURING_IR // ignore opt_sensor sensor readings when LED is triggering due to power/light distortions that may cause opt_sensor sensor reading inconsistencies. (only applies when setting variable is set as well)
+//#define OPT_SENSOR_ENABLE_IGNORE_DURING_IR_DEBUG_PIN_D2 // use the D2 pin to show when we disable opt_sensor reading because we are sending an active led token.
+#define OPT_SENSOR_ENABLE_STATS // prints opt_sensor statistics every OPT_SENSOR_UPDATE_STAT_PERIOD micros
+#define OPT_SENSOR_UPDATE_STAT_PERIOD 5000000 // in micros (frequency to update and optionally display stats for the opt_sensor sensor module)
+#define OPT_SENSOR_FILTER_ADC_SIGNAL // This will adjust the code to function properly with the BPW34 photodiode which has no transimpedance amplifier and has an output voltage much closer to 150mV so it can be mistriggered by noise ir led triggering. (beta testers have reported this causes flickering on some pwm backlit displays (possibly because the flashing of the backlight is irratic, perhaps this needs to be a proper peramater disabling for now by default)) (only applies when setting variable is set as well)
 #ifndef ENABLE_DEBUG_PIN_OUTPUTS
 //#define ENABLE_DEBUG_STATUS_LEDS // we are using the pads for the unused button footprints on D2, D4 and D5 to drive some status LEDs.
 //#define ENABLE_DEBUG_STATUS_FLASH_D2_ON_STARTUP 10
@@ -21,16 +21,16 @@
 
 // defaults LCD 2560x1080 60hz
 /*
-#define OPT101_BLOCK_SIGNAL_DETECTION_DELAY 15000 // in micros (some value around 90% of the frame rate, large enough to avoid false positive when signal is going down but small enough that dynamic framerate detection delay still works for displays without BFI)
+#define OPT_SENSOR_BLOCK_SIGNAL_DETECTION_DELAY 15000 // in micros (some value around 90% of the frame rate, large enough to avoid false positive when signal is going down but small enough that dynamic framerate detection delay still works for displays without BFI)
 #define IR_FRAME_DURATION  (9500)    // Frame exposure duration in microseconds (@16MHz)
-#define IR_FRAME_DELAY       (250)       // Time between opt101 trigger and start of IR token (in microseconds (@16MHz))
+#define IR_FRAME_DELAY       (250)       // Time between opt_sensor trigger and start of IR token (in microseconds (@16MHz))
 //*/
 
 // defaults LG OLED 1920x1080 120hz
 //*
-#define OPT101_BLOCK_SIGNAL_DETECTION_DELAY 6500 // in micros (some value around 90% of the frame rate, large enough to avoid false positive when signal is going down but small enough that dynamic framerate detection delay still works for displays without BFI)
+#define OPT_SENSOR_BLOCK_SIGNAL_DETECTION_DELAY 6500 // in micros (some value around 90% of the frame rate, large enough to avoid false positive when signal is going down but small enough that dynamic framerate detection delay still works for displays without BFI)
 #define IR_FRAME_DURATION  (7000)    // Frame exposure duration in microseconds (@16MHz)
-#define IR_FRAME_DELAY       (500)    // Time between opt101 trigger and start of IR token (in microseconds (@16MHz))
+#define IR_FRAME_DELAY       (500)    // Time between opt_sensor trigger and start of IR token (in microseconds (@16MHz))
 #define IR_SIGNAL_SPACING   (30)    // Minimum time required between ir signals being sent in us (measured at 17us currently so 30 us should be more than enough I think). 
 //*/
 
@@ -165,9 +165,9 @@
 Version History
 15 - Fixed handling of two token ir protocols
 14 - Removed all frequency analysis frame detection stuff for LCD's it was to complicated, and added ir_flip_eyes to support inverting the eye signals if frame_delay is triggering next frames eye instead
-13 - Improved sensor logging and added opt101_sensor_filter_mode
-12 - Added support for OPT101_IGNORE_ALL_DUPLICATES to help with displays with strange timings and PWM values
-11 - Added support for OPT101_ENABLE_STREAM_READINGS_TO_SERIAL to help debug timings on new displays
+13 - Improved sensor logging and added opt_sensor_filter_mode
+12 - Added support for OPT_SENSOR_IGNORE_ALL_DUPLICATES to help with displays with strange timings and PWM values
+11 - Added support for OPT_SENSOR_ENABLE_STREAM_READINGS_TO_SERIAL to help debug timings on new displays
 10 - First official tracked version
 */
 
@@ -178,18 +178,18 @@ struct EEPROMSettings {
     uint16_t ir_frame_delay; 
     uint16_t ir_frame_duration;
     uint16_t ir_signal_spacing;
-    uint32_t opt101_block_signal_detection_delay;
-    uint32_t opt101_min_threshold_value_to_activate;
-    uint8_t opt101_detection_threshold;
-    uint8_t opt101_enable_ignore_during_ir;
-    uint8_t opt101_enable_duplicate_realtime_reporting;
-    uint8_t opt101_output_stats; // was opt101_enable_ignore_during_ir;
-    uint8_t opt101_block_n_subsequent_duplicates; // was opt101_enable_duplicate_realtime_reporting;
-    uint8_t opt101_ignore_all_duplicates; // was opt101_output_stats;
-    uint8_t opt101_sensor_filter_mode;
-    uint8_t ir_flip_eyes; // was opt101_block_n_subsequent_duplicates;
-    uint8_t empty_216; // was opt101_ignore_all_duplicates;
-    uint8_t empty_224; // was opt101_sensor_filter_mode;
+    uint32_t opt_sensor_block_signal_detection_delay;
+    uint32_t opt_sensor_min_threshold_value_to_activate;
+    uint8_t opt_sensor_detection_threshold;
+    uint8_t opt_sensor_enable_ignore_during_ir;
+    uint8_t opt_sensor_enable_duplicate_realtime_reporting;
+    uint8_t opt_sensor_output_stats; // was opt_sensor_enable_ignore_during_ir;
+    uint8_t opt_sensor_block_n_subsequent_duplicates; // was opt_sensor_enable_duplicate_realtime_reporting;
+    uint8_t opt_sensor_ignore_all_duplicates; // was opt_sensor_output_stats;
+    uint8_t opt_sensor_filter_mode;
+    uint8_t ir_flip_eyes; // was opt_sensor_block_n_subsequent_duplicates;
+    uint8_t empty_216; // was opt_sensor_ignore_all_duplicates;
+    uint8_t empty_224; // was opt_sensor_filter_mode;
 };
 
 #endif /* _SETTINGS_H_ */
