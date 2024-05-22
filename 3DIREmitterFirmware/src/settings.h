@@ -180,7 +180,7 @@ struct EEPROMSettings {
     uint16_t ir_signal_spacing;
     uint32_t opt_sensor_block_signal_detection_delay;
     uint32_t opt_sensor_min_threshold_value_to_activate;
-    uint8_t opt_sensor_detection_threshold;
+    uint8_t opt_sensor_detection_threshold_high;
     uint8_t opt_sensor_enable_ignore_during_ir;
     uint8_t opt_sensor_enable_duplicate_realtime_reporting;
     uint8_t opt_sensor_output_stats; // was opt_sensor_enable_ignore_during_ir;

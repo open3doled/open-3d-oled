@@ -72,7 +72,7 @@ void setup()
             ir_signal_spacing = eeprom_settings.ir_signal_spacing;
             opt_sensor_block_signal_detection_delay = eeprom_settings.opt_sensor_block_signal_detection_delay;
             opt_sensor_min_threshold_value_to_activate = eeprom_settings.opt_sensor_min_threshold_value_to_activate;
-            opt_sensor_detection_threshold = eeprom_settings.opt_sensor_detection_threshold;
+            opt_sensor_detection_threshold_high = eeprom_settings.opt_sensor_detection_threshold_high;
             opt_sensor_enable_ignore_during_ir = eeprom_settings.opt_sensor_output_stats;
             opt_sensor_enable_duplicate_realtime_reporting = eeprom_settings.opt_sensor_block_n_subsequent_duplicates;
             opt_sensor_output_stats = eeprom_settings.opt_sensor_ignore_all_duplicates;
@@ -97,7 +97,7 @@ void setup()
             ir_signal_spacing = eeprom_settings.ir_signal_spacing;
             opt_sensor_block_signal_detection_delay = eeprom_settings.opt_sensor_block_signal_detection_delay;
             opt_sensor_min_threshold_value_to_activate = eeprom_settings.opt_sensor_min_threshold_value_to_activate;
-            opt_sensor_detection_threshold = eeprom_settings.opt_sensor_detection_threshold;
+            opt_sensor_detection_threshold_high = eeprom_settings.opt_sensor_detection_threshold_high;
             opt_sensor_enable_ignore_during_ir = eeprom_settings.opt_sensor_enable_ignore_during_ir;
             opt_sensor_enable_duplicate_realtime_reporting = eeprom_settings.opt_sensor_enable_duplicate_realtime_reporting;
             opt_sensor_output_stats = eeprom_settings.opt_sensor_output_stats;
@@ -167,7 +167,7 @@ void loop()
             *   this setting is used to stop the emitter turning on when the TV is turned off.  (default 10)
             *   to low a value will cause it to turn on when the screen is black and trigger sporatically. 
             *   to high a value will mean that it never turns on.
-            * 7) opt_sensor_detection_threshold - 
+            * 7) opt_sensor_detection_threshold_high - 
             *   the level (as a value between 1-255) above which an increasing light intensity is detected as the beggining of a new frame, 
             *   setting this lower will make the device aware of new frames earlier but also increase the likelihood of duplicate frame
             *   detection if the light intensity doesn't fall below this threshold before the opt_sensor_block_signal_detection_delay completes.
@@ -225,7 +225,7 @@ void loop()
                         }
                         else if (p == 7) 
                         {
-                            opt_sensor_detection_threshold = temp;
+                            opt_sensor_detection_threshold_high = temp;
                         }
                         else if (p == 8) 
                         {
@@ -281,7 +281,7 @@ void loop()
                             ir_signal_spacing,
                             opt_sensor_block_signal_detection_delay,
                             opt_sensor_min_threshold_value_to_activate,
-                            opt_sensor_detection_threshold,
+                            opt_sensor_detection_threshold_high,
                             opt_sensor_enable_ignore_during_ir,
                             opt_sensor_enable_duplicate_realtime_reporting,
                             opt_sensor_output_stats,
@@ -322,7 +322,7 @@ void loop()
                 Serial.print(",");
                 Serial.print(opt_sensor_min_threshold_value_to_activate);
                 Serial.print(",");
-                Serial.print(opt_sensor_detection_threshold);
+                Serial.print(opt_sensor_detection_threshold_high);
                 Serial.print(",");
                 Serial.print(opt_sensor_enable_ignore_during_ir);
                 Serial.print(",");

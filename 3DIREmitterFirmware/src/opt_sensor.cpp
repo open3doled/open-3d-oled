@@ -28,9 +28,7 @@ uint8_t opt_sensor_enable_frequency_analysis_based_duplicate_frame_detection = 0
 uint8_t opt_sensor_enable_ignore_during_ir = 0;
 uint8_t opt_sensor_enable_duplicate_realtime_reporting = 0;
 uint8_t opt_sensor_output_stats = 0;
-uint8_t opt_sensor_detection_threshold = 128;
-uint8_t opt_sensor_detection_threshold_repeated_high = 224;
-uint8_t opt_sensor_detection_threshold_repeated_low = 32;
+uint8_t opt_sensor_detection_threshold_high = 128;
 uint32_t opt_sensor_block_signal_detection_delay = OPT_SENSOR_BLOCK_SIGNAL_DETECTION_DELAY;
 uint8_t opt_sensor_block_n_subsequent_duplicates = 0;
 uint8_t opt_sensor_ignore_all_duplicates = 0;
@@ -60,7 +58,7 @@ uint16_t opt_sensor_premature_frames_counter = 0;
 volatile uint8_t opt_sensor_readings[OPT_SENSOR_CHANNELS];
 uint8_t opt_sensor_readings_high[OPT_SENSOR_CHANNELS];
 uint8_t opt_sensor_readings_low[OPT_SENSOR_CHANNELS];
-uint8_t opt_sensor_readings_threshold[OPT_SENSOR_CHANNELS];
+uint8_t opt_sensor_readings_threshold_high[OPT_SENSOR_CHANNELS];
 
 uint16_t opt_sensor_ss_reading_counter = 0;
 uint16_t opt_sensor_ss_duplicate_frames_counter = 0;
@@ -70,7 +68,7 @@ uint16_t opt_sensor_ss_channel_frequency_detection_counter[OPT_SENSOR_CHANNELS];
 volatile uint8_t opt_sensor_ss_readings[OPT_SENSOR_CHANNELS];
 uint8_t opt_sensor_ss_readings_high[OPT_SENSOR_CHANNELS];
 uint8_t opt_sensor_ss_readings_low[OPT_SENSOR_CHANNELS];
-uint8_t opt_sensor_ss_readings_threshold[OPT_SENSOR_CHANNELS];
+uint8_t opt_sensor_ss_readings_threshold_high[OPT_SENSOR_CHANNELS];
 
 
 /*
@@ -98,9 +96,7 @@ void opt_sensor_Init(void)
     opt_sensor_enable_frequency_analysis_based_duplicate_frame_detection = 0;
     opt_sensor_enable_duplicate_realtime_reporting = 0;
     opt_sensor_output_stats = 0;
-    opt_sensor_detection_threshold = 128;
-    opt_sensor_detection_threshold_repeated_high = 224;
-    opt_sensor_detection_threshold_repeated_low = 32;
+    opt_sensor_detection_threshold_high = 128;
     opt_sensor_block_signal_detection_delay = OPT_SENSOR_BLOCK_SIGNAL_DETECTION_DELAY;
     opt_sensor_block_n_subsequent_duplicates = 0;
     opt_sensor_ignore_all_duplicates = 0;
@@ -130,7 +126,7 @@ void opt_sensor_Init(void)
     memset((void *)opt_sensor_readings, 0, sizeof(opt_sensor_readings));
     memset((void *)opt_sensor_readings_high, 0, sizeof(opt_sensor_readings_high));
     memset((void *)opt_sensor_readings_low, 255, sizeof(opt_sensor_readings_low));
-    memset((void *)opt_sensor_readings_threshold, 60, sizeof(opt_sensor_readings_threshold));
+    memset((void *)opt_sensor_readings_threshold_high, 60, sizeof(opt_sensor_readings_threshold_high));
     
     ADMUX  = _BV(REFS0)  // ref = AVCC
            | _BV(ADLAR)  // left adjust result
@@ -173,7 +169,7 @@ void opt_sensor_PrintStats(void)
                 opt_sensor_ss_readings[ch] = opt_sensor_readings[ch];
                 opt_sensor_ss_readings_high[ch] = opt_sensor_readings_high[ch];
                 opt_sensor_ss_readings_low[ch] = opt_sensor_readings_low[ch];
-                opt_sensor_ss_readings_threshold[ch] = opt_sensor_readings_threshold[ch];
+                opt_sensor_ss_readings_threshold_high[ch] = opt_sensor_readings_threshold_high[ch];
             }
             opt_sensor_UpdateThresholds();
             opt_sensor_ClearStats();
@@ -213,7 +209,7 @@ void opt_sensor_PrintStats(void)
             break;
         case 10*OPT_SENSOR_STATS_SERIAL_OUTPUT_FREQUENCY:
             Serial.print(" thr:");
-            Serial.print(opt_sensor_ss_readings_threshold[0]);
+            Serial.print(opt_sensor_ss_readings_threshold_high[0]);
             Serial.println();
             opt_sensor_stats_count += 2*OPT_SENSOR_STATS_SERIAL_OUTPUT_FREQUENCY;
             break;
@@ -238,7 +234,7 @@ void opt_sensor_PrintStats(void)
             break;
         case 18*OPT_SENSOR_STATS_SERIAL_OUTPUT_FREQUENCY:
             Serial.print(" thr:");
-            Serial.print(opt_sensor_ss_readings_threshold[1]);
+            Serial.print(opt_sensor_ss_readings_threshold_high[1]);
             Serial.println();
             opt_sensor_stats_count += 2*OPT_SENSOR_STATS_SERIAL_OUTPUT_FREQUENCY;
             break;
@@ -266,7 +262,7 @@ void opt_sensor_UpdateThresholds(void)
         {
             opt_sensor_readings_active = false;
         }
-        opt_sensor_readings_threshold[c] = mult_by_threshold(opt_sensor_readings_high[c], opt_sensor_readings_low[c], opt_sensor_detection_threshold);
+        opt_sensor_readings_threshold_high[c] = mult_by_threshold(opt_sensor_readings_high[c], opt_sensor_readings_low[c], opt_sensor_detection_threshold_high);
 
     }
 }
@@ -293,11 +289,11 @@ void opt_sensor_CheckReadings(void)
             if (opt_sensor_readings_active)
             {
                 /*
-                if (last_reading < opt_sensor_readings_threshold[c] && 
-                    checked_readings[c] >= opt_sensor_readings_threshold[c])
+                if (last_reading < opt_sensor_readings_threshold_high[c] && 
+                    checked_readings[c] >= opt_sensor_readings_threshold_high[c])
                     */
                 if (last_reading < checked_readings[c] && 
-                    checked_readings[c] >= opt_sensor_readings_threshold[c])
+                    checked_readings[c] >= opt_sensor_readings_threshold_high[c])
                 {
                     opt_sensor_reading_above_threshold[c] = true;
                     // This is logic to ensure on LCD's where there may be pixel persistence with PWM backlight displays.
@@ -309,7 +305,7 @@ void opt_sensor_CheckReadings(void)
                     {
                         other_channel = (c == 1 ? 0 : 1);
                         if (checked_readings[other_channel] >= last_reading && 
-                            checked_readings[other_channel] >= ((opt_sensor_readings_threshold[other_channel] >> 4) + (opt_sensor_readings_threshold[other_channel] >> 2))) {
+                            checked_readings[other_channel] >= ((opt_sensor_readings_threshold_high[other_channel] >> 4) + (opt_sensor_readings_threshold_high[other_channel] >> 2))) {
                             opt_sensor_reading_above_threshold[c] = false;
                         }
                     }
