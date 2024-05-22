@@ -54,8 +54,8 @@ whitebox_bottom_border_ppc_cf = (corner_position_bottom ? (whitebox_vertical_pos
 
 blackbox_horizontal_position_ppc_cf_left = (flip_eyes == 1 ? (layout_sbs == 1 ? display_resolution_width+blackbox_horizontal_position_ppc_cf : blackbox_horizontal_position_ppc_cf) : blackbox_horizontal_position_ppc_cf)
 blackbox_vertical_position_ppc_cf_left = (flip_eyes == 1 ? (layout_sbs == 0 ? display_resolution_height+blackbox_vertical_position_ppc_cf : blackbox_vertical_position_ppc_cf) : blackbox_vertical_position_ppc_cf)
-blackbox_horizontal_position_ppc_cf_right = (flip_eyes == 1 ? (layout_sbs == 1 ? blackbox_horizontal_position_ppc_cf : display_resolution_width+blackbox_horizontal_position_ppc_cf : blackbox_horizontal_position_ppc_cf))
-blackbox_vertical_position_ppc_cf_right = (flip_eyes == 1 ? (layout_sbs == 0 ? blackbox_vertical_position_ppc_cf : display_resolution_height+blackbox_vertical_position_ppc_cf : blackbox_vertical_position_ppc_cf))
+blackbox_horizontal_position_ppc_cf_right = (flip_eyes == 1 ? blackbox_horizontal_position_ppc_cf : (layout_sbs == 1 ? display_resolution_width+blackbox_horizontal_position_ppc_cf : blackbox_horizontal_position_ppc_cf))
+blackbox_vertical_position_ppc_cf_right = (flip_eyes == 1 ? blackbox_vertical_position_ppc_cf : (layout_sbs == 0 ? display_resolution_height+blackbox_vertical_position_ppc_cf : blackbox_vertical_position_ppc_cf))
 
 trigger_box_mask = BlankClip( \
   width=blackbox_width_ppc-2*blackbox_blur_gradient_offset_ppc+horizontal_mod2_fix, \
