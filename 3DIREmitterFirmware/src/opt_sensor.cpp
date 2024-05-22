@@ -301,7 +301,6 @@ void opt_sensor_CheckReadings(void)
         for (uint8_t c = 0; c < OPT_SENSOR_CHANNELS; c++)
         {
             other_channel = (c == 1 ? 0 : 1);
-            uint8_t last_reading = opt_sensor_readings_last[c];
             if (opt_sensor_readings_active)
             {
                 if (checked_readings[c] >= opt_sensor_readings_threshold_high[c] &&
