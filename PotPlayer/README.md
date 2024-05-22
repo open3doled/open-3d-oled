@@ -7,6 +7,11 @@ The setup of such a system is provided in the steps below.
 
 ## Add Support for Blu-ray On the Fly Playback (Optional)
 * Install Xreveal from https://www.xreveal.com/how-to-use-xreveal.html (this is the recommended technique as it is 100% free to use)
+  * If using Xreveal and you are not using the payed version some discs will not play with the default install due to libbdplus bd+.dll limitations, these limitations can be overcome by following the instructions at https://forum.doom9.org/showthread.php?t=176924
+  * Specifically under the Xreveal "Settings -> Blu-ray -> KeyDB" you need to 
+    * Update KeyDB.cfg to point to the downloaded keydb.cfg file (which you changed the first 3 lines of as described on the doom9 page)
+    * Update the FUT location to point to the folder where you extract all the "cached BD+ tables"
+    * I don't believe the vm0 setup is necessary but if you run into difficulties playing some discs you can try that too.
 * DVDFab Passkey lite also works until the trial runs out, at which point you will only be able to play older 3d blu-ray until you buy a license.
 
 ## Install PotPlayer via ThreeDeeJay Installer Script (Includes all AVISynth and MVC Plugins)
@@ -51,6 +56,7 @@ The setup of such a system is provided in the steps below.
   * If you are using the standard template file instead of the custom generated one change the parameters at the top of the script to match those from 3d player TV Settings that you obtained from calibration, or tweak them manually until the trigger boxes are a satisfactory size and position.
 ```
 # these are the same values from 3d player under the display settings
+flip_eyes = 0
 display_size  = 24
 whitebox_brightness = 255
 whitebox_position = "top_left"
@@ -64,6 +70,14 @@ blackbox_border = 7
 assume_for_half = "half_sbs" # "half_sbs" ? "half_tab"
 ```
   * The "assume_for_half" parameter is used to define the default oreintation side-by-side top-and-bottom when half width or half height content will be played as there is no way to make this determination from the resolution alone.
+
+## FAQ
+* The trigger boxes aren't showing on some videos
+  * Make sure "Use Built-in DXVA Video Decoder" is "Off", when it is "On" the AVISynth script will not run. Look for the botton with the text "H/W" next to teh video duration and click it. It should update to show "S/W" and the trigger boxes should show.
+* Clicking "Swap left/right images" is not flipping the eyes.
+  * This option may not have any effect depending on factors I don't fully understand, you have two options.
+    * You can use 3d_player to invert the eyes by changing the setting "Emitter Settings -> IR Flip Eyes" to either "0" or "1" 
+    * You can set the variable in the AVISynth script to invert the eyes by setting "flip_eyes" to either "0" or "1" 
 
 ## Playing 3D Blu-rays
 * Start Xreveal (or DVDFab Passkey) if it isn't already running.

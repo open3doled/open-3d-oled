@@ -1,12 +1,13 @@
 # these are the same values from 3d player under the display settings
-display_size  = 24
+flip_eyes = 0
+display_size  = 55
 whitebox_brightness = 255
 whitebox_corner_position = "top_left"
-whitebox_vertical_position = -4
-whitebox_horizontal_position = -3
-whitebox_horizontal_spacing = 17
-whitebox_size = 13
-blackbox_border = 7
+whitebox_vertical_position = -5
+whitebox_horizontal_position = 0
+whitebox_horizontal_spacing = 18
+whitebox_size = 15
+blackbox_border = 10
 
 # assume half is sbs or tab (when we get a half tab or half sbs video we can't tell which is which)
 assume_for_half = "half_sbs" # "half_sbs" ? "half_tab"
@@ -51,6 +52,11 @@ blackbox_vertical_position_ppc_cf = (corner_position_bottom ? (display_resolutio
 whitebox_top_border_ppc_cf = (corner_position_bottom ? (blackbox_border_height_ppc+whitebox_blur_gradient_offset_ppc+vertical_mod2_fix) : (whitebox_vertical_position_ppc > 0 ? whitebox_vertical_position_ppc : 0))
 whitebox_bottom_border_ppc_cf = (corner_position_bottom ? (whitebox_vertical_position_ppc > 0 ? whitebox_vertical_position_ppc : 0) : (blackbox_border_height_ppc+whitebox_blur_gradient_offset_ppc+vertical_mod2_fix))
 
+blackbox_horizontal_position_ppc_cf_left = (flip_eyes == 1 ? (layout_sbs == 1 ? display_resolution_width+blackbox_horizontal_position_ppc_cf : blackbox_horizontal_position_ppc_cf) : blackbox_horizontal_position_ppc_cf)
+blackbox_vertical_position_ppc_cf_left = (flip_eyes == 1 ? (layout_sbs == 0 ? display_resolution_height+blackbox_vertical_position_ppc_cf : blackbox_vertical_position_ppc_cf) : blackbox_vertical_position_ppc_cf)
+blackbox_horizontal_position_ppc_cf_right = (flip_eyes == 1 ? (layout_sbs == 1 ? blackbox_horizontal_position_ppc_cf : display_resolution_width+blackbox_horizontal_position_ppc_cf : blackbox_horizontal_position_ppc_cf))
+blackbox_vertical_position_ppc_cf_right = (flip_eyes == 1 ? (layout_sbs == 0 ? blackbox_vertical_position_ppc_cf : display_resolution_height+blackbox_vertical_position_ppc_cf : blackbox_vertical_position_ppc_cf))
+
 trigger_box_mask = BlankClip( \
   width=blackbox_width_ppc-2*blackbox_blur_gradient_offset_ppc+horizontal_mod2_fix, \
   height=blackbox_height_ppc-blackbox_blur_gradient_offset_ppc+vertical_mod2_fix, \
@@ -78,8 +84,8 @@ left_trigger_box = BlankClip( \
 overlay( \
   clip, \
   left_trigger_box, \
-  x=blackbox_horizontal_position_ppc_cf, \
-  y=blackbox_vertical_position_ppc_cf, \
+  x=blackbox_horizontal_position_ppc_cf_left, \
+  y=blackbox_vertical_position_ppc_cf_left, \
   mode="blend", \
   mask=trigger_box_mask \
 )
@@ -99,8 +105,8 @@ right_trigger_box = BlankClip( \
 overlay( \
   last, \
   right_trigger_box, \
-  x=(layout_sbs == 1 ? display_resolution_width+blackbox_horizontal_position_ppc_cf : blackbox_horizontal_position_ppc_cf), \
-  y=(layout_sbs == 0 ? display_resolution_height+blackbox_vertical_position_ppc_cf : blackbox_vertical_position_ppc_cf), \
+  x=blackbox_horizontal_position_ppc_cf_right, \
+  y=blackbox_vertical_position_ppc_cf_right, \
   mode="blend", \
   mask=trigger_box_mask \
 )
