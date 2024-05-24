@@ -4,10 +4,12 @@
 Open3DOLED is a set of software and hardware designs that allow one to turn any display into a 3D display using compatible shutter glasses.
 It works best for displays that incorporate Black Frame Insertion (BFI) technologies and have framerates that exceed 120hz.
 This includes OLED TV's by the likes of LG and Sony which incorporate technologies like LG "Motion Pro" and Sony "Clearness" settings.
-But it should also works with LCD displays that include strobed backlight like those mentioned at https://www.rtings.com/monitor/tests/motion/black-frame-insertion
-In the future support will be added to do manual black frame insertion on displays with a framerate of 200hz or greater.
-Also there is a webstore in the works where you will be able to buy a pre-built/pre-programmed emitter unit in the next month or so once preliminary beta testing is complete..
-In the future custom firmware images that are optimized for software pageflipping for popular brands of glasses by Sony and Panasonic may be released. 
+It can also work on TV's or Monitors with LCD tech that have fast pixel response time, in such cases it works best if the TV supports HDMI/DVI QFT (Quick Frame Transport), this can be used to force a large vertical blanking interval during which time the image on the LCD will be static.
+It also has been tested to work on the latest Sony micro-LED TV's.
+If your compatibility information for your TV is not listed below, or you are considering buying a TV and would like to know if it might be compatible I would suggest referring to (this fantastic table)[https://www.rtings.com/tv/tools/table/138547] provided by rtings.com
+You can compare, sort and filter by pixel response time along, support for BFI 120hz, BFI duty cycle, PWM backlight fruency and duty cycle.
+There is a webstore in the works where you will be able to buy a pre-built/pre-programmed emitter unit in the next month or so once preliminary beta testing is complete..
+In the future custom firmware images that are optimized for software pageflipping for popular brands of glasses by Panasonic (and other manufacturers) may be released. 
 (I plan to sell these glasses on the webstore initially along with the emitters to help recoup the over 200(?) hours put into this project, they reduce jitter greatly and eliminate crosstalk from dropped frames)
 
 ## Glasses Warning
