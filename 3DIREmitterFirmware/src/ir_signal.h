@@ -8,6 +8,7 @@
 #define EYE_RIGHT 0
 #define EYE_LEFT  1
 #define SIGNAL_SEND_QUEUE_SIZE 4
+#define MAX_SIGNALS_TO_GENERATE_WITHOUT_TRIGGER 160 // this must be larger than OPT_FRAMETIME_COUNT_PERIOD
 
 typedef enum {
   SIGNAL_NONE,
@@ -29,6 +30,7 @@ extern volatile uint8_t ir_glasses_selected;
 extern volatile uint16_t ir_frame_duration;
 extern volatile uint16_t ir_frame_delay; 
 extern volatile uint16_t ir_signal_spacing;
+extern volatile uint8_t ir_average_timing_mode;
 extern volatile uint8_t ir_flip_eyes;
 extern volatile bool ir_led_token_active;
 
@@ -37,6 +39,6 @@ void ir_signal_send(ir_signal_type signal);
 void ir_signal_send_request(ir_signal_type signal);
 void ir_signal_send_finished(void);
 void ir_signal_schedule_send_request(ir_signal_type signal, uint16_t delay); 
-void ir_signal_process_opt_sensor(uint8_t left_eye, bool duplicate);
+void ir_signal_process_opt_sensor(uint8_t left_eye, uint16_t frametime);
 
 #endif /* _IR_SIGNAL_H_ */

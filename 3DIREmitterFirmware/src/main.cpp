@@ -86,7 +86,8 @@ void setup()
             }
             if (eeprom_settings.version >= 13)
             {
-                opt_sensor_filter_mode = eeprom_settings.empty_224;
+                opt_sensor_filter_mode = eeprom_settings.ir_average_timing_mode;
+;
             }
         }
         else
@@ -108,6 +109,10 @@ void setup()
             if (eeprom_settings.version >= 16)
             {
                 opt_sensor_detection_threshold_low = eeprom_settings.opt_sensor_detection_threshold_low;
+            }
+            if (eeprom_settings.version >= 17)
+            {
+                ir_average_timing_mode = eeprom_settings.ir_average_timing_mode;
             }
         }
 
@@ -183,6 +188,9 @@ void loop()
             * 13) opt_sensor_filter_mode -
             *   this is used to apply custom filtering to the ADC readings to try and eliminate spurious noise currently there are only two modes.
             *   0 - off, 1 - check that the last three readings are trending in the same direction
+            * 16) ir_average_timing_mode - 
+            *   This is a special mode which will find the average screen refresh rate over 1 second, and use that to create a constant interval timer to trigger glasses.
+            *   Some glasses appear to need a constant timer in order to synchronize with the ir signal, this may facilitate this.
             * 8) opt_sensor_enable_ignore_during_ir - 
             *   disable the opt_sensor sensor detection during the time when ir signals are being emitted.
             *   this stops reflections of IR signals from triggering frame start signals.
@@ -191,7 +199,7 @@ void loop()
             * 10) opt_sensor_output_stats -
             *   output statistics (if built with OPT_SENSOR_ENABLE_STATS) relating to how the opt_sensor module is processing all lines start with "+stats " followed by specific statistics.
             */
-            for (uint8_t p = 0; p < 19; p++) 
+            for (uint8_t p = 0; p < 20; p++) 
             {
                 end = input.indexOf(",", start);
                 if (end == 255) 
@@ -268,6 +276,10 @@ void loop()
                         {
                             opt_sensor_detection_threshold_low = temp;
                         }
+                        else if (p == 16)
+                        {
+                            ir_average_timing_mode = temp;
+                        }
                     }
                     else if (command == 7 && p == 1 && temp >= 0 && temp < 3) // update glasses mode
                     {
@@ -302,7 +314,8 @@ void loop()
                             opt_sensor_ignore_all_duplicates,
                             opt_sensor_filter_mode,
                             ir_flip_eyes,
-                            opt_sensor_detection_threshold_low
+                            opt_sensor_detection_threshold_low,
+                            ir_average_timing_mode
                         };
                         EEPROM.put(EEPROM_SETTING_ADDRESS, eeprom_settings);
                         Serial.println("OK");
@@ -352,7 +365,9 @@ void loop()
                 Serial.print(",");
                 Serial.print(ir_flip_eyes);
                 Serial.print(",");
-                Serial.println(opt_sensor_detection_threshold_low);
+                Serial.print(opt_sensor_detection_threshold_low);
+                Serial.print(",");
+                Serial.println(ir_average_timing_mode);
                 Serial.println("OK");
             }
             input = String();

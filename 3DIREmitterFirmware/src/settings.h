@@ -5,7 +5,7 @@
 #ifndef _SETTINGS_H_
 #define _SETTINGS_H_
 
-#define ENABLE_DEBUG_PIN_OUTPUTS
+//#define ENABLE_DEBUG_PIN_OUTPUTS
 #define ENABLE_LOOP_TOGGLE_DEBUG_PIN_D9 // will toggle on/off every time the loop goes round
 #define OPT_SENSOR_ENABLE_STREAM_READINGS_TO_SERIAL // adds code for command "10" to stream the opt_sensor readings for the left and right eye over serial to the computer (this is a debug mode, don't use at the same time as show stats or you will get garbled output)
 #define OPT_SENSOR_ENABLE_IGNORE_DURING_IR // ignore opt_sensor sensor readings when LED is triggering due to power/light distortions that may cause opt_sensor sensor reading inconsistencies. (only applies when setting variable is set as well)
@@ -14,8 +14,8 @@
 #define OPT_SENSOR_UPDATE_STAT_PERIOD 5000000 // in micros (frequency to update and optionally display stats for the opt_sensor sensor module)
 #define OPT_SENSOR_FILTER_ADC_SIGNAL // This will adjust the code to function properly with the BPW34 photodiode which has no transimpedance amplifier and has an output voltage much closer to 150mV so it can be mistriggered by noise ir led triggering. (beta testers have reported this causes flickering on some pwm backlit displays (possibly because the flashing of the backlight is irratic, perhaps this needs to be a proper peramater disabling for now by default)) (only applies when setting variable is set as well)
 #ifndef ENABLE_DEBUG_PIN_OUTPUTS
-//#define ENABLE_DEBUG_STATUS_LEDS // we are using the pads for the unused button footprints on D2, D4 and D5 to drive some status LEDs.
-//#define ENABLE_DEBUG_STATUS_FLASH_D2_ON_STARTUP 10
+#define ENABLE_DEBUG_STATUS_LEDS // we are using the pads for the unused button footprints on D2, D4 and D5 to drive some status LEDs.
+#define ENABLE_DEBUG_STATUS_FLASH_D2_ON_STARTUP 10
 #endif
 #define NUMBER_OF_IR_PROTOCOLS 7
 
@@ -159,10 +159,11 @@
 
 #define EEPROM_SETTING_ADDRESS 0
 #define EEPROM_SETTING_CHECKVALUE 0x3D3D3D3D
-#define EMITTER_VERSION 16
+#define EMITTER_VERSION 17
 
 /*
 Version History
+17 - Added average timing mode
 16 - Added detection threshold low option
 15 - Fixed handling of two token ir protocols
 14 - Removed all frequency analysis frame detection stuff for LCD's it was to complicated, and added ir_flip_eyes to support inverting the eye signals if frame_delay is triggering next frames eye instead
@@ -190,7 +191,7 @@ struct EEPROMSettings {
     uint8_t opt_sensor_filter_mode;
     uint8_t ir_flip_eyes; // was opt_sensor_block_n_subsequent_duplicates;
     uint8_t opt_sensor_detection_threshold_low; // was opt_sensor_ignore_all_duplicates;
-    uint8_t empty_224; // was opt_sensor_filter_mode;
+    uint8_t ir_average_timing_mode; // was opt_sensor_filter_mode;
 };
 
 #endif /* _SETTINGS_H_ */

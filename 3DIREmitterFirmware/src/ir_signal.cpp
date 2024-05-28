@@ -12,14 +12,15 @@ volatile uint8_t ir_glasses_selected = 6;
 volatile uint16_t ir_frame_duration = IR_FRAME_DURATION;
 volatile uint16_t ir_frame_delay = IR_FRAME_DELAY;
 volatile uint16_t ir_signal_spacing = IR_SIGNAL_SPACING;
+volatile uint8_t ir_average_timing_mode = 0;
 volatile uint8_t ir_flip_eyes = 0;
 #ifdef OPT_SENSOR_ENABLE_IGNORE_DURING_IR
 volatile bool ir_led_token_active = false;
 #endif
 
-const ir_glasses_signal_library_t* ir_glasses_selected_library;
-const ir_glasses_signal_library_t* ir_glasses_selected_library_sub_ir_signal_schedule_send_request;
-const ir_glasses_signal_library_t* ir_glasses_selected_library_sub_ir_signal_send;
+const ir_glasses_signal_library_t* volatile ir_glasses_selected_library;
+const ir_glasses_signal_library_t* volatile ir_glasses_selected_library_sub_ir_signal_schedule_send_request;
+const ir_glasses_signal_library_t* volatile ir_glasses_selected_library_sub_ir_signal_send;
 volatile ir_signal_type ir_signal_send_circular_queue[SIGNAL_SEND_QUEUE_SIZE];
 volatile uint8_t ir_signal_send_circular_queue_position = 0;
 volatile uint8_t ir_signal_send_circular_queue_end = 0;
@@ -32,13 +33,21 @@ uint8_t ir_signal_send_current_token_length;
 uint16_t ir_signal_send_current_token_timing;
 uint16_t ir_signal_send_last_open_right_tcnt1;
 uint16_t ir_signal_send_last_open_left_tcnt1;
-ir_signal_type ir_signal_next_timer1_compa_signal = SIGNAL_NONE;
-ir_signal_type ir_signal_next_timer1_compa_next_signal = SIGNAL_NONE;
-uint16_t ir_signal_next_timer1_compa_next_time = SIGNAL_NONE;
-ir_signal_type ir_signal_next_timer1_compb_signal = SIGNAL_NONE;
-ir_signal_type ir_signal_next_timer1_compb_next_signal = SIGNAL_NONE;
-uint16_t ir_signal_next_timer1_compb_next_time = SIGNAL_NONE;
-ir_signal_type ir_signal_next_timer1_compc_signal = SIGNAL_NONE;
+ir_signal_type ir_signal_next_timer1_compb_scheduled_signal = SIGNAL_NONE;
+ir_signal_type ir_signal_next_timer1_compb_start_signal = SIGNAL_NONE;
+uint16_t ir_signal_next_timer1_compb_start_time = 0;
+ir_signal_type ir_signal_next_timer1_compb_next_scheduled_signal = SIGNAL_NONE;
+ir_signal_type ir_signal_next_timer1_compb_next_start_signal = SIGNAL_NONE;
+uint16_t ir_signal_next_timer1_compb_next_start_time = 0;
+ir_signal_type ir_signal_next_timer1_compc_scheduled_signal = SIGNAL_NONE;
+ir_signal_type ir_signal_next_timer1_compc_start_signal = SIGNAL_NONE;
+uint16_t ir_signal_next_timer1_compc_start_time = 0;
+ir_signal_type ir_signal_next_timer1_compc_next_scheduled_signal = SIGNAL_NONE;
+ir_signal_type ir_signal_next_timer1_compc_next_start_signal = SIGNAL_NONE;
+uint16_t ir_signal_next_timer1_compc_next_start_time = 0;
+
+uint16_t ir_average_timing_mode_no_trigger_counter = 0;
+uint16_t ir_average_frametime_in_timer_units = 0;
 
 
 // This should initialize timer1 for sending ir signals and timer4 for scheduling 
@@ -60,13 +69,17 @@ void ir_signal_init() {
   ir_signal_send_circular_queue_end = 0;
   ir_signal_send_in_progress = false;
   ir_signal_send_current_signal = SIGNAL_NONE;
-  ir_signal_next_timer1_compa_signal = SIGNAL_NONE;
-  ir_signal_next_timer1_compb_signal = SIGNAL_NONE;
-  ir_signal_next_timer1_compc_signal = SIGNAL_NONE;
-  ir_signal_next_timer1_compa_next_signal = SIGNAL_NONE;
-  ir_signal_next_timer1_compa_next_time = 0;
-  ir_signal_next_timer1_compb_next_signal = SIGNAL_NONE;
-  ir_signal_next_timer1_compb_next_time = 0;
+  ir_signal_next_timer1_compb_scheduled_signal = SIGNAL_NONE;
+  ir_signal_next_timer1_compb_start_time = 0;
+  ir_signal_next_timer1_compc_scheduled_signal = SIGNAL_NONE;
+  ir_signal_next_timer1_compc_start_time = 0;
+  ir_signal_next_timer1_compb_next_scheduled_signal = SIGNAL_NONE;
+  ir_signal_next_timer1_compb_next_start_time = 0;
+  ir_signal_next_timer1_compc_next_scheduled_signal = SIGNAL_NONE;
+  ir_signal_next_timer1_compc_next_start_time = 0;
+
+  ir_average_timing_mode_no_trigger_counter = 0;
+  ir_average_frametime_in_timer_units = 0;
 
   // Initialize timer1 for scheduling IR signal sends
   TCCR1C = 0; // Timer stopped, normal mode
@@ -114,7 +127,7 @@ void ir_signal_send(ir_signal_type signal) {
     else if (signal == SIGNAL_OPEN_RIGHT_CLOSE_LEFT || signal == SIGNAL_CLOSE_LEFT)
     {
       bitClear(PORT_DEBUG_ACTIVATE_LEFT_D7, DEBUG_ACTIVATE_LEFT_D7);
-      bitClear(PORT_DEBUG_PORT_D15, DEBUG_PORT_D15);
+      //bitClear(PORT_DEBUG_PORT_D15, DEBUG_PORT_D15);
     }
     if (signal == SIGNAL_OPEN_RIGHT || signal == SIGNAL_OPEN_RIGHT_CLOSE_LEFT || signal == SIGNAL_OPEN_RIGHT_FAST_SWAP)
     {
@@ -123,10 +136,10 @@ void ir_signal_send(ir_signal_type signal) {
     else if (signal == SIGNAL_OPEN_LEFT_CLOSE_RIGHT || signal == SIGNAL_CLOSE_RIGHT)
     {
       bitClear(PORT_DEBUG_ACTIVATE_RIGHT_D8, DEBUG_ACTIVATE_RIGHT_D8);
-      bitClear(PORT_DEBUG_PORT_D15, DEBUG_PORT_D15);
+      //bitClear(PORT_DEBUG_PORT_D15, DEBUG_PORT_D15);
     }
     if (signal == SIGNAL_OPEN_LEFT_FAST_SWAP || signal == SIGNAL_OPEN_RIGHT_FAST_SWAP) {
-      bitSet(PORT_DEBUG_PORT_D15, DEBUG_PORT_D15);
+      //bitSet(PORT_DEBUG_PORT_D15, DEBUG_PORT_D15);
     }
     #endif
     #ifdef OPT_SENSOR_ENABLE_IGNORE_DURING_IR
@@ -290,28 +303,27 @@ void ir_signal_send_finished() {
   }
 }
 
-
 /*
  this should take the signal to queue up and it will be loaded into a comparator on timer 4,
  based on the frame delay (for open signal) and frame duration (for close signal).
  Which of the two used comparators will depend on which eye it is for.
 
- It should be called in two scenarios.
- 1) It will be called from the comparator isr 
-    (when an open signal is processed to queue the corresponding closing signal)
- 2) It will be called from ir_signal_process_opt_sensor when we detect a screen update to 
-    queue the next open signal.
-    (below discusses how this will work)
-
  For scheduling the comparators we will just take the timer4 current value + the delay 
  (frame delay (for open signal) and frame duration (for close signal))
-
- For now we only need to support panasonic glasses for testing, later support all those inir_glasses_available.
 */
 void ir_signal_schedule_send_request(ir_signal_type signal, uint16_t timer1_tcnt_target) {
   uint8_t scheduled_signal_index;
   const ir_signal_t* scheduled_signal_definition;
 
+  if (ir_glasses_selected_library != ir_glasses_selected_library_sub_ir_signal_schedule_send_request) {
+    // If the selected glasses have changed we need to stop everything.
+    ir_signal_next_timer1_compb_scheduled_signal = SIGNAL_NONE;
+    bitClear(TIMSK1, OCIE1B);
+    bitSet(TIFR1, OCF1B);
+    ir_signal_next_timer1_compc_scheduled_signal = SIGNAL_NONE;
+    bitClear(TIMSK1, OCIE1C);
+    bitSet(TIFR1, OCF1C);
+  }
   ir_glasses_selected_library_sub_ir_signal_schedule_send_request = ir_glasses_selected_library;
   scheduled_signal_index = ir_glasses_selected_library_sub_ir_signal_schedule_send_request->signal_index[signal];
   if (scheduled_signal_index != 255 && scheduled_signal_index < ir_glasses_selected_library_sub_ir_signal_schedule_send_request->signal_count) {
@@ -320,105 +332,110 @@ void ir_signal_schedule_send_request(ir_signal_type signal, uint16_t timer1_tcnt
       timer1_tcnt_target -= scheduled_signal_definition->token_length;
     }
   }
-  
-  if (signal == SIGNAL_OPEN_LEFT || signal == SIGNAL_CLOSE_LEFT || signal == SIGNAL_OPEN_LEFT_CLOSE_RIGHT) {
-    if (ir_signal_next_timer1_compa_signal == SIGNAL_NONE) {
-      cli();
-      ir_signal_next_timer1_compa_signal = signal;
-      OCR1A = timer1_tcnt_target;
-      bitSet(TIFR1, OCF1A);
-      bitSet(TIMSK1, OCIE1A);
-      sei();
-    }
-    else if (ir_signal_next_timer1_compa_next_signal == SIGNAL_NONE) {
-      cli();
-      ir_signal_next_timer1_compa_next_signal = signal;
-      ir_signal_next_timer1_compa_next_time = timer1_tcnt_target;
-      sei();
-    }
+
+  while (ir_average_timing_mode == 1 && timer1_tcnt_target > ir_average_frametime_in_timer_units) {
+    timer1_tcnt_target -= ir_average_frametime_in_timer_units;
   }
-  else if ((signal == SIGNAL_OPEN_RIGHT || signal == SIGNAL_CLOSE_RIGHT || signal == SIGNAL_OPEN_RIGHT_CLOSE_LEFT)) {
-    if (ir_signal_next_timer1_compb_signal == SIGNAL_NONE) {
+  
+  if (signal == SIGNAL_OPEN_LEFT || signal == SIGNAL_OPEN_LEFT_CLOSE_RIGHT) {
+    if (ir_signal_next_timer1_compb_scheduled_signal == SIGNAL_NONE) {
       cli();
-      ir_signal_next_timer1_compb_signal = signal;
-      OCR1B = timer1_tcnt_target;    
+      OCR1B = timer1_tcnt_target;
       bitSet(TIFR1, OCF1B);
       bitSet(TIMSK1, OCIE1B);
+      ir_signal_next_timer1_compb_scheduled_signal = signal;
+      ir_signal_next_timer1_compb_start_signal = signal;
+      ir_signal_next_timer1_compb_start_time = timer1_tcnt_target;
+      if (ir_average_timing_mode == 1) {
+        ir_signal_next_timer1_compc_start_signal = (signal == SIGNAL_OPEN_LEFT_CLOSE_RIGHT ? SIGNAL_OPEN_RIGHT_CLOSE_LEFT : SIGNAL_OPEN_RIGHT);
+        ir_signal_next_timer1_compc_start_time = timer1_tcnt_target;
+      }
       sei();
     }
-    else if (ir_signal_next_timer1_compb_next_signal == SIGNAL_NONE) {
+    else if (ir_average_timing_mode == 0 && ir_signal_next_timer1_compb_next_scheduled_signal == SIGNAL_NONE) {
+      // We only allow queing commands when not running in timing mode
       cli();
-      ir_signal_next_timer1_compb_next_signal = signal;
-      ir_signal_next_timer1_compb_next_time = timer1_tcnt_target;
+      ir_signal_next_timer1_compb_next_scheduled_signal = signal;
+      ir_signal_next_timer1_compb_next_start_signal = signal;
+      ir_signal_next_timer1_compb_next_start_time = timer1_tcnt_target;
       sei();
     }
   }
-  else if (ir_signal_next_timer1_compc_signal == SIGNAL_NONE) {
-    cli();
-    ir_signal_next_timer1_compc_signal = signal;
-    OCR1C = timer1_tcnt_target;
-    bitSet(TIFR1, OCF1C);
-    bitSet(TIMSK1, OCIE1C);
-    sei();
+  else if ((signal == SIGNAL_OPEN_RIGHT || signal == SIGNAL_OPEN_RIGHT_CLOSE_LEFT)) {
+    if (ir_signal_next_timer1_compc_scheduled_signal == SIGNAL_NONE) {
+      cli();
+      OCR1C = timer1_tcnt_target;    
+      bitSet(TIFR1, OCF1C);
+      bitSet(TIMSK1, OCIE1C);
+      ir_signal_next_timer1_compc_scheduled_signal = signal;
+      ir_signal_next_timer1_compc_start_signal = signal;
+      ir_signal_next_timer1_compc_start_time = timer1_tcnt_target;
+      if (ir_average_timing_mode == 1) {
+        ir_signal_next_timer1_compb_start_signal = (signal == SIGNAL_OPEN_RIGHT_CLOSE_LEFT ? SIGNAL_OPEN_LEFT_CLOSE_RIGHT : SIGNAL_OPEN_LEFT);
+        ir_signal_next_timer1_compb_start_time = timer1_tcnt_target;
+      }
+      sei();
+    }
+    else if (ir_average_timing_mode == 0 && ir_signal_next_timer1_compc_next_scheduled_signal == SIGNAL_NONE) {
+      // We only allow queing commands when not running in timing mode
+      cli();
+      ir_signal_next_timer1_compc_next_scheduled_signal = signal;
+      ir_signal_next_timer1_compc_next_start_signal = signal;
+      ir_signal_next_timer1_compc_next_start_time = timer1_tcnt_target;
+      sei();
+    }
   }
 }
 
+/*
 ISR(TIMER1_COMPA_vect)
 {
-  ir_signal_type scheduled_signal = ir_signal_next_timer1_compa_signal;
+ 
+}
+//*/
+
+ISR(TIMER1_COMPB_vect)
+{
+  ir_signal_type scheduled_signal = ir_signal_next_timer1_compb_scheduled_signal;
 
   if (scheduled_signal == SIGNAL_OPEN_LEFT) {
     uint8_t scheduled_signal_index;
     const ir_signal_t* scheduled_signal_definition;
-    uint16_t scheduled_signal_time_subtractor = 0;
+    uint16_t scheduled_signal_time_temp = 0;
     scheduled_signal_index = ir_glasses_selected_library_sub_ir_signal_schedule_send_request->signal_index[scheduled_signal];
     if (scheduled_signal_index != 255 && scheduled_signal_index < ir_glasses_selected_library_sub_ir_signal_schedule_send_request->signal_count) {
       scheduled_signal_definition = &(ir_glasses_selected_library_sub_ir_signal_schedule_send_request->signals[scheduled_signal_index]);
       if (scheduled_signal_definition->mode == 1) {
-        scheduled_signal_time_subtractor = scheduled_signal_definition->token_length;
+        scheduled_signal_time_temp = scheduled_signal_definition->token_length;
       }
     }
-    ir_signal_next_timer1_compa_signal = SIGNAL_CLOSE_LEFT;
-    OCR1A += ((ir_frame_duration - scheduled_signal_time_subtractor) << 1);
-  }
-  else if (ir_signal_next_timer1_compa_next_signal != SIGNAL_NONE) {
-    ir_signal_next_timer1_compa_signal = ir_signal_next_timer1_compa_next_signal;
-    OCR1A = ir_signal_next_timer1_compa_next_time;
-    ir_signal_next_timer1_compa_next_signal = SIGNAL_NONE;
-    ir_signal_next_timer1_compa_next_time = 0;
-  }
-  else {
-    ir_signal_next_timer1_compa_signal = SIGNAL_NONE;
-    bitClear(TIMSK1, OCIE1A);
-  }
-  ir_signal_send_request(scheduled_signal);
-}
-
-ISR(TIMER1_COMPB_vect)
-{
-  ir_signal_type scheduled_signal = ir_signal_next_timer1_compb_signal;
-  if (scheduled_signal == SIGNAL_OPEN_RIGHT) {
-    uint8_t scheduled_signal_index;
-    const ir_signal_t* scheduled_signal_definition;
-    uint16_t scheduled_signal_time_subtractor = 0;
-    scheduled_signal_index = ir_glasses_selected_library_sub_ir_signal_schedule_send_request->signal_index[scheduled_signal];
-    if (scheduled_signal_index != 255 && scheduled_signal_index < ir_glasses_selected_library_sub_ir_signal_schedule_send_request->signal_count) {
-      scheduled_signal_definition = &(ir_glasses_selected_library_sub_ir_signal_schedule_send_request->signals[scheduled_signal_index]);
-      if (scheduled_signal_definition->mode == 1) {
-        scheduled_signal_time_subtractor = scheduled_signal_definition->token_length;
-      }
+    ir_signal_next_timer1_compb_scheduled_signal = SIGNAL_CLOSE_LEFT;
+    scheduled_signal_time_temp = OCR1B + ((ir_frame_duration - scheduled_signal_time_temp) << 1);
+    while (ir_average_timing_mode == 1 && scheduled_signal_time_temp > ir_average_frametime_in_timer_units) {
+      scheduled_signal_time_temp -= ir_average_frametime_in_timer_units;
     }
-    ir_signal_next_timer1_compb_signal = SIGNAL_CLOSE_RIGHT;
-    OCR1B += ((ir_frame_duration - scheduled_signal_time_subtractor) << 1);
+    OCR1B = scheduled_signal_time_temp;
   }
-  else if (ir_signal_next_timer1_compb_next_signal != SIGNAL_NONE) {
-    ir_signal_next_timer1_compb_signal = ir_signal_next_timer1_compb_next_signal;
-    OCR1B = ir_signal_next_timer1_compb_next_time;
-    ir_signal_next_timer1_compb_next_signal = SIGNAL_NONE;
-    ir_signal_next_timer1_compb_next_time = 0;
+  else if (ir_average_timing_mode == 1 && (scheduled_signal == SIGNAL_CLOSE_LEFT || scheduled_signal == SIGNAL_OPEN_LEFT_CLOSE_RIGHT)) {
+    if (ir_average_timing_mode_no_trigger_counter < MAX_SIGNALS_TO_GENERATE_WITHOUT_TRIGGER) {
+      ir_average_timing_mode_no_trigger_counter++;
+      ir_signal_next_timer1_compc_scheduled_signal = ir_signal_next_timer1_compc_start_signal;
+      OCR1C = ir_signal_next_timer1_compc_start_time;    
+      bitSet(TIFR1, OCF1C);
+      bitSet(TIMSK1, OCIE1C);
+    }
+    ir_signal_next_timer1_compb_scheduled_signal = SIGNAL_NONE;
+    bitClear(TIMSK1, OCIE1B);
+  }
+  else if (ir_average_timing_mode == 0 && ir_signal_next_timer1_compb_next_scheduled_signal != SIGNAL_NONE) {
+    // We only allow queing commands when not running in timing mode
+    ir_signal_next_timer1_compb_scheduled_signal = ir_signal_next_timer1_compb_next_scheduled_signal;
+    OCR1B = ir_signal_next_timer1_compb_next_start_time;
+    ir_signal_next_timer1_compb_next_scheduled_signal = SIGNAL_NONE;
+    ir_signal_next_timer1_compb_next_start_time = 0;
   }
   else {
-    ir_signal_next_timer1_compb_signal = SIGNAL_NONE;
+    ir_signal_next_timer1_compb_scheduled_signal = SIGNAL_NONE;
     bitClear(TIMSK1, OCIE1B);
   }
   ir_signal_send_request(scheduled_signal);
@@ -426,9 +443,47 @@ ISR(TIMER1_COMPB_vect)
 
 ISR(TIMER1_COMPC_vect)
 {
-  ir_signal_type scheduled_signal = ir_signal_next_timer1_compc_signal;
-  ir_signal_next_timer1_compc_signal = SIGNAL_NONE;
-  bitClear(TIMSK1, OCIE1C);
+  ir_signal_type scheduled_signal = ir_signal_next_timer1_compc_scheduled_signal;
+  if (scheduled_signal == SIGNAL_OPEN_RIGHT) {
+    uint8_t scheduled_signal_index;
+    const ir_signal_t* scheduled_signal_definition;
+    uint16_t scheduled_signal_time_temp = 0;
+    scheduled_signal_index = ir_glasses_selected_library_sub_ir_signal_schedule_send_request->signal_index[scheduled_signal];
+    if (scheduled_signal_index != 255 && scheduled_signal_index < ir_glasses_selected_library_sub_ir_signal_schedule_send_request->signal_count) {
+      scheduled_signal_definition = &(ir_glasses_selected_library_sub_ir_signal_schedule_send_request->signals[scheduled_signal_index]);
+      if (scheduled_signal_definition->mode == 1) {
+        scheduled_signal_time_temp = scheduled_signal_definition->token_length;
+      }
+    }
+    ir_signal_next_timer1_compc_scheduled_signal = SIGNAL_CLOSE_RIGHT;
+    scheduled_signal_time_temp = OCR1C + ((ir_frame_duration - scheduled_signal_time_temp) << 1);
+    while (ir_average_timing_mode == 1 && scheduled_signal_time_temp > ir_average_frametime_in_timer_units) {
+      scheduled_signal_time_temp -= ir_average_frametime_in_timer_units;
+    }
+    OCR1C = scheduled_signal_time_temp;
+  }
+  else if (ir_average_timing_mode == 1 && (scheduled_signal == SIGNAL_CLOSE_RIGHT || scheduled_signal == SIGNAL_OPEN_RIGHT_CLOSE_LEFT)) {
+    if (ir_average_timing_mode_no_trigger_counter < MAX_SIGNALS_TO_GENERATE_WITHOUT_TRIGGER) {
+      ir_average_timing_mode_no_trigger_counter++;
+      ir_signal_next_timer1_compb_scheduled_signal = ir_signal_next_timer1_compb_start_signal;
+      OCR1B = ir_signal_next_timer1_compb_start_time;    
+      bitSet(TIFR1, OCF1B);
+      bitSet(TIMSK1, OCIE1B);
+    }
+    ir_signal_next_timer1_compc_scheduled_signal = SIGNAL_NONE;
+    bitClear(TIMSK1, OCIE1C);
+  }
+  else if (ir_average_timing_mode == 0 && ir_signal_next_timer1_compc_next_scheduled_signal != SIGNAL_NONE) {
+    // We only allow queing commands when not running in timing mode
+    ir_signal_next_timer1_compc_scheduled_signal = ir_signal_next_timer1_compc_next_scheduled_signal;
+    OCR1C = ir_signal_next_timer1_compc_next_start_time;
+    ir_signal_next_timer1_compc_next_scheduled_signal = SIGNAL_NONE;
+    ir_signal_next_timer1_compc_next_start_time = 0;
+  }
+  else {
+    ir_signal_next_timer1_compc_scheduled_signal = SIGNAL_NONE;
+    bitClear(TIMSK1, OCIE1C);
+  }
   ir_signal_send_request(scheduled_signal);
 }
 
@@ -436,7 +491,7 @@ ISR(TIMER1_COMPC_vect)
  Responsible for converting external state change parameters into the those parameters used internally.
  Schedule the open signal for the current frames eye.
 */
-void ir_signal_process_opt_sensor(uint8_t left_eye, bool duplicate) {
+void ir_signal_process_opt_sensor(uint8_t left_eye, uint16_t frametime) {
   ir_signal_type ir_desired_signal = (left_eye ^ ir_flip_eyes ? SIGNAL_OPEN_LEFT : SIGNAL_OPEN_RIGHT);
   uint8_t desired_signal_index;
   ir_glasses_selected_library = ir_glasses_available[ir_glasses_selected];
@@ -450,6 +505,28 @@ void ir_signal_process_opt_sensor(uint8_t left_eye, bool duplicate) {
   }
   cli();
   uint16_t current_tcnt1 = TCNT1;
+  if (ir_average_timing_mode == 1) {
+    //bitToggle(PORT_DEBUG_PORT_D15, DEBUG_PORT_D15); // debug
+    ir_average_timing_mode_no_trigger_counter = 0;
+    ir_average_frametime_in_timer_units = frametime << 1;
+    TCCR1B |= _BV(WGM12);
+    OCR1A = ir_average_frametime_in_timer_units;
+    //*
+    if (ir_signal_next_timer1_compb_start_time > ir_average_frametime_in_timer_units) {
+      ir_signal_next_timer1_compb_start_time = 0;
+    }
+    if (ir_signal_next_timer1_compc_start_time > ir_average_frametime_in_timer_units) {
+      ir_signal_next_timer1_compc_start_time = 0;
+    }
+    if (current_tcnt1 > ir_average_frametime_in_timer_units) {
+      TCNT1 = 0;
+      current_tcnt1  = 0;
+    }
+    //*/
+  }
+  else {
+    TCCR1B &= ~(_BV(WGM12));
+  }
   sei();
   ir_signal_schedule_send_request(ir_desired_signal, current_tcnt1 + (ir_frame_delay << 1));
 }

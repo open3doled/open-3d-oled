@@ -10,6 +10,8 @@
 //#define OPT_SENSOR_MIN_THRESHOLD_VALUE_TO_ACTIVATE 15
 #define OPT_SENSOR_STATS_SERIAL_OUTPUT_FREQUENCY 25
 #define OPT_TRIGGER_COUNT_THRESHOLD 2 // We need this many triggers in a row before sending the shutter glass signal based on the trigger boxes
+#define OPT_FRAMETIME_COUNT_PERIOD_2PN 7 // This is how often we update the frametime in cycles as 2^(OPT_FRAMETIME_COUNT_PERIOD_2PN) (eg 2^7 = 128)
+#define OPT_FRAMETIME_COUNT_PERIOD (1 << OPT_FRAMETIME_COUNT_PERIOD_2PN)
 
 extern uint32_t opt_sensor_block_signal_detection_delay;
 extern uint8_t opt_sensor_block_n_subsequent_duplicates;
@@ -25,6 +27,7 @@ extern uint8_t opt_sensor_enable_frequency_analysis_based_duplicate_frame_detect
 #ifdef OPT_SENSOR_ENABLE_STREAM_READINGS_TO_SERIAL
 extern uint8_t opt_sensor_enable_stream_readings_to_serial;
 #endif
+extern volatile uint8_t ir_average_timing_mode;
 
 void opt_sensor_Init(void);
 #ifdef OPT_SENSOR_ENABLE_STATS

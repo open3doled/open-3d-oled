@@ -74,6 +74,10 @@ uint8_t opt_sensor_ss_readings_low[OPT_SENSOR_CHANNELS];
 uint8_t opt_sensor_ss_readings_threshold_high[OPT_SENSOR_CHANNELS];
 uint8_t opt_sensor_ss_readings_threshold_low[OPT_SENSOR_CHANNELS];
 
+uint16_t opt_sensor_frametime_frame_counter = 0;
+uint32_t opt_sensor_frametime_start_time = 0;
+uint16_t opt_sensor_frametime_average = 0;
+bool opt_sensor_frametime_average_set = false;
 
 /*
     7,  // A0               PF7                 ADC7 // right eye
@@ -134,6 +138,11 @@ void opt_sensor_Init(void)
     memset((void *)opt_sensor_readings_low, 255, sizeof(opt_sensor_readings_low));
     memset((void *)opt_sensor_readings_threshold_high, 255, sizeof(opt_sensor_readings_threshold_high));
     memset((void *)opt_sensor_readings_threshold_low, 0, sizeof(opt_sensor_readings_threshold_low));
+
+    opt_sensor_frametime_frame_counter = 0;
+    opt_sensor_frametime_start_time = 0;
+    opt_sensor_frametime_average = 0;
+    opt_sensor_frametime_average_set = false;
     
     ADMUX  = _BV(REFS0)  // ref = AVCC
            | _BV(ADLAR)  // left adjust result
@@ -325,6 +334,11 @@ void opt_sensor_CheckReadings(void)
                 opt_sensor_duplicate_frame[c] = (opt_sensor_detected_signal_start_eye == c && opt_sensor_detected_signal_start_eye_set);
                 if (opt_sensor_duplicate_frame[c]) 
                 {
+                    if (ir_average_timing_mode == 1)
+                    {
+                        opt_sensor_frametime_frame_counter = 0;
+                        opt_sensor_frametime_start_time = 0;
+                    }
                     opt_sensor_duplicate_frames_counter++;
                     opt_sensor_duplicate_frames_in_a_row_counter++;
                     #ifdef ENABLE_DEBUG_PIN_OUTPUTS
@@ -379,13 +393,28 @@ void opt_sensor_CheckReadings(void)
                     #endif
                     opt_sensor_detected_signal_start_eye = c;
                     opt_sensor_detected_signal_start_eye_set = true;
-                    if (opt_sensor_duplicate_frame[c]) 
+                    if (ir_average_timing_mode == 1)
                     {
-                        ir_signal_process_opt_sensor(opt_sensor_detected_signal_start_eye, true);
+                        if (opt_sensor_frametime_average_set && opt_sensor_duplicate_frame[c]) 
+                        {
+                            ir_signal_process_opt_sensor(opt_sensor_detected_signal_start_eye, opt_sensor_frametime_average);
+                        }
+                        if (opt_sensor_frametime_frame_counter == OPT_FRAMETIME_COUNT_PERIOD)
+                        {
+                            opt_sensor_frametime_average = (opt_sensor_current_time - opt_sensor_frametime_start_time) >> OPT_FRAMETIME_COUNT_PERIOD_2PN;
+                            opt_sensor_frametime_average_set = true;
+                            ir_signal_process_opt_sensor(opt_sensor_detected_signal_start_eye, opt_sensor_frametime_average);
+                            opt_sensor_frametime_frame_counter = 0;
+                        }
+                        if (opt_sensor_frametime_frame_counter == 0) 
+                        {
+                            opt_sensor_frametime_start_time = opt_sensor_current_time;
+                        }
+                        opt_sensor_frametime_frame_counter++;
                     }
-                    else 
+                    else
                     {
-                        ir_signal_process_opt_sensor(opt_sensor_detected_signal_start_eye, false);
+                        ir_signal_process_opt_sensor(opt_sensor_detected_signal_start_eye, opt_sensor_frametime_average);
                     }
                     opt_sensor_initiated_sending_ir_signal = true;
                     break;
