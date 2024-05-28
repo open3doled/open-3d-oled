@@ -18,7 +18,7 @@
 /* [TV Settings:] */
 
 // Screen bezel to pixel height dimension (lgc155=11)
-tv_bezel_to_pixels_vertical_distance = 11;
+tv_bezel_to_pixels_vertical_distance = 10;
 /*
   11 mm - LG C1 OLED and Sony XBR-48A9S Bezel Only
   14 mm - LG C1 OLED and MMK 55MBL-EL Screen protector
@@ -28,7 +28,7 @@ tv_bezel_to_pixels_vertical_distance = 11;
 */
 
 // Screen bezel thickness dimension (lgc155=4.7)
-tv_bezel_thickness = 6.2;
+tv_bezel_thickness = 32;
 /*
   4.7 mm - LG C1 OLED Bezel Only (measured 4.4 mm)
   6.2 mm - LG C1 OLED with felt (back and front)
@@ -45,6 +45,12 @@ tv_bezel_thickness = 6.2;
 
 // This is the wall thickness for the case
 bevel_w = 1.0; 
+
+// Rows of ledss populated (starting from bottom row)
+rows_of_leds_populated = 1;
+
+// thickness of ir led acrylic window sheet
+ir_led_window_plastic_thickness = 0;
 
 /* [STL Print Settings:] */
 // Orientate modules for ease of printing
@@ -371,10 +377,16 @@ module cover_main() {
 
 sensor_pcb_wh = 4.0; // components and pcb // measured 3.14 mm but we need room for cables to bend over
 sc_cc_wy = cover_channel_width;
-sc_irh_px = 2.5;
+sc_irh_px = 2.5; // ir hole
 sc_irh_py = 7;
 sc_irh_wx = 17.5;
-sc_irh_wy = 12;
+sc_irh_wy = (rows_of_leds_populated == 2 ? 18-sc_irh_py : (rows_of_leds_populated == 1 ? 12-sc_irh_py : 0));
+sc_irw_ww = 3.5; // ir window  
+sc_irw_px = 2.5-sc_irw_ww;
+sc_irw_py = 7-sc_irw_ww;
+sc_irw_wz = ir_led_window_plastic_thickness;
+sc_irw_wx = sc_irh_wx+2*sc_irw_ww; 
+sc_irw_wy = sc_irh_wy+2*sc_irw_ww;
 sc_mh_wr_s = 2;
 sc_mh_wr_h_st = m1_4_wd_h_st/2;
 sc_mh_pxl = [-sensor_pcb_wx*0.45,sensor_pcb_wx*0.45];
@@ -388,7 +400,7 @@ module cover_sensor() {
       union() {
         // main cover
         translate([-sb_base_wx_o/2-bevel_w,0,-tv_bezel_thickness])
-        cube([sb_base_wx_o+2*bevel_w,sb_base_wy_o+st_base_d+sc_cc_wy+2*bevel_w,sensor_pcb_wh+sb_base_d+tv_bezel_thickness+bevel_w]);
+        cube([sb_base_wx_o+2*bevel_w,sb_base_wy_o+st_base_d+sc_cc_wy+2*bevel_w,sensor_pcb_wh+sc_irw_wz+sb_base_d+tv_bezel_thickness+bevel_w]);
       }
       union() {
         // main cutaway
@@ -397,9 +409,12 @@ module cover_sensor() {
         // secondary cutaway
         translate([-sb_base_wx_o/2-bevel_w-2*ovr,-ovr,-tv_bezel_thickness-ovr])
         cube([sb_base_wx_o+2*bevel_w+4*ovr,sb_base_wy_o+st_base_d+bevel_w+cover_tol+ovr,tv_bezel_thickness+bevel_d+cover_tol+ovr]);
+        // ir window cutaway
+        translate([-sensor_pcb_wx/2+sc_irw_px,sb_base_w_oy+bevel_w+sc_irw_py,sensor_pcb_wh+sb_base_d-ovr])
+        cube([sc_irw_wx,sc_irw_wy,sc_irw_wz+2*ovr]);
         // ir led cutaway
-        translate([-sensor_pcb_wx/2+sc_irh_px,sb_base_w_oy+bevel_w+sc_irh_py,sensor_pcb_wh+sb_base_d-ovr])
-        cube([sc_irh_wx,sc_irh_wy,bevel_d+2*ovr]);
+        translate([-sensor_pcb_wx/2+sc_irh_px,sb_base_w_oy+bevel_w+sc_irh_py,sensor_pcb_wh++sb_base_d-ovr])
+        cube([sc_irh_wx,sc_irh_wy,bevel_d+sc_irw_wz+2*ovr]);
       }
     }
     difference() {
@@ -407,16 +422,16 @@ module cover_sensor() {
         for (sc_mh_px=sc_mh_pxl) {
           // mounting hole standoff
           translate([sc_mh_px,sc_mh_py,-tv_bezel_thickness])
-          cylinder(h=sensor_pcb_wh+sb_base_d+tv_bezel_thickness,r=sc_mh_wr_s);
+          cylinder(h=sensor_pcb_wh+sc_irw_wz+sb_base_d+tv_bezel_thickness,r=sc_mh_wr_s);
           translate([sc_mh_px-sc_mh_wr_s,sc_mh_py,-tv_bezel_thickness])
-          cube([2*sc_mh_wr_s,sb_base_wy_o+st_base_d+sc_cc_wy+2*bevel_w-sc_mh_py,sensor_pcb_wh+sb_base_d+tv_bezel_thickness]);
+          cube([2*sc_mh_wr_s,sb_base_wy_o+st_base_d+sc_cc_wy+2*bevel_w-sc_mh_py,sensor_pcb_wh+sc_irw_wz+sb_base_d+tv_bezel_thickness]);
         }
       }
       union() {
         for (sc_mh_px=sc_mh_pxl) {
           // mounting hole
           translate([sc_mh_px,sc_mh_py,-tv_bezel_thickness-ovr])
-          cylinder(h=sensor_pcb_wh+sb_base_d+tv_bezel_thickness+ovr,r=sc_mh_wr_h_st);
+          cylinder(h=sensor_pcb_wh+sc_irw_wz+sb_base_d+tv_bezel_thickness+ovr,r=sc_mh_wr_h_st);
         }
       }
     }
