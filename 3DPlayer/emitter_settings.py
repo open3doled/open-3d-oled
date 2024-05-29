@@ -1081,6 +1081,26 @@ class EmitterSettingsDialog:
         self.supported_parameters = None
         self.update_settings_from_serial()
 
+    def get_settings_dictionary(self):
+        return {
+            "ir_protocol": self.setting_ir_protocol_variable.get(),
+            "ir_frame_delay": self.setting_ir_frame_delay_variable.get(),
+            "ir_frame_duration": self.setting_ir_frame_duration_variable.get(),
+            "ir_signal_spacing": self.setting_ir_signal_spacing_variable.get(),
+            "ir_flip_eyes": self.setting_ir_flip_eyes_variable.get(),
+            "ir_average_timing_mode": self.setting_ir_flip_eyes_variable.get(),
+            "opt_block_signal_detection_delay": self.setting_opt_block_signal_detection_delay_variable.get(),
+            "opt_block_n_subsequent_duplicates": self.setting_opt_block_n_subsequent_duplicates_variable.get(),
+            "opt_ignore_all_duplicates": self.setting_opt_ignore_all_duplicates_variable.get(),
+            "opt_sensor_filter_mode_variable": self.setting_opt_sensor_filter_mode_variable.get(),
+            "opt_min_threshold_value_to_activate": self.setting_opt_min_threshold_value_to_activate_variable.get(),
+            "opt_detection_threshold_high": self.setting_opt_detection_threshold_high_variable.get(),
+            "opt_detection_threshold_low": self.setting_opt_detection_threshold_low_variable.get(),
+            "opt_enable_ignore_during_ir": self.setting_opt_enable_ignore_during_ir_variable.get(),
+            "opt_enable_duplicate_realtime_reporting": self.setting_opt_enable_duplicate_realtime_reporting_variable.get(),
+            "opt_output_stats": self.setting_opt_output_stats_variable.get(),
+        }
+
     def update_settings_from_serial(self):
         if self.main_app.emitter_serial:
             response = self.main_app.emitter_serial.line_reader.command("0")[0].split(
@@ -1357,24 +1377,7 @@ class EmitterSettingsDialog:
         if file_name:
             f = open(file_name, "w")
             json.dump(
-                {
-                    "ir_protocol": self.setting_ir_protocol_variable.get(),
-                    "ir_frame_delay": self.setting_ir_frame_delay_variable.get(),
-                    "ir_frame_duration": self.setting_ir_frame_duration_variable.get(),
-                    "ir_signal_spacing": self.setting_ir_signal_spacing_variable.get(),
-                    "ir_flip_eyes": self.setting_ir_flip_eyes_variable.get(),
-                    "ir_average_timing_mode": self.setting_ir_flip_eyes_variable.get(),
-                    "opt_block_signal_detection_delay": self.setting_opt_block_signal_detection_delay_variable.get(),
-                    "opt_block_n_subsequent_duplicates": self.setting_opt_block_n_subsequent_duplicates_variable.get(),
-                    "opt_ignore_all_duplicates": self.setting_opt_ignore_all_duplicates_variable.get(),
-                    "opt_sensor_filter_mode_variable": self.setting_opt_sensor_filter_mode_variable.get(),
-                    "opt_min_threshold_value_to_activate": self.setting_opt_min_threshold_value_to_activate_variable.get(),
-                    "opt_detection_threshold_high": self.setting_opt_detection_threshold_high_variable.get(),
-                    "opt_detection_threshold_low": self.setting_opt_detection_threshold_low_variable.get(),
-                    "opt_enable_ignore_during_ir": self.setting_opt_enable_ignore_during_ir_variable.get(),
-                    "opt_enable_duplicate_realtime_reporting": self.setting_opt_enable_duplicate_realtime_reporting_variable.get(),
-                    "opt_output_stats": self.setting_opt_output_stats_variable.get(),
-                },
+                self.get_settings_dictionary(),
                 f,
                 indent=2,
             )
@@ -1532,6 +1535,13 @@ class EmitterSettingsDialog:
             )
 
             if new_value == 0:
+                for (
+                    setting_name,
+                    setting_value,
+                ) in self.get_settings_dictionary().items():
+                    self.main_app.emitter_serial.line_reader.debug_stream_file.write(
+                        f"\n\n{setting_name},{setting_value}\n"
+                    )
                 self.main_app.emitter_serial.line_reader.debug_stream_file.close()
                 self.main_app.emitter_serial.line_reader.debug_stream_file = None
             command = f"10,{new_value}"

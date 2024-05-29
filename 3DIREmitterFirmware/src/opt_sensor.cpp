@@ -323,7 +323,8 @@ void opt_sensor_CheckReadings(void)
                     opt_sensor_reading_triggered_count[c] = 0;
                 }
             }
-            if (opt_sensor_reading_triggered_count[c] > OPT_TRIGGER_COUNT_THRESHOLD)
+            if (opt_sensor_reading_triggered_count[c] > OPT_TRIGGER_COUNT_THRESHOLD 
+                || (opt_sensor_enable_stream_readings_to_serial && opt_sensor_reading_triggered_count[c] > 1)) // when we are running in sensor log mode we skip the check as it already takes 140 us per cycle, there is still the risk of miss triggering, but operating on a pwm backlight display sensor log mode already breaks the algorithm entirely (this at least helps it kind of continue working)
             {
                 opt_sensor_reading_triggered[c] = true;
                 if (opt_sensor_current_time == 0)
