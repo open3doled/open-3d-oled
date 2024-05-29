@@ -6,7 +6,7 @@ It works best for displays that incorporate Black Frame Insertion (BFI) technolo
 This includes OLED TV's by the likes of LG and Sony which incorporate technologies like LG "Motion Pro" and Sony "Clearness" settings.  
 It can also work on LCD TV's and monitors that have fast pixel response time, in such cases it works best if the TV supports HDMI/DVI QFT (Quick Frame Transport), this can be used to force a large vertical blanking interval during which time the image on the LCD will be static.  
 It also has been tested to work on the latest Sony micro-LED TV's.  
-If your compatibility information for your TV is not listed below, or you are considering buying a TV and would like to know if it might be compatible I would suggest referring to [this fantastic table](https://www.rtings.com/tv/tools/table/138932) provided by rtings.com  
+If your compatibility information for your TV is not listed below, or you are considering buying a TV and would like to know if it might be compatible I would suggest referring to [this fantastic table](https://www.rtings.com/tv/tools/table/138933) provided by rtings.com  
 You can compare, sort and filter by pixel response time, support for BFI 120hz, BFI duty cycle, PWM backlight fruency and duty cycle.  
 There is a webstore in the works where you will be able to buy a pre-built/pre-programmed emitter unit in the next month or so once preliminary beta testing is complete..  
 In the future custom firmware images that are optimized for software pageflipping for popular brands of glasses by Panasonic (and other manufacturers) may be released.  
