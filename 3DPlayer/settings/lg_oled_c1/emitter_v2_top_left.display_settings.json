@@ -11,7 +11,7 @@
   "whitebox_size": "15",
   "whitebox_horizontal_spacing": "18",
   "blackbox_border": "10",
-  "calibration_mode": true,
+  "calibration_mode": false,
   "display_osd_timestamp": false,
-  "disable_3d_on_mouse_move_under_windows": true
+  "disable_3d_on_mouse_move_under_windows": false
 }
