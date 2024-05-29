@@ -334,11 +334,14 @@ void opt_sensor_CheckReadings(void)
                 opt_sensor_duplicate_frame[c] = (opt_sensor_detected_signal_start_eye == c && opt_sensor_detected_signal_start_eye_set);
                 if (opt_sensor_duplicate_frame[c]) 
                 {
+                    /*
+                    // For PWM Backlit displays with 720hz, this breaks the special frametime mode when operating in the preferred mode with block signal equal to the PWM pulse length rather than to the frametime
                     if (ir_average_timing_mode == 1)
                     {
                         opt_sensor_frametime_frame_counter = 0;
                         opt_sensor_frametime_start_time = 0;
                     }
+                    */
                     opt_sensor_duplicate_frames_counter++;
                     opt_sensor_duplicate_frames_in_a_row_counter++;
                     #ifdef ENABLE_DEBUG_PIN_OUTPUTS
