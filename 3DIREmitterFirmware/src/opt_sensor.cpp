@@ -323,8 +323,9 @@ void opt_sensor_CheckReadings(void)
                     opt_sensor_reading_triggered_count[c] = 0;
                 }
             }
-            if (opt_sensor_reading_triggered_count[c] > OPT_TRIGGER_COUNT_THRESHOLD 
-                || (opt_sensor_enable_stream_readings_to_serial && opt_sensor_reading_triggered_count[c] > 1)) // when we are running in sensor log mode we skip the check as it already takes 140 us per cycle, there is still the risk of miss triggering, but operating on a pwm backlight display sensor log mode already breaks the algorithm entirely (this at least helps it kind of continue working)
+            if (opt_sensor_reading_triggered[c] == false &&  // we only count it the first time we hit it....
+                (opt_sensor_reading_triggered_count[c] > OPT_TRIGGER_COUNT_THRESHOLD 
+                || (opt_sensor_enable_stream_readings_to_serial && opt_sensor_reading_triggered_count[c] > 1))) // when we are running in sensor log mode we skip the check as it already takes 140 us per cycle, there is still the risk of miss triggering, but operating on a pwm backlight display sensor log mode already breaks the algorithm entirely (this at least helps it kind of continue working)
             {
                 opt_sensor_reading_triggered[c] = true;
                 if (opt_sensor_current_time == 0)
@@ -335,14 +336,6 @@ void opt_sensor_CheckReadings(void)
                 opt_sensor_duplicate_frame[c] = (opt_sensor_detected_signal_start_eye == c && opt_sensor_detected_signal_start_eye_set);
                 if (opt_sensor_duplicate_frame[c]) 
                 {
-                    /*
-                    // For PWM Backlit displays with 720hz, this breaks the special frametime mode when operating in the preferred mode with block signal equal to the PWM pulse length rather than to the frametime
-                    if (ir_average_timing_mode == 1)
-                    {
-                        opt_sensor_frametime_frame_counter = 0;
-                        opt_sensor_frametime_start_time = 0;
-                    }
-                    */
                     opt_sensor_duplicate_frames_counter++;
                     opt_sensor_duplicate_frames_in_a_row_counter++;
                     #ifdef ENABLE_DEBUG_PIN_OUTPUTS
@@ -374,14 +367,28 @@ void opt_sensor_CheckReadings(void)
                                 frequency after we exceed opt_sensor_block_n_subsequent_duplicates.
                             */ 
                             opt_sensor_duplicate_frames_in_a_row_counter = 0;
+                            // We use opt_sensor_block_n_subsequent_duplicates as a proxy for pwm mode when non-zero we assume pwm and when we detect a real duplicate in pwm mode if we are using ir_average_timing_mode we needto bump our frame counters
+                            if (ir_average_timing_mode == 1)
+                            {
+                                opt_sensor_frametime_frame_counter++;
+                            }
                         }
+                    }
+                    // We use opt_sensor_block_n_subsequent_duplicates as a proxy for pwm mode and when inactive if we are using ir_average_timing_mode we need to bump our frame counters on every duplicate
+                    if (!opt_sensor_block_n_subsequent_duplicates && ir_average_timing_mode == 1)
+                    {
+                        opt_sensor_frametime_frame_counter++;
                     }
                 }
                 else
                 {
                     opt_sensor_duplicate_frames_in_a_row_counter = 0;
                 }
-                if (!opt_sensor_ignore_duplicate[c])
+                if (opt_sensor_ignore_duplicate[c])
+                {
+                    opt_sensor_block_signal_detection_until = opt_sensor_current_time + opt_sensor_block_signal_detection_delay;
+                }
+                else
                 {
                     opt_sensor_block_signal_detection_until = opt_sensor_current_time + opt_sensor_block_signal_detection_delay;
                     #ifdef ENABLE_DEBUG_PIN_OUTPUTS
@@ -408,6 +415,15 @@ void opt_sensor_CheckReadings(void)
                             opt_sensor_frametime_average = (opt_sensor_current_time - opt_sensor_frametime_start_time) >> OPT_FRAMETIME_COUNT_PERIOD_2PN;
                             opt_sensor_frametime_average_set = true;
                             ir_signal_process_opt_sensor(opt_sensor_detected_signal_start_eye, opt_sensor_frametime_average);
+                            opt_sensor_frametime_frame_counter = 0;
+                        }
+                        else if (opt_sensor_frametime_frame_counter > OPT_FRAMETIME_COUNT_PERIOD)
+                        {
+                            // If we had a duplicate on the last trigger cycle then we will have exceeded OPT_FRAMETIME_COUNT_PERIOD, in such a situation just reuse the old average and re-compute
+                            if (opt_sensor_frametime_average_set)
+                            {
+                                ir_signal_process_opt_sensor(opt_sensor_detected_signal_start_eye, opt_sensor_frametime_average);
+                            }
                             opt_sensor_frametime_frame_counter = 0;
                         }
                         if (opt_sensor_frametime_frame_counter == 0) 
@@ -524,10 +540,9 @@ void opt_sensor_CheckReadings(void)
             bitClear(PORT_DEBUG_DETECTED_RIGHT_D5, DEBUG_DETECTED_RIGHT_D5);
             bitClear(PORT_DEBUG_DETECTED_LEFT_D4, DEBUG_DETECTED_LEFT_D4);
             bitClear(PORT_DEBUG_PREMATURE_FRAME_D14, DEBUG_PREMATURE_FRAME_D14);
-            bitClear(PORT_DEBUG_DUPLICATE_FRAME_D16, DEBUG_DUPLICATE_FRAME_D16);
-
         }
     }
+    bitClear(PORT_DEBUG_DUPLICATE_FRAME_D16, DEBUG_DUPLICATE_FRAME_D16);
     #endif
     #ifdef OPT_SENSOR_ENABLE_IGNORE_DURING_IR
     if (ir_led_token_active)
