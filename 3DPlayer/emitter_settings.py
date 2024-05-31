@@ -1578,6 +1578,9 @@ class EmitterSettingsDialog:
             )
 
             if new_value == 0:
+                self.main_app.emitter_serial.line_reader.debug_stream_file.write(
+                    f"\n\n"
+                )
                 for (
                     setting_name,
                     setting_value,
