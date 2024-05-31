@@ -74,12 +74,8 @@ void setup()
             opt_sensor_min_threshold_value_to_activate = eeprom_settings.opt_sensor_min_threshold_value_to_activate;
             opt_sensor_detection_threshold_high = eeprom_settings.opt_sensor_detection_threshold_high;
             opt_sensor_enable_ignore_during_ir = eeprom_settings.opt_sensor_output_stats;
-            opt_sensor_enable_duplicate_realtime_reporting = eeprom_settings.opt_sensor_block_n_subsequent_duplicates;
+            opt_sensor_enable_duplicate_realtime_reporting = eeprom_settings.target_frametime;
             opt_sensor_output_stats = eeprom_settings.opt_sensor_ignore_all_duplicates;
-            if (eeprom_settings.version >= 10) 
-            {
-                opt_sensor_block_n_subsequent_duplicates = eeprom_settings.ir_flip_eyes;
-            }
             if (eeprom_settings.version >= 12) 
             {
                 opt_sensor_ignore_all_duplicates = eeprom_settings.opt_sensor_detection_threshold_low;
@@ -102,7 +98,6 @@ void setup()
             opt_sensor_enable_ignore_during_ir = eeprom_settings.opt_sensor_enable_ignore_during_ir;
             opt_sensor_enable_duplicate_realtime_reporting = eeprom_settings.opt_sensor_enable_duplicate_realtime_reporting;
             opt_sensor_output_stats = eeprom_settings.opt_sensor_output_stats;
-            opt_sensor_block_n_subsequent_duplicates = eeprom_settings.opt_sensor_block_n_subsequent_duplicates;
             opt_sensor_ignore_all_duplicates = eeprom_settings.opt_sensor_ignore_all_duplicates;
             opt_sensor_filter_mode = eeprom_settings.opt_sensor_filter_mode;
             ir_flip_eyes = eeprom_settings.ir_flip_eyes;
@@ -113,6 +108,12 @@ void setup()
             if (eeprom_settings.version >= 17)
             {
                 ir_average_timing_mode = eeprom_settings.ir_average_timing_mode;
+            }
+            if (eeprom_settings.version >= 18) 
+            {
+                target_frametime = eeprom_settings.target_frametime;
+                pwm_backlight_frequency = eeprom_settings.pwm_backlight_frequency;
+                update_pwm_pulses_per_frame();
             }
         }
 
@@ -160,17 +161,23 @@ void loop()
             *   how long to wait after a high tv signal on left or right before allowing another high tv signal on either 
             *   channel (in microseconds) this is useful to eliminating false triggers when the tv signal is decreasing in a noisy fashion.
             *   this is best set to slighly lower than the target refresh rate (about 80-90%).
-            * 11) opt_sensor_block_n_subsequent_duplicates -
-            *   (number of detections to block) on displays that use a PWM backlight one needs to block fake duplicate frames 
-            *   for at least the first math.ceiling((PWM frequency)/framerate) otherwise a PWM pulse may incorrectly 
-            *   be detected as the next duplicate frame causing the unit to lose proper synchronization. 
-            *   When using this setting one should set opt_sensor_block_signal_detection_delay to a 
-            *   value 80-90% of the PWM backlight cycle time. (default 0).
+            * 17) target_frametime -
+            *   (the expected time to elapse between frames in microseconds this is 1000000/(monitor refresh rate))
+            *   This is used to filter out invalid average frametimes computed when running with 'IR Average Timing Mode'. 
+            *   With PWM displays and 'Ignore All Duplicates' enabled when you have a duplicate frame sent from your PC the sensor will detect a duplicate for each PWM backlight pulse, 
+            *   in these situations the computed average frametime will be invalid so we just ignore it. (120 hz corresponds to 8333) (default 0 - don't filter average frametimes at all).
+            * 11) pwm_backlight_frequency -
+            *   (The number of cycles per second for the PWM backlight in the display)
+            *   When running in 'IR Average Timing Mode' with PWM displays and 'Ignore All Duplicates' enabled this is used to deterine when the number of duplicates exceeds that of a single display frame.
+            *   By making this determination we can resynchronize the built in timer on the next detected frame, thus only having 1 frame of ghosting.
+            *   On many PWM backlit displays this is 120hz but you can also refer to the following table on RTINGs if you unsure https://www.rtings.com/tv/tools/table/138933
+            *   (default 0 - unknown so we only resynchronize every second or so unless 'Ignore All Duplicates' is unchecked and this is not a PWM backlit display)
             * 12) opt_sensor_ignore_all_duplicates -
-            *   (0 disable - >1 enable) on displays with too much jitter where setting opt_sensor_block_signal_detection_delay and/or
-            *   opt_sensor_block_n_subsequent_duplicates does not eliminate false dulicate detection due to strange PWM characteristics
-            *   or variable brightness periods, it may be best to ignore any detected duplicates. This will mean that glasses only
-            *   attempt resynchronization when the alternate eye trigger is sent by the display.
+            *   (0=Disable, 1=Enable) On displays with too much jitter or PWM backlit displays you will need to set this to 1.
+            *   The software will not send any signal to the glasses on what might be a duplicate frame but will instead ignore it. 
+            *   This will mean that glasses only attempt resynchronization when the alternate eye trigger is sent by the display. 
+            *   (If you are using a display without some form of BFI or a PWM backlit display it is highly recommended you enable this)
+            *   (default 0 - off)
             * 6) opt_sensor_min_threshold_value_to_activate -
             *   the light intensities threshold value in a given threshold update cycle must exceed this value before the emitter will turn on.
             *   this setting is used to stop the emitter turning on when the TV is turned off.  (default 10)
@@ -258,7 +265,8 @@ void loop()
                         }
                         else if (p == 11) 
                         {
-                            opt_sensor_block_n_subsequent_duplicates = temp;
+                            pwm_backlight_frequency = temp;
+                            update_pwm_pulses_per_frame();
                         }
                         else if (p == 12) 
                         {
@@ -279,6 +287,11 @@ void loop()
                         else if (p == 16)
                         {
                             ir_average_timing_mode = temp;
+                        }
+                        else if (p == 17) 
+                        {
+                            target_frametime = temp;
+                            update_pwm_pulses_per_frame();
                         }
                     }
                     else if (command == 7 && p == 1 && temp >= 0 && temp < 3) // update glasses mode
@@ -310,12 +323,14 @@ void loop()
                             opt_sensor_enable_ignore_during_ir,
                             opt_sensor_enable_duplicate_realtime_reporting,
                             opt_sensor_output_stats,
-                            opt_sensor_block_n_subsequent_duplicates,
+                            0,
                             opt_sensor_ignore_all_duplicates,
                             opt_sensor_filter_mode,
                             ir_flip_eyes,
                             opt_sensor_detection_threshold_low,
-                            ir_average_timing_mode
+                            ir_average_timing_mode,
+                            target_frametime,
+                            pwm_backlight_frequency
                         };
                         EEPROM.put(EEPROM_SETTING_ADDRESS, eeprom_settings);
                         Serial.println("OK");
@@ -357,7 +372,7 @@ void loop()
                 Serial.print(",");
                 Serial.print(opt_sensor_output_stats);
                 Serial.print(",");
-                Serial.print(opt_sensor_block_n_subsequent_duplicates);
+                Serial.print(pwm_backlight_frequency);
                 Serial.print(",");
                 Serial.print(opt_sensor_ignore_all_duplicates);
                 Serial.print(",");
@@ -367,7 +382,9 @@ void loop()
                 Serial.print(",");
                 Serial.print(opt_sensor_detection_threshold_low);
                 Serial.print(",");
-                Serial.println(ir_average_timing_mode);
+                Serial.print(ir_average_timing_mode);
+                Serial.print(",");
+                Serial.println(target_frametime);
                 Serial.println("OK");
             }
             input = String();

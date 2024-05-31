@@ -21,6 +21,8 @@ DEFAULT_IR_FRAME_DELAY = "500"
 DEFAULT_IR_FRAME_DURATION = "7000"
 DEFAULT_IR_SIGNAL_SPACING = "30"
 DEFAULT_IR_FLIP_EYES = "0"
+DEFAULT_TARGET_FRAMETIME = "0"
+DEFAULT_PWM_BACKLIGHT_FREQUENCY = "0"
 DEFAULT_OPT_BLOCK_SIGNAL_DETECTION_DELAY = "7500"
 DEFAULT_OPT_BLOCK_N_SUBSEQUENT_DUPLICATES = "0"
 DEFAULT_OPT_IGNORE_ALL_DUPLICATES = "0"
@@ -680,35 +682,6 @@ class EmitterSettingsDialog:
         )
         row_count += 1
 
-        self.setting_opt_block_n_subsequent_duplicates_frame = tkinter.Frame(top)
-        self.setting_opt_block_n_subsequent_duplicates_variable = tkinter.StringVar(top)
-        self.setting_opt_block_n_subsequent_duplicates_variable.set(
-            DEFAULT_OPT_BLOCK_N_SUBSEQUENT_DUPLICATES
-        )
-        self.setting_opt_block_n_subsequent_duplicates_label = tkinter.Label(
-            self.setting_opt_block_n_subsequent_duplicates_frame,
-            text="OPT Block N Subsequent Duplicates: ",
-        )
-        self.setting_opt_block_n_subsequent_duplicates_label.pack(
-            padx=5, side=tkinter.LEFT
-        )
-        self.setting_opt_block_n_subsequent_duplicates_entry = tkinter.Entry(
-            self.setting_opt_block_n_subsequent_duplicates_frame,
-            textvariable=self.setting_opt_block_n_subsequent_duplicates_variable,
-        )
-        self.setting_opt_block_n_subsequent_duplicates_entry.pack(
-            padx=5, side=tkinter.LEFT
-        )
-        self.setting_opt_block_n_subsequent_duplicates_tooltip = idlelib.tooltip.Hovertip(
-            self.setting_opt_block_n_subsequent_duplicates_entry,
-            "(number of detections to block) on displays that use a PWM backlight one needs to block fake duplicate frames \nfor at least the first math.ceiling((PWM frequency)/framerate) otherwise a PWM pulse may incorrectly \nbe detected as the next duplicate frame causing the unit to lose proper synchronization. \nWhen using this setting one should set 'OPT Block Signal Detection Delay' to a \nvalue 80-90% of the PWM backlight cycle time. \nThis feature is only availble from emitter firmware version 10 \n(default 0).",
-            hover_delay=100,
-        )
-        self.setting_opt_block_n_subsequent_duplicates_frame.grid(
-            row=row_count, column=0, sticky="w"
-        )
-        row_count += 1
-
         self.setting_opt_ignore_all_duplicates_frame = tkinter.Frame(top)
         self.setting_opt_ignore_all_duplicates_variable = tkinter.StringVar(top)
         self.setting_opt_ignore_all_duplicates_variable.set(
@@ -726,7 +699,7 @@ class EmitterSettingsDialog:
         self.setting_opt_ignore_all_duplicates_entry.pack(padx=5, side=tkinter.LEFT)
         self.setting_opt_ignore_all_duplicates_tooltip = idlelib.tooltip.Hovertip(
             self.setting_opt_ignore_all_duplicates_entry,
-            "(0=Disable, 1=Enable) On displays with too much jitter where setting OPT Block Signal Detection Delay and/or \nOPT Block N Subsequent Duplicates does not eliminate false dulicate detection due to strange PWM characteristics \nor variable brightness periods, it may be best to ignore any detected duplicates. This will mean that glasses only \nattempt resynchronization when the alternate eye trigger is sent by the display. (If you are using a display without some form of BFI it is highly recommended you enable this)",
+            "(0=Disable, 1=Enable) On displays with too much jitter or PWM backlit displays you will need to set this to 1. \nThe software will not send any signal to the glasses on what might be a duplicate frame but will instead ignore it. \nThis will mean that glasses only attempt resynchronization when the alternate eye trigger is sent by the display. (If you are using a display without some form of BFI or a PWM backlit display it is highly recommended you enable this) (default 0 - off)",
             hover_delay=100,
         )
         self.setting_opt_ignore_all_duplicates_frame.grid(
@@ -957,6 +930,58 @@ class EmitterSettingsDialog:
         )
         debug_row_count += 1
 
+        self.setting_target_frametime_frame = tkinter.Frame(
+            self.experimental_and_debug_frame
+        )
+        self.setting_target_frametime_variable = tkinter.StringVar(top)
+        self.setting_target_frametime_variable.set(DEFAULT_TARGET_FRAMETIME)
+        self.setting_target_frametime_label = tkinter.Label(
+            self.setting_target_frametime_frame,
+            text="Target Frametime: ",
+        )
+        self.setting_target_frametime_label.pack(padx=5, side=tkinter.LEFT)
+        self.setting_target_frametime_entry = tkinter.Entry(
+            self.setting_target_frametime_frame,
+            textvariable=self.setting_target_frametime_variable,
+        )
+        self.setting_target_frametime_entry.pack(padx=5, side=tkinter.LEFT)
+        self.setting_target_frametime_tooltip = idlelib.tooltip.Hovertip(
+            self.setting_target_frametime_entry,
+            "(the expected time to elapse between frames in microseconds this is 1000000/(monitor refresh rate)) \nThis is used to filter out invalid average frametimes computed when running with 'IR Average Timing Mode'. \nWith PWM displays and 'Ignore All Duplicates' enabled when you have a duplicate frame sent from your PC the sensor will detect a duplicate for each PWM backlight pulse, \nin these situations the computed average frametime will be invalid so we just ignore it. (120 hz corresponds to 8333) (default 0 - don't filter average frametimes at all).",
+            hover_delay=100,
+        )
+        self.setting_target_frametime_frame.grid(
+            row=debug_row_count, column=0, sticky="w"
+        )
+        debug_row_count += 1
+
+        self.setting_pwm_backlight_frequency_frame = tkinter.Frame(
+            self.experimental_and_debug_frame
+        )
+        self.setting_pwm_backlight_frequency_variable = tkinter.StringVar(top)
+        self.setting_pwm_backlight_frequency_variable.set(
+            DEFAULT_PWM_BACKLIGHT_FREQUENCY
+        )
+        self.setting_pwm_backlight_frequency_label = tkinter.Label(
+            self.setting_pwm_backlight_frequency_frame,
+            text="PWM Backlight Frequency: ",
+        )
+        self.setting_pwm_backlight_frequency_label.pack(padx=5, side=tkinter.LEFT)
+        self.setting_pwm_backlight_frequency_entry = tkinter.Entry(
+            self.setting_pwm_backlight_frequency_frame,
+            textvariable=self.setting_pwm_backlight_frequency_variable,
+        )
+        self.setting_pwm_backlight_frequency_entry.pack(padx=5, side=tkinter.LEFT)
+        self.setting_pwm_backlight_frequency_tooltip = idlelib.tooltip.Hovertip(
+            self.setting_pwm_backlight_frequency_entry,
+            "(The number of cycles per second for the PWM backlight in the display) \nWhen running in 'IR Average Timing Mode' with PWM displays and 'Ignore All Duplicates' enabled this is used to deterine when the number of duplicates exceeds that of a single display frame. \nBy making this determination we can resynchronize the built in timer on the next detected frame, thus only having 1 frame of ghosting. \nOn many PWM backlit displays this is 720hz but you can also refer to the following table on RTINGs if you unsure https://www.rtings.com/tv/tools/table/138933 \nSetting this value too low will result in every trigger box updating the timer unnecessarily with the last average frametime, setting it too high is generally OK so long as you don't exceed (framerate / 2 * actual_pwm_backlight_frequency), \nif you exceed that it will only resynchonize once a second instead of after every duplicate frame \nSo for an actual_pwm_backlight_frequency of 720, values between 680 and 1300 should work. \n(default 0 - unknown so we only resynchronize every second or so unless 'Ignore All Duplicates' is unchecked and this is not a PWM backlit display)",
+            hover_delay=100,
+        )
+        self.setting_pwm_backlight_frequency_frame.grid(
+            row=debug_row_count, column=0, sticky="w"
+        )
+        debug_row_count += 1
+
         self.frequency_analysis_based_duplicate_frame_detection_frame_top_frame = (
             tkinter.Frame(
                 self.experimental_and_debug_frame, relief="raised", borderwidth=1
@@ -1089,8 +1114,9 @@ class EmitterSettingsDialog:
             "ir_signal_spacing": self.setting_ir_signal_spacing_variable.get(),
             "ir_flip_eyes": self.setting_ir_flip_eyes_variable.get(),
             "ir_average_timing_mode": self.setting_ir_flip_eyes_variable.get(),
+            "target_frametime": self.setting_target_frametime_variable.get(),
+            "pwm_backlight_frequency": self.setting_pwm_backlight_frequency_variable.get(),
             "opt_block_signal_detection_delay": self.setting_opt_block_signal_detection_delay_variable.get(),
-            "opt_block_n_subsequent_duplicates": self.setting_opt_block_n_subsequent_duplicates_variable.get(),
             "opt_ignore_all_duplicates": self.setting_opt_ignore_all_duplicates_variable.get(),
             "opt_sensor_filter_mode_variable": self.setting_opt_sensor_filter_mode_variable.get(),
             "opt_min_threshold_value_to_activate": self.setting_opt_min_threshold_value_to_activate_variable.get(),
@@ -1152,13 +1178,6 @@ class EmitterSettingsDialog:
                         opt_enable_duplicate_realtime_reporting
                     )
                     self.setting_opt_output_stats_variable.set(opt_output_stats)
-                    if self.emitter_firmware_version_int > 9:
-                        self.setting_opt_block_n_subsequent_duplicates_variable.set(
-                            parameters[14]
-                        )
-                        self.setting_opt_block_n_subsequent_duplicates_entry.config(
-                            state="normal"
-                        )
                     if self.emitter_firmware_version_int >= 11:
                         self.setting_opt_enable_stream_readings_to_serial_toggle_button.config(
                             state="normal"
@@ -1193,6 +1212,8 @@ class EmitterSettingsDialog:
                         )
                     self.setting_ir_flip_eyes_variable.set(DEFAULT_IR_FLIP_EYES)
                     self.setting_ir_flip_eyes_entry.config(state="disabled")
+                    self.setting_target_frametime_entry.config(state="disabled")
+                    self.setting_pwm_backlight_frequency_entry.config(state="disabled")
                 else:
                     (
                         ir_protocol,
@@ -1205,7 +1226,7 @@ class EmitterSettingsDialog:
                         opt_enable_ignore_during_ir,
                         opt_enable_duplicate_realtime_reporting,
                         opt_output_stats,
-                        opt_block_n_subsequent_duplicates,
+                        param_12,
                         opt_ignore_all_duplicates,
                         opt_sensor_filter_mode,
                         ir_flip_eyes,
@@ -1234,9 +1255,6 @@ class EmitterSettingsDialog:
                         opt_enable_duplicate_realtime_reporting
                     )
                     self.setting_opt_output_stats_variable.set(opt_output_stats)
-                    self.setting_opt_block_n_subsequent_duplicates_variable.set(
-                        opt_block_n_subsequent_duplicates
-                    )
                     self.setting_opt_ignore_all_duplicates_variable.set(
                         opt_ignore_all_duplicates
                     )
@@ -1245,9 +1263,6 @@ class EmitterSettingsDialog:
                     )
                     self.setting_ir_flip_eyes_variable.set(ir_flip_eyes)
 
-                    self.setting_opt_block_n_subsequent_duplicates_entry.config(
-                        state="normal"
-                    )
                     self.setting_opt_enable_stream_readings_to_serial_toggle_button.config(
                         state="normal"
                     )
@@ -1276,6 +1291,24 @@ class EmitterSettingsDialog:
                             DEFAULT_OPT_DETECTION_THRESHOLD_LOW
                         )
                         self.setting_ir_average_timing_mode_entry.config(
+                            state="disabled"
+                        )
+                    if self.emitter_firmware_version_int >= 18:
+                        self.setting_target_frametime_variable.set(parameters[17])
+                        self.setting_target_frametime_entry.config(state="normal")
+                        self.setting_pwm_backlight_frequency_variable.set(param_12)
+                        self.setting_pwm_backlight_frequency_entry.config(
+                            state="normal"
+                        )
+                    else:
+                        self.setting_target_frametime_variable.set(
+                            DEFAULT_TARGET_FRAMETIME
+                        )
+                        self.setting_target_frametime_entry.config(state="disabled")
+                        self.setting_pwm_backlight_frequency_variable.set(
+                            DEFAULT_PWM_BACKLIGHT_FREQUENCY
+                        )
+                        self.setting_pwm_backlight_frequency_entry.config(
                             state="disabled"
                         )
 
@@ -1327,7 +1360,7 @@ class EmitterSettingsDialog:
                     f"{DEFAULT_OPT_ENABLE_FREQUENCY_ANALYSIS_BASED_DUPLICATE_FRAME_DETECTION}"
                 )
                 if self.emitter_firmware_version_int >= 10:
-                    command += f",{self.setting_opt_block_n_subsequent_duplicates_variable.get()}"
+                    command += f",{DEFAULT_OPT_BLOCK_N_SUBSEQUENT_DUPLICATES}"
                 if self.emitter_firmware_version_int >= 12:
                     command += (
                         f",{self.setting_opt_ignore_all_duplicates_variable.get()}"
@@ -1347,7 +1380,12 @@ class EmitterSettingsDialog:
                     f"{self.setting_opt_enable_ignore_during_ir_variable.get()},"
                     f"{self.setting_opt_enable_duplicate_realtime_reporting_variable.get()},"
                     f"{self.setting_opt_output_stats_variable.get()},"
-                    f"{self.setting_opt_block_n_subsequent_duplicates_variable.get()},"
+                )
+                if self.emitter_firmware_version_int >= 18:
+                    command += f"{self.setting_pwm_backlight_frequency_variable.get()},"
+                else:
+                    command += f"{DEFAULT_OPT_BLOCK_N_SUBSEQUENT_DUPLICATES},"
+                command += (
                     f"{self.setting_opt_ignore_all_duplicates_variable.get()},"
                     f"{self.setting_opt_sensor_filter_mode_variable.get()},"
                     f"{self.setting_ir_flip_eyes_variable.get()}"
@@ -1358,6 +1396,8 @@ class EmitterSettingsDialog:
                     )
                 if self.emitter_firmware_version_int >= 17:
                     command += f",{self.setting_ir_average_timing_mode_variable.get()}"
+                if self.emitter_firmware_version_int >= 18:
+                    command += f",{self.setting_target_frametime_variable.get()}"
 
             print(command)
             self.main_app.emitter_serial.line_reader.command(command)
@@ -1417,6 +1457,18 @@ class EmitterSettingsDialog:
                     DEFAULT_IR_AVERAGE_TIMING_MODE,
                 )
             )
+            self.setting_target_frametime_variable.set(
+                settings.get(
+                    "target_frametime",
+                    DEFAULT_TARGET_FRAMETIME,
+                )
+            )
+            self.setting_pwm_backlight_frequency_variable.set(
+                settings.get(
+                    "pwm_backlight_frequency",
+                    DEFAULT_PWM_BACKLIGHT_FREQUENCY,
+                )
+            )
             self.setting_opt_block_signal_detection_delay_variable.set(
                 settings.get(
                     "opt_block_signal_detection_delay",
@@ -1469,15 +1521,6 @@ class EmitterSettingsDialog:
             )
             self.setting_opt_output_stats_variable.set(
                 settings.get("opt_output_stats", DEFAULT_OPT_OUTPUT_STATS)
-            )
-            self.setting_opt_block_n_subsequent_duplicates_variable.set(
-                settings.get(
-                    "opt_block_n_subsequent_duplicates",
-                    settings.get(
-                        "opt101_block_n_subsequent_duplicates",
-                        DEFAULT_OPT_BLOCK_N_SUBSEQUENT_DUPLICATES,
-                    ),
-                )
             )
             self.setting_opt_ignore_all_duplicates_variable.set(
                 settings.get(

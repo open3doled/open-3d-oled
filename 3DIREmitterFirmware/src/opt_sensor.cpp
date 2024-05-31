@@ -31,7 +31,9 @@ uint8_t opt_sensor_output_stats = 0;
 uint8_t opt_sensor_detection_threshold_high = 128;
 uint8_t opt_sensor_detection_threshold_low = 32;
 uint32_t opt_sensor_block_signal_detection_delay = OPT_SENSOR_BLOCK_SIGNAL_DETECTION_DELAY;
-uint8_t opt_sensor_block_n_subsequent_duplicates = 0;
+uint16_t target_frametime = 0;
+uint16_t pwm_backlight_frequency = 0;
+uint8_t pwm_pulses_per_frame = 0;
 uint8_t opt_sensor_ignore_all_duplicates = 0;
 uint8_t opt_sensor_filter_mode = 0;
 uint8_t opt_sensor_min_threshold_value_to_activate = OPT_SENSOR_MIN_THRESHOLD_VALUE_TO_ACTIVATE;
@@ -78,6 +80,7 @@ uint16_t opt_sensor_frametime_frame_counter = 0;
 uint32_t opt_sensor_frametime_start_time = 0;
 uint16_t opt_sensor_frametime_average = 0;
 bool opt_sensor_frametime_average_set = false;
+bool opt_sensor_resync_average_timing_mode_required = true;
 
 /*
     7,  // A0               PF7                 ADC7 // right eye
@@ -89,6 +92,18 @@ bool opt_sensor_frametime_average_set = false;
 */
 //const uint8_t admux[OPT_SENSOR_CHANNELS] = {ADC7D, ADC6D, ADC5D, ADC4D}; // ADC MUX channels.
 const uint8_t admux[OPT_SENSOR_CHANNELS] = {ADC7D, ADC6D}; // ADC MUX channels. (right eye, left eye)
+
+void update_pwm_pulses_per_frame(void)
+{
+    if (target_frametime > 0 && pwm_backlight_frequency > 0)
+    {
+        pwm_pulses_per_frame = ((uint32_t)pwm_backlight_frequency)/(((uint32_t)1000000)/((uint32_t)target_frametime+70)); // we add 70 to frametime here just so we hae a bit of safety above the rounding error so we don't round down.
+    }
+    else 
+    {
+        pwm_pulses_per_frame = 0;
+    }
+}
 
 void opt_sensor_Init(void) 
 {
@@ -107,7 +122,9 @@ void opt_sensor_Init(void)
     opt_sensor_detection_threshold_high = 128;
     opt_sensor_detection_threshold_low = 32;
     opt_sensor_block_signal_detection_delay = OPT_SENSOR_BLOCK_SIGNAL_DETECTION_DELAY;
-    opt_sensor_block_n_subsequent_duplicates = 0;
+    target_frametime = 0;
+    pwm_backlight_frequency = 0;
+    pwm_pulses_per_frame = 0;
     opt_sensor_ignore_all_duplicates = 0;
     opt_sensor_filter_mode = 0;
     opt_sensor_min_threshold_value_to_activate = OPT_SENSOR_MIN_THRESHOLD_VALUE_TO_ACTIVATE;
@@ -143,6 +160,7 @@ void opt_sensor_Init(void)
     opt_sensor_frametime_start_time = 0;
     opt_sensor_frametime_average = 0;
     opt_sensor_frametime_average_set = false;
+    opt_sensor_resync_average_timing_mode_required = false;
     
     ADMUX  = _BV(REFS0)  // ref = AVCC
            | _BV(ADLAR)  // left adjust result
@@ -323,121 +341,106 @@ void opt_sensor_CheckReadings(void)
                     opt_sensor_reading_triggered_count[c] = 0;
                 }
             }
-            if (opt_sensor_reading_triggered[c] == false &&  // we only count it the first time we hit it....
-                (opt_sensor_reading_triggered_count[c] > OPT_TRIGGER_COUNT_THRESHOLD 
-                || (opt_sensor_enable_stream_readings_to_serial && opt_sensor_reading_triggered_count[c] > 1))) // when we are running in sensor log mode we skip the check as it already takes 140 us per cycle, there is still the risk of miss triggering, but operating on a pwm backlight display sensor log mode already breaks the algorithm entirely (this at least helps it kind of continue working)
+            if (opt_sensor_reading_triggered_count[c] > OPT_TRIGGER_COUNT_THRESHOLD 
+                || (opt_sensor_enable_stream_readings_to_serial && opt_sensor_reading_triggered_count[c] > 1)) // when we are running in sensor log mode we skip the check as it already takes 140 us per cycle, there is still the risk of miss triggering, but operating on a pwm backlight display sensor log mode already breaks the algorithm entirely (this at least helps it kind of continue working)
             {
-                opt_sensor_reading_triggered[c] = true;
-                if (opt_sensor_current_time == 0)
+                if (opt_sensor_reading_triggered[c] == false)  // we only count it the first time we hit it....)
                 {
-                    opt_sensor_current_time = micros();
-                }
-                opt_sensor_ignore_duplicate[c] = false;
-                opt_sensor_duplicate_frame[c] = (opt_sensor_detected_signal_start_eye == c && opt_sensor_detected_signal_start_eye_set);
-                if (opt_sensor_duplicate_frame[c]) 
-                {
-                    opt_sensor_duplicate_frames_counter++;
-                    opt_sensor_duplicate_frames_in_a_row_counter++;
-                    #ifdef ENABLE_DEBUG_PIN_OUTPUTS
-                    if (opt_sensor_duplicate_frame[c])
+                    opt_sensor_reading_triggered[c] = true;
+                    if (opt_sensor_current_time == 0)
                     {
-                        bitSet(PORT_DEBUG_DUPLICATE_FRAME_D16, DEBUG_DUPLICATE_FRAME_D16);
+                        opt_sensor_current_time = micros();
                     }
-                    #endif
-                    if (opt_sensor_enable_duplicate_realtime_reporting && ((opt_sensor_duplicate_frames_in_a_row_counter % 2) == 1) && 
-                        (!opt_sensor_ignore_all_duplicates || opt_sensor_duplicate_frames_in_a_row_counter == 1)) // if ignore all duplicates is on then we only report the first duplicate because it will keep detecting duplicates multiple times per frame
+                    opt_sensor_ignore_duplicate[c] = false;
+                    opt_sensor_duplicate_frame[c] = (opt_sensor_detected_signal_start_eye == c && opt_sensor_detected_signal_start_eye_set);
+                    if (opt_sensor_duplicate_frame[c]) 
                     {
-                        Serial.println("+d");
-                    }
-                    if (opt_sensor_ignore_all_duplicates)
-                    {
-                        opt_sensor_ignore_duplicate[c] = true;
-                    }
-                    else if (opt_sensor_block_n_subsequent_duplicates) 
-                    {
-                        if (opt_sensor_duplicate_frames_in_a_row_counter < opt_sensor_block_n_subsequent_duplicates) 
+                        opt_sensor_duplicate_frames_counter++;
+                        opt_sensor_duplicate_frames_in_a_row_counter++;
+                        #ifdef ENABLE_DEBUG_PIN_OUTPUTS
+                        if (opt_sensor_duplicate_frame[c])
+                        {
+                            bitSet(PORT_DEBUG_DUPLICATE_FRAME_D16, DEBUG_DUPLICATE_FRAME_D16);
+                        }
+                        #endif
+                        if (opt_sensor_enable_duplicate_realtime_reporting && ((opt_sensor_duplicate_frames_in_a_row_counter % 2) == 1) && 
+                            (!opt_sensor_ignore_all_duplicates || opt_sensor_duplicate_frames_in_a_row_counter == 1)) // if ignore all duplicates is on then we only report the first duplicate because it will keep detecting duplicates multiple times per frame
+                        {
+                            Serial.println("+d");
+                        }
+                        if (opt_sensor_ignore_all_duplicates)
                         {
                             opt_sensor_ignore_duplicate[c] = true;
                         }
-                        else {
-                            /*
-                                When using opt_sensor_block_n_subsequent_duplicates we need to reset this to 0 (after letting one duplicate *this one* through)
-                                so that we continue to block subsequent duplicates.
-                                Otherwise in the case of a real 120hz duplicate frame we would blast out ir signals at the screen backlight PWM 
-                                frequency after we exceed opt_sensor_block_n_subsequent_duplicates.
-                            */ 
-                            opt_sensor_duplicate_frames_in_a_row_counter = 0;
-                            // We use opt_sensor_block_n_subsequent_duplicates as a proxy for pwm mode when non-zero we assume pwm and when we detect a real duplicate in pwm mode if we are using ir_average_timing_mode we needto bump our frame counters
-                            if (ir_average_timing_mode == 1)
-                            {
-                                opt_sensor_frametime_frame_counter++;
-                            }
+                        if (ir_average_timing_mode == 1 && pwm_pulses_per_frame > 0 && opt_sensor_duplicate_frames_in_a_row_counter > pwm_pulses_per_frame)
+                        {
+                            opt_sensor_resync_average_timing_mode_required = true;
                         }
-                    }
-                    // We use opt_sensor_block_n_subsequent_duplicates as a proxy for pwm mode and when inactive if we are using ir_average_timing_mode we need to bump our frame counters on every duplicate
-                    if (!opt_sensor_block_n_subsequent_duplicates && ir_average_timing_mode == 1)
-                    {
-                        opt_sensor_frametime_frame_counter++;
-                    }
-                }
-                else
-                {
-                    opt_sensor_duplicate_frames_in_a_row_counter = 0;
-                }
-                if (opt_sensor_ignore_duplicate[c])
-                {
-                    opt_sensor_block_signal_detection_until = opt_sensor_current_time + opt_sensor_block_signal_detection_delay;
-                }
-                else
-                {
-                    opt_sensor_block_signal_detection_until = opt_sensor_current_time + opt_sensor_block_signal_detection_delay;
-                    #ifdef ENABLE_DEBUG_PIN_OUTPUTS
-                    opt_sensor_disable_debug_detection_flag_after = opt_sensor_current_time + (opt_sensor_block_signal_detection_delay>>2); // half of the block signal detection delay in length
-                    if (c) 
-                    {
-                        bitSet(PORT_DEBUG_DETECTED_LEFT_D4, DEBUG_DETECTED_LEFT_D4);
                     }
                     else
                     {
-                        bitSet(PORT_DEBUG_DETECTED_RIGHT_D5, DEBUG_DETECTED_RIGHT_D5);
+                        opt_sensor_duplicate_frames_in_a_row_counter = 0;
                     }
-                    #endif
-                    opt_sensor_detected_signal_start_eye = c;
-                    opt_sensor_detected_signal_start_eye_set = true;
-                    if (ir_average_timing_mode == 1)
+                    if (opt_sensor_ignore_duplicate[c])
                     {
-                        if (opt_sensor_frametime_average_set && opt_sensor_duplicate_frame[c]) 
+                        opt_sensor_block_signal_detection_until = opt_sensor_current_time + opt_sensor_block_signal_detection_delay;
+                    }
+                    else
+                    {
+                        opt_sensor_block_signal_detection_until = opt_sensor_current_time + opt_sensor_block_signal_detection_delay;
+                        #ifdef ENABLE_DEBUG_PIN_OUTPUTS
+                        opt_sensor_disable_debug_detection_flag_after = opt_sensor_current_time + (opt_sensor_block_signal_detection_delay>>2); // half of the block signal detection delay in length
+                        if (c) 
                         {
-                            ir_signal_process_opt_sensor(opt_sensor_detected_signal_start_eye, opt_sensor_frametime_average);
+                            bitSet(PORT_DEBUG_DETECTED_LEFT_D4, DEBUG_DETECTED_LEFT_D4);
                         }
-                        if (opt_sensor_frametime_frame_counter == OPT_FRAMETIME_COUNT_PERIOD)
+                        else
                         {
-                            opt_sensor_frametime_average = (opt_sensor_current_time - opt_sensor_frametime_start_time) >> OPT_FRAMETIME_COUNT_PERIOD_2PN;
-                            opt_sensor_frametime_average_set = true;
-                            ir_signal_process_opt_sensor(opt_sensor_detected_signal_start_eye, opt_sensor_frametime_average);
-                            opt_sensor_frametime_frame_counter = 0;
+                            bitSet(PORT_DEBUG_DETECTED_RIGHT_D5, DEBUG_DETECTED_RIGHT_D5);
                         }
-                        else if (opt_sensor_frametime_frame_counter > OPT_FRAMETIME_COUNT_PERIOD)
+                        #endif
+                        opt_sensor_detected_signal_start_eye = c;
+                        opt_sensor_detected_signal_start_eye_set = true;
+                        if (ir_average_timing_mode == 1)
                         {
-                            // If we had a duplicate on the last trigger cycle then we will have exceeded OPT_FRAMETIME_COUNT_PERIOD, in such a situation just reuse the old average and re-compute
-                            if (opt_sensor_frametime_average_set)
+                            if (opt_sensor_frametime_average_set && (opt_sensor_resync_average_timing_mode_required || opt_sensor_duplicate_frame[c])) 
                             {
+                                bitSet(PORT_DEBUG_PREMATURE_FRAME_D14, DEBUG_PREMATURE_FRAME_D14);
                                 ir_signal_process_opt_sensor(opt_sensor_detected_signal_start_eye, opt_sensor_frametime_average);
+                                opt_sensor_resync_average_timing_mode_required = false;
                             }
-                            opt_sensor_frametime_frame_counter = 0;
+                            if (opt_sensor_frametime_frame_counter == OPT_FRAMETIME_COUNT_PERIOD)
+                            {
+                                uint16_t new_frametime_average = (opt_sensor_current_time - opt_sensor_frametime_start_time) >> OPT_FRAMETIME_COUNT_PERIOD_2PN;
+                                if (target_frametime == 0 || (target_frametime - 30 < new_frametime_average && new_frametime_average < target_frametime + 30))
+                                {
+                                    // if a target_frametime is specified we only permit deviation by 30 us above or below the target. 
+                                    // For a 120hz display this equates to 120 +/- 0.438
+                                    // With a 120hz display and OPT_FRAMETIME_COUNT_PERIOD_2PN of 128 a single duplicate uncounted frame would result in an average frametime of 8333.3333×121÷120 = 8402.777744167 which is 70 microseconds longer and thus would be ignored.
+                                    opt_sensor_frametime_average = new_frametime_average;
+                                    opt_sensor_frametime_average_set = true;
+                                }
+                                if (opt_sensor_frametime_average_set)
+                                {
+                                    bitSet(PORT_DEBUG_PREMATURE_FRAME_D14, DEBUG_PREMATURE_FRAME_D14);
+                                    ir_signal_process_opt_sensor(opt_sensor_detected_signal_start_eye, opt_sensor_frametime_average);
+                                    opt_sensor_resync_average_timing_mode_required = false;
+                                }
+                                opt_sensor_frametime_frame_counter = 0;
+                            }
+                            if (opt_sensor_frametime_frame_counter == 0) 
+                            {
+                                opt_sensor_frametime_start_time = opt_sensor_current_time;
+                            }
+                            opt_sensor_frametime_frame_counter++;
                         }
-                        if (opt_sensor_frametime_frame_counter == 0) 
+                        else
                         {
-                            opt_sensor_frametime_start_time = opt_sensor_current_time;
+                            ir_signal_process_opt_sensor(opt_sensor_detected_signal_start_eye, opt_sensor_frametime_average);
                         }
-                        opt_sensor_frametime_frame_counter++;
+                        opt_sensor_initiated_sending_ir_signal = true;
+                        break;
                     }
-                    else
-                    {
-                        ir_signal_process_opt_sensor(opt_sensor_detected_signal_start_eye, opt_sensor_frametime_average);
-                    }
-                    opt_sensor_initiated_sending_ir_signal = true;
-                    break;
                 }
             }
             else 
@@ -540,9 +543,9 @@ void opt_sensor_CheckReadings(void)
             bitClear(PORT_DEBUG_DETECTED_RIGHT_D5, DEBUG_DETECTED_RIGHT_D5);
             bitClear(PORT_DEBUG_DETECTED_LEFT_D4, DEBUG_DETECTED_LEFT_D4);
             bitClear(PORT_DEBUG_PREMATURE_FRAME_D14, DEBUG_PREMATURE_FRAME_D14);
+            bitClear(PORT_DEBUG_DUPLICATE_FRAME_D16, DEBUG_DUPLICATE_FRAME_D16);
         }
     }
-    bitClear(PORT_DEBUG_DUPLICATE_FRAME_D16, DEBUG_DUPLICATE_FRAME_D16);
     #endif
     #ifdef OPT_SENSOR_ENABLE_IGNORE_DURING_IR
     if (ir_led_token_active)

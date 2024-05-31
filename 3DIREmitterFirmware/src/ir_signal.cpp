@@ -336,6 +336,14 @@ void ir_signal_schedule_send_request(ir_signal_type signal, uint16_t timer1_tcnt
   while (ir_average_timing_mode == 1 && timer1_tcnt_target > ir_average_frametime_in_timer_units) {
     timer1_tcnt_target -= ir_average_frametime_in_timer_units;
   }
+
+  if (ir_average_timing_mode == 1) {
+    // In timing mode we always stop all existing timers to allow for phase correction
+    bitClear(TIMSK1, OCIE1B);
+    bitClear(TIMSK1, OCIE1C);
+    ir_signal_next_timer1_compb_scheduled_signal = SIGNAL_NONE;
+    ir_signal_next_timer1_compc_scheduled_signal = SIGNAL_NONE;
+  }
   
   if (signal == SIGNAL_OPEN_LEFT || signal == SIGNAL_OPEN_LEFT_CLOSE_RIGHT) {
     if (ir_signal_next_timer1_compb_scheduled_signal == SIGNAL_NONE) {

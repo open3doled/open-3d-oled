@@ -159,10 +159,11 @@
 
 #define EEPROM_SETTING_ADDRESS 0
 #define EEPROM_SETTING_CHECKVALUE 0x3D3D3D3D
-#define EMITTER_VERSION 17
+#define EMITTER_VERSION 18
 
 /*
 Version History
+18 - Removed opt_sensor_block_n_subsequent_duplicates and added target_frametime and pwm_backlight_frequency
 17 - Added average timing mode
 16 - Added detection threshold low option
 15 - Fixed handling of two token ir protocols
@@ -186,12 +187,14 @@ struct EEPROMSettings {
     uint8_t opt_sensor_enable_ignore_during_ir;
     uint8_t opt_sensor_enable_duplicate_realtime_reporting;
     uint8_t opt_sensor_output_stats; // was opt_sensor_enable_ignore_during_ir;
-    uint8_t opt_sensor_block_n_subsequent_duplicates; // was opt_sensor_enable_duplicate_realtime_reporting;
+    uint8_t empty_13; // was opt_sensor_enable_duplicate_realtime_reporting;
     uint8_t opt_sensor_ignore_all_duplicates; // was opt_sensor_output_stats;
     uint8_t opt_sensor_filter_mode;
     uint8_t ir_flip_eyes; // was opt_sensor_block_n_subsequent_duplicates;
     uint8_t opt_sensor_detection_threshold_low; // was opt_sensor_ignore_all_duplicates;
     uint8_t ir_average_timing_mode; // was opt_sensor_filter_mode;
+    uint16_t target_frametime;
+    uint16_t pwm_backlight_frequency;
 };
 
 #endif /* _SETTINGS_H_ */
