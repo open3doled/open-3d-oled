@@ -81,6 +81,8 @@ uint32_t opt_sensor_frametime_start_time = 0;
 uint16_t opt_sensor_frametime_average = 0;
 bool opt_sensor_frametime_average_set = false;
 bool opt_sensor_resync_average_timing_mode_required = true;
+bool opt_sensor_average_timing_mode_resync = false;
+bool opt_sensor_frametime_average_updated = false;
 
 /*
     7,  // A0               PF7                 ADC7 // right eye
@@ -161,6 +163,8 @@ void opt_sensor_Init(void)
     opt_sensor_frametime_average = 0;
     opt_sensor_frametime_average_set = false;
     opt_sensor_resync_average_timing_mode_required = false;
+    opt_sensor_average_timing_mode_resync = false;
+    opt_sensor_frametime_average_updated = false;
     
     ADMUX  = _BV(REFS0)  // ref = AVCC
            | _BV(ADLAR)  // left adjust result
@@ -405,9 +409,12 @@ void opt_sensor_CheckReadings(void)
                         {
                             if (opt_sensor_frametime_average_set && (opt_sensor_resync_average_timing_mode_required || opt_sensor_duplicate_frame[c])) 
                             {
-                                bitSet(PORT_DEBUG_PREMATURE_FRAME_D14, DEBUG_PREMATURE_FRAME_D14);
+                                #ifdef ENABLE_DEBUG_PIN_OUTPUTS
+                                bitSet(PORT_DEBUG_AVERAGE_TIMING_MODE_RESYNC_D14, DEBUG_AVERAGE_TIMING_MODE_RESYNC_D14);
+                                #endif
                                 ir_signal_process_opt_sensor(opt_sensor_detected_signal_start_eye, opt_sensor_frametime_average);
                                 opt_sensor_resync_average_timing_mode_required = false;
+                                opt_sensor_average_timing_mode_resync = true;
                             }
                             if (opt_sensor_frametime_frame_counter == OPT_FRAMETIME_COUNT_PERIOD)
                             {
@@ -419,12 +426,16 @@ void opt_sensor_CheckReadings(void)
                                     // With a 120hz display and OPT_FRAMETIME_COUNT_PERIOD_2PN of 128 a single duplicate uncounted frame would result in an average frametime of 8333.3333×121÷120 = 8402.777744167 which is 70 microseconds longer and thus would be ignored.
                                     opt_sensor_frametime_average = new_frametime_average;
                                     opt_sensor_frametime_average_set = true;
+                                    opt_sensor_frametime_average_updated = true;
                                 }
                                 if (opt_sensor_frametime_average_set)
                                 {
-                                    bitSet(PORT_DEBUG_PREMATURE_FRAME_D14, DEBUG_PREMATURE_FRAME_D14);
+                                    #ifdef ENABLE_DEBUG_PIN_OUTPUTS
+                                    bitSet(PORT_DEBUG_AVERAGE_TIMING_MODE_RESYNC_D14, DEBUG_AVERAGE_TIMING_MODE_RESYNC_D14);
+                                    #endif
                                     ir_signal_process_opt_sensor(opt_sensor_detected_signal_start_eye, opt_sensor_frametime_average);
                                     opt_sensor_resync_average_timing_mode_required = false;
+                                    opt_sensor_average_timing_mode_resync = true;
                                 }
                                 opt_sensor_frametime_frame_counter = 0;
                             }
@@ -489,6 +500,8 @@ void opt_sensor_CheckReadings(void)
         );
         buffer[4] = (
             0x80 | 
+            (opt_sensor_average_timing_mode_resync == true ? 0x20 : 0x00) | 
+            (opt_sensor_frametime_average_updated == true ? 0x10 : 0x00) | 
             (opt_sensor_readings_active == true ? 0x08 : 0x00) |
             (opt_sensor_detected_signal_start_eye == 1 ? 0x04 : 0x00) | 
             (opt_sensor_initiated_sending_ir_signal ? 0x02 : 0x00) |
@@ -505,6 +518,8 @@ void opt_sensor_CheckReadings(void)
         Serial.write(buffer, 15);
         // We only really need to clear these here, as their values aren't used in between loops except for sensor logging.
         opt_sensor_initiated_sending_ir_signal = false;
+        opt_sensor_average_timing_mode_resync = false;
+        opt_sensor_frametime_average_updated = false;
         opt_sensor_duplicate_frame[1] = false;
         opt_sensor_ignore_duplicate[1] = false;
         opt_sensor_reading_triggered[1] = false;
@@ -542,7 +557,7 @@ void opt_sensor_CheckReadings(void)
             opt_sensor_disable_debug_detection_flag_after = 0;
             bitClear(PORT_DEBUG_DETECTED_RIGHT_D5, DEBUG_DETECTED_RIGHT_D5);
             bitClear(PORT_DEBUG_DETECTED_LEFT_D4, DEBUG_DETECTED_LEFT_D4);
-            bitClear(PORT_DEBUG_PREMATURE_FRAME_D14, DEBUG_PREMATURE_FRAME_D14);
+            bitClear(PORT_DEBUG_AVERAGE_TIMING_MODE_RESYNC_D14, DEBUG_AVERAGE_TIMING_MODE_RESYNC_D14);
             bitClear(PORT_DEBUG_DUPLICATE_FRAME_D16, DEBUG_DUPLICATE_FRAME_D16);
         }
     }
