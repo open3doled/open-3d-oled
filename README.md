@@ -1,5 +1,15 @@
 # Open3DOLED 
 
+## Beta Testers Needed
+I'm looking for beta testers who have potentially compatible displays.
+I have 49 partially assembled units.
+If you have a 120hz TV and it is either and OLED with BFI (@120hz), or an LCD with fast pixel response time you are eligible.
+Just to be clear the beta units are not free, but produced near cost and bundled with a pair of panasonic glasses with custom firmware optimized for software pageflipping (see below for details about this).
+Prices for the emitter and glasses start at $70 USD with untracked shipping or $90 USD with tracked ems shipping.
+I will help you configure the unit to work with your display and help with any trouble shooting, if the unit does not work with your TV you can return it for a refund (minus cost of shipping).
+In return all I ask is that you share the config settings that work best with your TV.
+If interested contact me at: support at open3doled dot com.
+
 ## Introduction
 Open3DOLED is a set of software and hardware designs that allow one to turn any display into a 3D display using compatible shutter glasses.  
 It works best for displays that incorporate Black Frame Insertion (BFI) technologies and have framerates that exceed 120hz.  
