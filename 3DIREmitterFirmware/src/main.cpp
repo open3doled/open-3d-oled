@@ -293,6 +293,7 @@ void loop()
                             target_frametime = temp;
                             update_pwm_pulses_per_frame();
                         }
+                        opt_sensor_SettingsChanged();
                     }
                     else if (command == 7 && p == 1 && temp >= 0 && temp < 3) // update glasses mode
                     {

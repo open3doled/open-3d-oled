@@ -38,6 +38,7 @@ void opt_sensor_PrintStats(void);
 bool opt_sensor_FinishPrintStats(void);
 #endif
 void opt_sensor_UpdateThresholds(void);
+void opt_sensor_SettingsChanged(void);
 void opt_sensor_CheckReadings(void);
 void opt_sensor_ClearStats(void);
 
