@@ -1,15 +1,15 @@
 /*
-* Open3DOLED is licensed under CC BY-NC-SA 4.0. To view a copy of this license, visit http://creativecommons.org/licenses/by-nc-sa/4.0/
-*/
+ * Open3DOLED is licensed under CC BY-NC-SA 4.0. To view a copy of this license, visit http://creativecommons.org/licenses/by-nc-sa/4.0/
+ */
 
 #ifndef _OPT_SENSOR_SENSOR_H_
 #define _OPT_SENSOR_SENSOR_H_
 
 #define OPT_SENSOR_CHANNELS 2
 #define OPT_SENSOR_MIN_THRESHOLD_VALUE_TO_ACTIVATE 10 // IR LED was triggering shutters while testing
-//#define OPT_SENSOR_MIN_THRESHOLD_VALUE_TO_ACTIVATE 15
+// #define OPT_SENSOR_MIN_THRESHOLD_VALUE_TO_ACTIVATE 15
 #define OPT_SENSOR_STATS_SERIAL_OUTPUT_FREQUENCY 25
-#define OPT_TRIGGER_COUNT_THRESHOLD 2 // We need this many triggers in a row before sending the shutter glass signal based on the trigger boxes
+#define OPT_TRIGGER_COUNT_THRESHOLD 2    // We need this many triggers in a row before sending the shutter glass signal based on the trigger boxes
 #define OPT_FRAMETIME_COUNT_PERIOD_2PN 7 // This is how often we update the frametime in cycles as 2^(OPT_FRAMETIME_COUNT_PERIOD_2PN) (eg 2^7 = 128)
 #define OPT_FRAMETIME_COUNT_PERIOD (1 << OPT_FRAMETIME_COUNT_PERIOD_2PN)
 
@@ -41,6 +41,5 @@ void opt_sensor_UpdateThresholds(void);
 void opt_sensor_SettingsChanged(void);
 void opt_sensor_CheckReadings(void);
 void opt_sensor_ClearStats(void);
-
 
 #endif /* _OPT_SENSOR_SENSOR_H_ */

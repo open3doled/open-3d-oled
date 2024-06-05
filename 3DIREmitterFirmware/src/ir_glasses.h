@@ -1,6 +1,6 @@
 /*
-* Open3DOLED is licensed under CC BY-NC-SA 4.0. To view a copy of this license, visit http://creativecommons.org/licenses/by-nc-sa/4.0/
-*/
+ * Open3DOLED is licensed under CC BY-NC-SA 4.0. To view a copy of this license, visit http://creativecommons.org/licenses/by-nc-sa/4.0/
+ */
 
 #ifndef _IR_GLASSES_H_
 #define _IR_GLASSES_H_
@@ -15,34 +15,34 @@
 
 typedef struct
 {
-  uint16_t mode;         // shutter glasses toggle at (0 - start of token, 1 - end of end token) // not sure why this needed to be uint16_t but uint8_t broke the timing pulses perhaps it needs to be 16bit word aligned
-  uint16_t token_length; // to align end of start tokens
-  uint16_t size;         // also making this uint16_t incase timings needs to be 16 bit word aligned...
-  uint16_t timings[MAX_IR_SIGNAL_TIMINGS];
+    uint16_t mode;         // shutter glasses toggle at (0 - start of token, 1 - end of end token) // not sure why this needed to be uint16_t but uint8_t broke the timing pulses perhaps it needs to be 16bit word aligned
+    uint16_t token_length; // to align end of start tokens
+    uint16_t size;         // also making this uint16_t incase timings needs to be 16 bit word aligned...
+    uint16_t timings[MAX_IR_SIGNAL_TIMINGS];
 } ir_signal_t;
 
 typedef struct
 {
-  uint8_t signal_count;
-  /*
-    Valid Signal Indices:
-      0: [DUMMY]
-      1: [SIGNAL_OPEN_RIGHT]
-      2: [SIGNAL_CLOSE_RIGHT]
-      3: [SIGNAL_OPEN_LEFT]
-      4: [SIGNAL_CLOSE_LEFT]
-      3: [SIGNAL_OPEN_LEFT]
-      4: [SIGNAL_CLOSE_LEFT]
-      5: [SIGNAL_OPEN_RIGHT_FAST_SWAP]
-      6: [SIGNAL_OPEN_LEFT_FAST_SWAP]
-      7: [SIGNAL_MODE_RIGHT_AND_LEFT]
-      8: [SIGNAL_MODE_RIGHT_ONLY]
-      9: [SIGNAL_MODE_LEFT_ONLY]
-      10: [SIGNAL_OPEN_RIGHT_CLOSE_LEFT]
-      11: [SIGNAL_OPEN_LEFT_CLOSE_RIGHT]
-  */
-  uint8_t signal_index[NUM_IR_SIGNAL_TYPES];
-  ir_signal_t signals[];
+    uint8_t signal_count;
+    /*
+      Valid Signal Indices:
+        0: [DUMMY]
+        1: [SIGNAL_OPEN_RIGHT]
+        2: [SIGNAL_CLOSE_RIGHT]
+        3: [SIGNAL_OPEN_LEFT]
+        4: [SIGNAL_CLOSE_LEFT]
+        3: [SIGNAL_OPEN_LEFT]
+        4: [SIGNAL_CLOSE_LEFT]
+        5: [SIGNAL_OPEN_RIGHT_FAST_SWAP]
+        6: [SIGNAL_OPEN_LEFT_FAST_SWAP]
+        7: [SIGNAL_MODE_RIGHT_AND_LEFT]
+        8: [SIGNAL_MODE_RIGHT_ONLY]
+        9: [SIGNAL_MODE_LEFT_ONLY]
+        10: [SIGNAL_OPEN_RIGHT_CLOSE_LEFT]
+        11: [SIGNAL_OPEN_LEFT_CLOSE_RIGHT]
+    */
+    uint8_t signal_index[NUM_IR_SIGNAL_TYPES];
+    ir_signal_t signals[];
 } ir_glasses_signal_library_t;
 
 const ir_glasses_signal_library_t ir_glasses_samsung07 = {
@@ -194,7 +194,6 @@ const ir_glasses_signal_library_t ir_glasses_sony = {
             .token_length = 300,
             .size = 9,
             .timings = {20, 20, 20, 20, 20, 140, 20, 20, 20}}}};
-
 
 // Panasonic glasses have a vertical front polarizing element and a horizontal back polarizing element, so OLED is fine but 45 degree polarized monitors will have half brightness and horizontal polarized displays will not work
 const ir_glasses_signal_library_t ir_glasses_panasonic = {
