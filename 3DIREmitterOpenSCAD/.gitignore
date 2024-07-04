@@ -2,6 +2,7 @@
 *.3mf
 *.gcode
 0105a.stl
+0202a.stl
 *.json
 *_base.stl
 *_cover_*.stl
