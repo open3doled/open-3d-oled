@@ -18,8 +18,9 @@
 /* [TV Settings:] */
 
 // Screen bezel to pixel height dimension (lgc155=11)
-tv_bezel_to_pixels_vertical_distance = 10;
+tv_bezel_to_pixels_vertical_distance = 16;
 /*
+  15 mm - LG CX OLED Bezel Only
   11 mm - LG C1 OLED and Sony XBR-48A9S Bezel Only
   14 mm - LG C1 OLED and MMK 55MBL-EL Screen protector
   7 mm - LG G3 OLED Bezel Only
@@ -28,15 +29,14 @@ tv_bezel_to_pixels_vertical_distance = 10;
 */
 
 // Screen bezel thickness dimension (lgc155=4.7)
-tv_bezel_thickness = 32;
+tv_bezel_thickness = 9.5;
 /*
+  ** add 1.5 mm for felt and tolerance **
+  8 mm - LG CX OLED Bezel Only (measure 8 mm)
   4.7 mm - LG C1 OLED Bezel Only (measured 4.4 mm)
-  6.2 mm - LG C1 OLED with felt (back and front)
   29 mm - LG C1 OLED and MMK 55MBL-EL Screen protector
-  30 mm - LG C1 OLED and MMK 55MBL-EL Screen protector with felt
   5.5 mm - Sony XBR-48A9S Bezel Only
   13.5 mm - LG G3 OLED Bezel Only
-  15.0 mm - LG G3 OLED Bezel Only with felt (back and front)
   32 mm - Sony X95K MiniLED (it has a rounded back so I've made it a little larger than what looks like 30mm any extra can be filled with spacers)
   29 mm - Viewsonic XG2431 (it has a rounded back so we just use the thickest measurement and you will need adhesive on the top bezel.)
 */
