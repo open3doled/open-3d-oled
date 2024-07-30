@@ -64,6 +64,9 @@ echo "VIRTUALENVWRAPPER_PYTHON=/usr/bin/python3" >> ~/.bashrc
 echo "source /usr/share/virtualenvwrapper/virtualenvwrapper.sh" >> ~/.bashrc
 mkvirtualenv --system-site-packages open3doled
 pip install -r requirements.txt
+  if pyopengl-accelerate fails to install due to some numpy error and your system has numpy installed via apt already you can try either of the following.
+  ignore the system numpy with: pip install --ignore-installed -r requirements.txt
+  don't use pyopengl-accelerate: remove pyopengl-accelerate from requirements.txt
 python3 3d_player.py
 ```
 * Running subsequently
