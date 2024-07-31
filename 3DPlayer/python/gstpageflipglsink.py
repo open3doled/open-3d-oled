@@ -1405,17 +1405,21 @@ class PageflipGLWindow(threading.Thread):
             # gl.glPixelStorei(gl.GL_UNPACK_ALIGNMENT, 1) # may be necessary for non 32 bit aligned pixel formats https://stackoverflow.com/questions/66221801/glteximage2d-data-not-filled-as-expected
             if self.__in_image_updated:
                 in_image_bytes = self.__in_image
-                gl.glTexImage2D(
-                    gl.GL_TEXTURE_2D,
-                    0,
-                    gl.GL_RGBA,  # https://www.khronos.org/opengl/wiki/Image_Format GL_ALPHA RL_RGBA
-                    in_width,
-                    in_height,
-                    0,
-                    gl.GL_RGBA,  # https://www.khronos.org/opengl/wiki/Image_Format GL_ALPHA RL_RGBA
-                    gl.GL_UNSIGNED_BYTE,
-                    in_image_bytes,
-                )
+                try:
+                    gl.glTexImage2D(
+                        gl.GL_TEXTURE_2D,
+                        0,
+                        gl.GL_RGBA,  # https://www.khronos.org/opengl/wiki/Image_Format GL_ALPHA RL_RGBA
+                        in_width,
+                        in_height,
+                        0,
+                        gl.GL_RGBA,  # https://www.khronos.org/opengl/wiki/Image_Format GL_ALPHA RL_RGBA
+                        gl.GL_UNSIGNED_BYTE,
+                        in_image_bytes,
+                    )
+                except ValueError:
+                    # ValueError: ('operation forbidden on released memoryview object', <OpenGL.GL.images.ImageInputConverter object at 0xnnnnnnnnn>)
+                    pass
                 self.__finish_buffer_copy_event.set()
                 self.__in_image_updated = False
 
