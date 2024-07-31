@@ -673,6 +673,47 @@ class TopWindow:
         # print(display_resolution)
         if video_file_name == "":
             return
+
+        def set_pageflipglsink_properties():
+            self.pageflipglsink.set_property("calibration-mode", calibration_mode)
+            self.pageflipglsink.set_property("fullscreen", True)
+            self.pageflipglsink.set_property("frame-packing", frame_packing)
+            self.pageflipglsink.set_property("right-eye", right_eye)
+            self.pageflipglsink.set_property("target-framerate", target_framerate)
+            self.pageflipglsink.set_property("display-resolution", display_resolution)
+            self.pageflipglsink.set_property("display-zoom-factor", display_zoom_factor)
+            self.pageflipglsink.set_property("display-size", display_size)
+            self.pageflipglsink.set_property("whitebox-brightness", whitebox_brightness)
+            self.pageflipglsink.set_property(
+                "whitebox-corner-position", whitebox_corner_position
+            )
+            self.pageflipglsink.set_property(
+                "whitebox-vertical-position", whitebox_vertical_position
+            )
+            self.pageflipglsink.set_property(
+                "whitebox-horizontal-position", whitebox_horizontal_position
+            )
+            self.pageflipglsink.set_property(
+                "whitebox-horizontal-spacing", whitebox_horizontal_spacing
+            )
+            self.pageflipglsink.set_property("whitebox-size", whitebox_size)
+            self.pageflipglsink.set_property("blackbox-border", blackbox_border)
+            self.pageflipglsink.set_property(
+                "display-osd-timestamp", display_osd_timestamp
+            )
+
+            self.pageflipglsink.set_property("subtitle-font", subtitle_font)
+            self.pageflipglsink.set_property("subtitle-size", subtitle_size)
+            self.pageflipglsink.set_property("subtitle-depth", subtitle_depth)
+            self.pageflipglsink.set_property(
+                "subtitle-vertical-offset", subtitle_vertical_offset
+            )
+            self.pageflipglsink.set_property(
+                "disable-3d-on-mouse-move-under-windows",
+                disable_3d_on_mouse_move_under_windows,
+            )
+            self.pageflipglsink.set_property("start", True)  # this must be done last
+
         if video_file_name.startswith("/dev/video"):
             # this is the special side by side to frame sequential capture mode
             self.player = Gst.Pipeline.new("player")
@@ -694,6 +735,8 @@ class TopWindow:
                 self.emitter_serial.pageflipglsink = self.pageflipglsink
             self.player.add(self.pageflipglsink)
             videoconvert_1.link(self.pageflipglsink)
+
+            set_pageflipglsink_properties()
 
         else:
             video_file_path = os.path.realpath(video_file_name)
@@ -962,45 +1005,11 @@ class TopWindow:
                     "text-sink", self.subtitle3dsink
                 )  # https://gstreamer.freedesktop.org/documentation/playback/playbin.html?gi-language=python
 
-        self.pageflipglsink.set_property("calibration-mode", calibration_mode)
-        self.pageflipglsink.set_property("fullscreen", True)
-        self.pageflipglsink.set_property("frame-packing", frame_packing)
-        self.pageflipglsink.set_property("right-eye", right_eye)
-        self.pageflipglsink.set_property("target-framerate", target_framerate)
-        self.pageflipglsink.set_property("display-resolution", display_resolution)
-        self.pageflipglsink.set_property("display-zoom-factor", display_zoom_factor)
-        self.pageflipglsink.set_property("display-size", display_size)
-        self.pageflipglsink.set_property("whitebox-brightness", whitebox_brightness)
-        self.pageflipglsink.set_property(
-            "whitebox-corner-position", whitebox_corner_position
-        )
-        self.pageflipglsink.set_property(
-            "whitebox-vertical-position", whitebox_vertical_position
-        )
-        self.pageflipglsink.set_property(
-            "whitebox-horizontal-position", whitebox_horizontal_position
-        )
-        self.pageflipglsink.set_property(
-            "whitebox-horizontal-spacing", whitebox_horizontal_spacing
-        )
-        self.pageflipglsink.set_property("whitebox-size", whitebox_size)
-        self.pageflipglsink.set_property("blackbox-border", blackbox_border)
-        self.pageflipglsink.set_property("display-osd-timestamp", display_osd_timestamp)
+            set_pageflipglsink_properties()
 
-        self.pageflipglsink.set_property("subtitle-font", subtitle_font)
-        self.pageflipglsink.set_property("subtitle-size", subtitle_size)
-        self.pageflipglsink.set_property("subtitle-depth", subtitle_depth)
-        self.pageflipglsink.set_property(
-            "subtitle-vertical-offset", subtitle_vertical_offset
-        )
-        self.pageflipglsink.set_property(
-            "disable-3d-on-mouse-move-under-windows",
-            disable_3d_on_mouse_move_under_windows,
-        )
-        self.pageflipglsink.set_property("start", True)  # this must be done last
-        self.player.set_property("video-sink", self.pageflipglsink)
+            self.player.set_property("video-sink", self.pageflipglsink)
 
-        self.player.set_property("flags", play_flags)  # no subtitles 0x00000004
+            self.player.set_property("flags", play_flags)  # no subtitles 0x00000004
 
         # self.player.set_property('force-aspect-ratio', True)
 
@@ -1019,39 +1028,42 @@ class TopWindow:
             failed_to_start = True
 
         if not failed_to_start:
-            video_duration = self.player.query_duration(Gst.Format.TIME).duration
-            self.pageflipglsink.set_property("video-duration", video_duration)
+            if not video_file_name.startswith("/dev/video"):
+                video_duration = self.player.query_duration(Gst.Format.TIME).duration
+                self.pageflipglsink.set_property("video-duration", video_duration)
 
-            # show video progress frame
-            self.video_progress_timestamp_variable.set(
-                self.player.query_position(Gst.Format.TIME).cur
-            )
-            self.video_progress_frame = tkinter.Frame(self.window)
-            self.video_progress_frame.pack(
-                fill="x",
-                expand=1,
-                pady=5,
-                padx=25,
-                anchor="n",
-            )
-            self.video_progress_bar = tkinter.ttk.Progressbar(
-                self.video_progress_frame,
-                orient=tkinter.HORIZONTAL,
-                maximum=video_duration,
-                mode="determinate",
-                variable=self.video_progress_timestamp_variable,
-            )
-            self.video_progress_bar.pack(
-                fill="x", expand=1, pady=5, padx=5, anchor="n", side=tkinter.LEFT
-            )
-            self.video_progress_bar.bind("<Button-1>", self.seek_from_video_progress)
-            self.video_duration_label = tkinter.Label(
-                self.video_progress_frame,
-                text=str(datetime.timedelta(seconds=video_duration // 1000000000)),
-            )
-            self.video_duration_label.pack(
-                pady=5, padx=5, anchor="n", side=tkinter.RIGHT
-            )
+                # show video progress frame
+                self.video_progress_timestamp_variable.set(
+                    self.player.query_position(Gst.Format.TIME).cur
+                )
+                self.video_progress_frame = tkinter.Frame(self.window)
+                self.video_progress_frame.pack(
+                    fill="x",
+                    expand=1,
+                    pady=5,
+                    padx=25,
+                    anchor="n",
+                )
+                self.video_progress_bar = tkinter.ttk.Progressbar(
+                    self.video_progress_frame,
+                    orient=tkinter.HORIZONTAL,
+                    maximum=video_duration,
+                    mode="determinate",
+                    variable=self.video_progress_timestamp_variable,
+                )
+                self.video_progress_bar.pack(
+                    fill="x", expand=1, pady=5, padx=5, anchor="n", side=tkinter.LEFT
+                )
+                self.video_progress_bar.bind(
+                    "<Button-1>", self.seek_from_video_progress
+                )
+                self.video_duration_label = tkinter.Label(
+                    self.video_progress_frame,
+                    text=str(datetime.timedelta(seconds=video_duration // 1000000000)),
+                )
+                self.video_duration_label.pack(
+                    pady=5, padx=5, anchor="n", side=tkinter.RIGHT
+                )
 
             self.__open_video_file_button.config(state="disabled")
             self.__flip_right_and_left_button.config(state="normal")
