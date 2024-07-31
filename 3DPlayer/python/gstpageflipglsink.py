@@ -2581,7 +2581,7 @@ class GstPageflipGLSink(GstBase.BaseSink):
                 self.__pageflip_gl_window.update_image(
                     inbuffer.pts, in_image, in_image_width, in_image_height
                 )  # we may need to clone it so we don't lock the Gst.Buffer
-        except SystemError:
+        except (SystemError, BufferError):
             # TODO: figure out hte cause of the following error and fix it.
             # SystemError: <built in function buffer_override_unmap> returned a result with an exception set (BufferError: memoryview has 1 exported buffer)
             return Gst.FlowReturn.OK
