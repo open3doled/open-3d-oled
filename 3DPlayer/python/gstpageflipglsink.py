@@ -2589,6 +2589,18 @@ class GstPageflipGLSink(GstBase.BaseSink):
             traceback.print_exc()
             logging.error(e)
 
+        # TODO: remove this I'm using it to get fps stats for v4l2src
+        current_time = time.time()
+        if (
+            not hasattr(self, "last_second_time")
+            or current_time > self.last_second_time
+        ):
+            if hasattr(self, "last_second_time"):
+                print(f"fps {self.last_second_time}: {self.last_second_count}")
+            self.last_second_time = current_time
+            self.last_second_count = 0
+        self.last_second_count += 1
+
         return Gst.FlowReturn.OK
 
     def do_set_caps(self, caps: Gst.Caps) -> bool:
