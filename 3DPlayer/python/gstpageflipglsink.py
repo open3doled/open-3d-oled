@@ -1419,7 +1419,7 @@ class PageflipGLWindow(threading.Thread):
                     )
                 except ValueError:
                     # ValueError: ('operation forbidden on released memoryview object', <OpenGL.GL.images.ImageInputConverter object at 0xnnnnnnnnn>)
-                    pass
+                    return
                 self.__finish_buffer_copy_event.set()
                 self.__in_image_updated = False
 
