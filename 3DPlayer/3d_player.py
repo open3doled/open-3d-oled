@@ -673,271 +673,294 @@ class TopWindow:
         # print(display_resolution)
         if video_file_name == "":
             return
-        video_file_path = os.path.realpath(video_file_name)
-        if not os.path.exists(video_file_path):
-            return
-        video_file_path = "file:///" + video_file_path.replace("\\", "/").replace(
-            ":", "|"
-        )
+        if video_file_name.startswith("/dev/video"):
+            # this is the special side by side to frame sequential capture mode
+            self.player = Gst.Pipeline.new("player")
+            v4l2src = Gst.ElementFactory.make("v4l2src", "V4L2Src")
+            v4l2src.set_property("device", video_file_name)
+            self.player.add(v4l2src)
 
-        if subtitle_file_name:
-            show_subtitles = True
-            subtitle_file_path = os.path.realpath(subtitle_file_name)
-            if subtitle_offset != "0":
-                subs = pysrt.open(subtitle_file_path)
-                subs.shift(seconds=float(subtitle_offset))
-                subtitle_file_path = f"{subtitle_file_path}.shifted"
-                subs.save(subtitle_file_path, encoding="utf-8-sig")
-            subtitle_file_path = "file:///" + subtitle_file_path.replace(
-                "\\", "/"
-            ).replace(":", "|")
+            videoconvert_1 = Gst.ElementFactory.make("videoconvert", "VideoConvert1")
+            self.player.add(videoconvert_1)
+            v4l2src.link(videoconvert_1)
+
+            self.pageflipglsink = Gst.ElementFactory.make(
+                "gstpageflipglsink", "PageflipGLSink"
+            )
+            if self.pageflipglsink is None:
+                print("Unable to find/initialize GStreamer plugin GSTPageflipGLSink.")
+                return
+            if self.emitter_serial is not None:
+                self.emitter_serial.pageflipglsink = self.pageflipglsink
+            self.player.add(self.pageflipglsink)
+            videoconvert_1.link(self.pageflipglsink)
+
         else:
-            show_subtitles = False
-            subtitle_file_path = None
-
-        display_resolution_width, display_resolution_height = tuple(  # @UnusedVariable
-            map(int, display_resolution.split("x"))
-        )
-
-        nvcodec_filters = [
-            "nvjpegdec",
-            "nvmpeg2videodec",
-            "nvmpeg4videodec",
-            "nvmpegvideodec",
-            "nvh264dec",
-            "nvh265dec",
-            "nvvp9dec",
-        ]
-        vaapi_filters = [
-            "vaapidecodebin",
-            "vaapih264dec",
-            "vaapih264enc",
-            "vaapih265dec",
-            "vaapijpegdec",
-            "vaapijpegenc",
-            "vaapimpeg2dec",
-            "vaapipostproc",
-            "vaapisink",
-            "vaapivp8dec",
-            "vaapivp9dec",
-        ]
-        msdk_filters = [
-            "msdkh264dec",
-            "msdkh265dec",
-            "msdkvp9dec",
-        ]
-        d3d11_filters = [
-            "d3d11h264dec",
-            "d3d11h264device1dec",
-            "d3d11h265dec",
-            "d3d11h265device1dec",
-            "d3d11mpeg2dec",
-            "d3d11mpeg2device1dec",
-            "d3d11vp8dec",
-            "d3d11vp9dec",
-            "d3d11vp9device1dec",
-        ]
-        software_filters = [
-            "openh264",
-            "avdec_h264",
-            "vah264dec",
-            "vah265dec",
-            "libde265dec" "avdec_h265",
-            "vavp9dec",
-            "vp9dec",
-            "avdec_vp9",
-        ]
-
-        filters_to_prioritize = []
-        filters_to_deprioritize = set(
-            nvcodec_filters
-            + vaapi_filters
-            + msdk_filters
-            + d3d11_filters
-            + software_filters
-        )
-        if decoder_preference == display_settings.DECODER_PREFERENCE_NVCODEC:
-            filters_to_prioritize.extend(nvcodec_filters)
-        elif decoder_preference == display_settings.DECODER_PREFERENCE_VAAPI:
-            filters_to_prioritize.extend(vaapi_filters)
-        elif decoder_preference == display_settings.DECODER_PREFERENCE_MSDK:
-            filters_to_prioritize.extend(msdk_filters)
-        elif decoder_preference == display_settings.DECODER_PREFERENCE_D3D11:
-            filters_to_prioritize.extend(d3d11_filters)
-        elif decoder_preference == display_settings.DECODER_PREFERENCE_SOFTWARE:
-            filters_to_prioritize.extend(software_filters)
-        else:  # default
-            filters_to_deprioritize = set()
-        filters_to_deprioritize.difference_update(filters_to_prioritize)
-        for filter_to_prioritize in filters_to_prioritize:
-            primary_decoder_element_factory = Gst.ElementFactory.find(
-                filter_to_prioritize
+            video_file_path = os.path.realpath(video_file_name)
+            if not os.path.exists(video_file_path):
+                return
+            video_file_path = "file:///" + video_file_path.replace("\\", "/").replace(
+                ":", "|"
             )
-            if primary_decoder_element_factory:
-                primary_decoder_element_factory.set_rank(Gst.Rank.PRIMARY + 1)
-        for filter_to_deprioritize in filters_to_deprioritize:
-            primary_decoder_element_factory = Gst.ElementFactory.find(
-                filter_to_deprioritize
+
+            if subtitle_file_name:
+                show_subtitles = True
+                subtitle_file_path = os.path.realpath(subtitle_file_name)
+                if subtitle_offset != "0":
+                    subs = pysrt.open(subtitle_file_path)
+                    subs.shift(seconds=float(subtitle_offset))
+                    subtitle_file_path = f"{subtitle_file_path}.shifted"
+                    subs.save(subtitle_file_path, encoding="utf-8-sig")
+                subtitle_file_path = "file:///" + subtitle_file_path.replace(
+                    "\\", "/"
+                ).replace(":", "|")
+            else:
+                show_subtitles = False
+                subtitle_file_path = None
+
+            display_resolution_width, display_resolution_height = tuple(
+                map(int, display_resolution.split("x"))
+            )  # @UnusedVariable
+
+            nvcodec_filters = [
+                "nvjpegdec",
+                "nvmpeg2videodec",
+                "nvmpeg4videodec",
+                "nvmpegvideodec",
+                "nvh264dec",
+                "nvh265dec",
+                "nvvp9dec",
+            ]
+            vaapi_filters = [
+                "vaapidecodebin",
+                "vaapih264dec",
+                "vaapih264enc",
+                "vaapih265dec",
+                "vaapijpegdec",
+                "vaapijpegenc",
+                "vaapimpeg2dec",
+                "vaapipostproc",
+                "vaapisink",
+                "vaapivp8dec",
+                "vaapivp9dec",
+            ]
+            msdk_filters = [
+                "msdkh264dec",
+                "msdkh265dec",
+                "msdkvp9dec",
+            ]
+            d3d11_filters = [
+                "d3d11h264dec",
+                "d3d11h264device1dec",
+                "d3d11h265dec",
+                "d3d11h265device1dec",
+                "d3d11mpeg2dec",
+                "d3d11mpeg2device1dec",
+                "d3d11vp8dec",
+                "d3d11vp9dec",
+                "d3d11vp9device1dec",
+            ]
+            software_filters = [
+                "openh264",
+                "avdec_h264",
+                "vah264dec",
+                "vah265dec",
+                "libde265dec" "avdec_h265",
+                "vavp9dec",
+                "vp9dec",
+                "avdec_vp9",
+            ]
+
+            filters_to_prioritize = []
+            filters_to_deprioritize = set(
+                nvcodec_filters
+                + vaapi_filters
+                + msdk_filters
+                + d3d11_filters
+                + software_filters
             )
-            if primary_decoder_element_factory:
-                primary_decoder_element_factory.set_rank(Gst.Rank.MARGINAL)
-                # primary_decoder_element_factory.set_rank(Gst.Rank.NONE)
+            if decoder_preference == display_settings.DECODER_PREFERENCE_NVCODEC:
+                filters_to_prioritize.extend(nvcodec_filters)
+            elif decoder_preference == display_settings.DECODER_PREFERENCE_VAAPI:
+                filters_to_prioritize.extend(vaapi_filters)
+            elif decoder_preference == display_settings.DECODER_PREFERENCE_MSDK:
+                filters_to_prioritize.extend(msdk_filters)
+            elif decoder_preference == display_settings.DECODER_PREFERENCE_D3D11:
+                filters_to_prioritize.extend(d3d11_filters)
+            elif decoder_preference == display_settings.DECODER_PREFERENCE_SOFTWARE:
+                filters_to_prioritize.extend(software_filters)
+            else:  # default
+                filters_to_deprioritize = set()
+            filters_to_deprioritize.difference_update(filters_to_prioritize)
+            for filter_to_prioritize in filters_to_prioritize:
+                primary_decoder_element_factory = Gst.ElementFactory.find(
+                    filter_to_prioritize
+                )
+                if primary_decoder_element_factory:
+                    primary_decoder_element_factory.set_rank(Gst.Rank.PRIMARY + 1)
+            for filter_to_deprioritize in filters_to_deprioritize:
+                primary_decoder_element_factory = Gst.ElementFactory.find(
+                    filter_to_deprioritize
+                )
+                if primary_decoder_element_factory:
+                    primary_decoder_element_factory.set_rank(Gst.Rank.MARGINAL)
+                    # primary_decoder_element_factory.set_rank(Gst.Rank.NONE)
 
-        # self.player = Gst.ElementFactory.make("playbin", "Playbin")
-        self.player = Gst.ElementFactory.make("playbin3", "Playbin")
+            # self.player = Gst.ElementFactory.make("playbin", "Playbin")
+            self.player = Gst.ElementFactory.make("playbin3", "Playbin")
 
-        self.player.set_property("uri", video_file_path)
-        # self.player.set_property("current-audio", -1)  # -1 is the first audio stream
-        # self.player.set_property('current-audio', 2) # -1 is the first audio stream
+            self.player.set_property("uri", video_file_path)
+            # self.player.set_property("current-audio", -1)  # -1 is the first audio stream
+            # self.player.set_property('current-audio', 2) # -1 is the first audio stream
 
-        self.pageflipglsink = Gst.ElementFactory.make(
-            "gstpageflipglsink", "PageflipGLSink"
-        )
-        if self.pageflipglsink is None:
-            print("Unable to find/initialize GStreamer plugin GSTPageflipGLSink.")
-            return
-        if self.emitter_serial is not None:
-            self.emitter_serial.pageflipglsink = self.pageflipglsink
-
-        """
-          soft-colorbalance+deinterlace+soft-volume+text+audio+video 
-          
-          0x00000400 | 0x00000200 | 0x00000010 | 0x00000004 | 0x00000002 | 0x00000001
-          
-          https://gstreamer.freedesktop.org/documentation/playback/playsink.html?gi-language=python#GstPlayFlags
-          video (0x00000001) – Render the video stream
-          audio (0x00000002) – Render the audio stream
-          text (0x00000004) – Render subtitles
-          vis (0x00000008) – Render visualisation when no video is present
-          soft-volume (0x00000010) – Use software volume
-          native-audio (0x00000020) – Only use native audio formats
-          native-video (0x00000040) – Only use native video formats
-          download (0x00000080) – Attempt progressive download buffering
-          buffering (0x00000100) – Buffer demuxed/parsed data
-          deinterlace (0x00000200) – Deinterlace video if necessary
-          soft-colorbalance (0x00000400) – Use software color balance
-          force-filters (0x00000800) – Force audio/video filter(s) to be applied
-          force-sw-decoders (0x00001000) – Force only software-based decoders (no effect for playbin3) 
-        """
-        play_flags = 0x00000400 | 0x00000200 | 0x00000010 | 0x00000002 | 0x00000001
-
-        # Sample of adding video filters to pipeline
-        video_filters = None
-        previous_video_filter = None  # @UnusedVariable
-        video_sink_pad = None
-        video_src_pad = None
-
-        """
-        if video_filters is None:
-            video_filters = Gst.Bin("video_filters")
-
-        subtitle_filesrc = Gst.ElementFactory.make("filesrc", "FileSrc")
-        subtitle_filesrc.set_property("location", subtitle_file_path)
-        video_filters.add(subtitle_filesrc)
-
-        subtitle_subparse = Gst.ElementFactory.make("subparse", "SubParse")
-        video_filters.add(subtitle_subparse)
-        subtitle_filesrc.link(subtitle_subparse)
-
-        if frame_packing == "side-by-side-half":
-            frame_packing = "side-by-side-full"
-
-            videoscale = Gst.ElementFactory.make("videoscale", "VideoScale")
-            video_sink_pad = videoscale.sinkpad
-            videoscale.set_property("method", 0)
-            videoscale.set_property("add-borders", False)
-            video_filters.add(videoscale)
-
-            video_resolution_width = 1920
-            video_resolution_height = 1080
-            previous_video_filter = videoscale_capsfilter = Gst.ElementFactory.make(
-                "capsfilter", "VideoScaleCapsFilter"
+            self.pageflipglsink = Gst.ElementFactory.make(
+                "gstpageflipglsink", "PageflipGLSink"
             )
-            video_src_pad = videoscale_capsfilter.srcpad
-            videoscale_capsfilter.set_property(
-                "caps",
-                Gst.caps_from_string(
-                    f"video/x-raw,width={2*video_resolution_width},height={video_resolution_height},pixel-aspect-ratio=1/1"
-                ),
+            if self.pageflipglsink is None:
+                print("Unable to find/initialize GStreamer plugin GSTPageflipGLSink.")
+                return
+            if self.emitter_serial is not None:
+                self.emitter_serial.pageflipglsink = self.pageflipglsink
+
+            """
+              soft-colorbalance+deinterlace+soft-volume+text+audio+video 
+              
+              0x00000400 | 0x00000200 | 0x00000010 | 0x00000004 | 0x00000002 | 0x00000001
+              
+              https://gstreamer.freedesktop.org/documentation/playback/playsink.html?gi-language=python#GstPlayFlags
+              video (0x00000001) – Render the video stream
+              audio (0x00000002) – Render the audio stream
+              text (0x00000004) – Render subtitles
+              vis (0x00000008) – Render visualisation when no video is present
+              soft-volume (0x00000010) – Use software volume
+              native-audio (0x00000020) – Only use native audio formats
+              native-video (0x00000040) – Only use native video formats
+              download (0x00000080) – Attempt progressive download buffering
+              buffering (0x00000100) – Buffer demuxed/parsed data
+              deinterlace (0x00000200) – Deinterlace video if necessary
+              soft-colorbalance (0x00000400) – Use software color balance
+              force-filters (0x00000800) – Force audio/video filter(s) to be applied
+              force-sw-decoders (0x00001000) – Force only software-based decoders (no effect for playbin3) 
+            """
+            play_flags = 0x00000400 | 0x00000200 | 0x00000010 | 0x00000002 | 0x00000001
+
+            # Sample of adding video filters to pipeline
+            video_filters = None
+            previous_video_filter = None  # @UnusedVariable
+            video_sink_pad = None
+            video_src_pad = None
+
+            """
+            if video_filters is None:
+                video_filters = Gst.Bin("video_filters")
+    
+            subtitle_filesrc = Gst.ElementFactory.make("filesrc", "FileSrc")
+            subtitle_filesrc.set_property("location", subtitle_file_path)
+            video_filters.add(subtitle_filesrc)
+    
+            subtitle_subparse = Gst.ElementFactory.make("subparse", "SubParse")
+            video_filters.add(subtitle_subparse)
+            subtitle_filesrc.link(subtitle_subparse)
+    
+            if frame_packing == "side-by-side-half":
+                frame_packing = "side-by-side-full"
+    
+                videoscale = Gst.ElementFactory.make("videoscale", "VideoScale")
+                video_sink_pad = videoscale.sinkpad
+                videoscale.set_property("method", 0)
+                videoscale.set_property("add-borders", False)
+                video_filters.add(videoscale)
+    
+                video_resolution_width = 1920
+                video_resolution_height = 1080
+                previous_video_filter = videoscale_capsfilter = Gst.ElementFactory.make(
+                    "capsfilter", "VideoScaleCapsFilter"
+                )
+                video_src_pad = videoscale_capsfilter.srcpad
+                videoscale_capsfilter.set_property(
+                    "caps",
+                    Gst.caps_from_string(
+                        f"video/x-raw,width={2*video_resolution_width},height={video_resolution_height},pixel-aspect-ratio=1/1"
+                    ),
+                )
+                video_filters.add(videoscale_capsfilter)
+                videoscale.link(videoscale_capsfilter)
+    
+            subtitle_textoverlay = Gst.ElementFactory.make(
+                "subtitleoverlay", "SubtitleOverlay"
             )
-            video_filters.add(videoscale_capsfilter)
-            videoscale.link(videoscale_capsfilter)
-
-        subtitle_textoverlay = Gst.ElementFactory.make(
-            "subtitleoverlay", "SubtitleOverlay"
-        )
-        if previous_video_filter is None:
-            video_sink_pad = subtitle_textoverlay.sinkpads[0]
-        video_src_pad = subtitle_textoverlay.srcpads[0]
-        subtitle_textoverlay.set_property(
-            "font-desc", f"{subtitle_font}, {subtitle_size}"
-        )  # subtitle font we need a mono spacing font for the subtitle reformatter to work because it duplicates text and inserts whitespace to force the correct depth position
-        subtitle_textoverlay.set_property(
-            "subtitle-ts-offset", float(subtitle_offset)
-        )  # The synchronisation offset between text and video in nanoseconds
-        video_filters.add(subtitle_textoverlay)
-        if previous_video_filter is not None:
-            previous_video_filter.link(subtitle_textoverlay)
-        subtitle_subparse.link(subtitle_textoverlay)
-        """
-
-        if video_filters is not None:
-            ghostpad_video_sink = Gst.GhostPad.new("sink", video_sink_pad)
-            ghostpad_video_source = Gst.GhostPad.new("src", video_src_pad)
-            video_filters.add_pad(ghostpad_video_sink)
-            video_filters.add_pad(ghostpad_video_source)
-            self.player.set_property("video-filter", video_filters)
-
-        # Sample of adding audio filters to pipeline
-        audio_filters = None
-        previous_audio_filter = None  # @UnusedVariable
-        audio_sink_pad = None
-        audio_src_pad = None
-
-        if audio_format_filter != "":
-            if audio_filters is None:
-                audio_filters = Gst.Bin("audio_filters")
-
-            previous_audio_filter = audio_capsfilter = (  # @UnusedVariable
-                Gst.ElementFactory.make("capsfilter", "AudioCapsFilter")
-            )
-            audio_sink_pad = audio_capsfilter.sinkpad
-            audio_src_pad = audio_capsfilter.srcpad
-            audio_capsfilter.set_property(
-                "caps",
-                Gst.caps_from_string(audio_format_filter),
-            )
-            audio_filters.add(audio_capsfilter)
-
-        if audio_filters is not None:
-            ghostpad_audio_sink = Gst.GhostPad.new("sink", audio_sink_pad)
-            ghostpad_audio_source = Gst.GhostPad.new("src", audio_src_pad)
-            audio_filters.add_pad(ghostpad_audio_sink)
-            audio_filters.add_pad(ghostpad_audio_source)
-            self.player.set_property("audio-filter", audio_filters)
-
-        if show_subtitles and subtitle_file_path:
-            play_flags |= 0x00000004  # add subtitles
-
-            self.subtitle3dsink = Gst.ElementFactory.make(
-                "gstsubtitle3dsink", "Subtitle3DSink"
-            )
-            # self.subtitle3dsink = Gst.ElementFactory.make('fakesink', 'Subtitle3DSink')
-            # self.subtitle3dsink.set_property('dump', 1)
-            # self.subtitle3dsink.set_property('silent', 1)
-
-            # self.player.set_property('subtitle-encoding', None) # subtitle encoding defaults to utf8
-            # self.player.set_property('subtitle-font-desc', None) # subtitle font
-            # self.player.set_property('subtitle-font-desc', 'Sans, 12') # subtitle font
-            self.player.set_property(
-                "subtitle-font-desc", f"{subtitle_font}, {subtitle_size}"
+            if previous_video_filter is None:
+                video_sink_pad = subtitle_textoverlay.sinkpads[0]
+            video_src_pad = subtitle_textoverlay.srcpads[0]
+            subtitle_textoverlay.set_property(
+                "font-desc", f"{subtitle_font}, {subtitle_size}"
             )  # subtitle font we need a mono spacing font for the subtitle reformatter to work because it duplicates text and inserts whitespace to force the correct depth position
+            subtitle_textoverlay.set_property(
+                "subtitle-ts-offset", float(subtitle_offset)
+            )  # The synchronisation offset between text and video in nanoseconds
+            video_filters.add(subtitle_textoverlay)
+            if previous_video_filter is not None:
+                previous_video_filter.link(subtitle_textoverlay)
+            subtitle_subparse.link(subtitle_textoverlay)
+            """
 
-            self.player.set_property("suburi", subtitle_file_path)  # subtitle file
-            # self.player.set_property('text-offset', float(subtitle_offset)) # time offset for subtitles
-            self.player.set_property(
-                "text-sink", self.subtitle3dsink
-            )  # https://gstreamer.freedesktop.org/documentation/playback/playbin.html?gi-language=python
+            if video_filters is not None:
+                ghostpad_video_sink = Gst.GhostPad.new("sink", video_sink_pad)
+                ghostpad_video_source = Gst.GhostPad.new("src", video_src_pad)
+                video_filters.add_pad(ghostpad_video_sink)
+                video_filters.add_pad(ghostpad_video_source)
+                self.player.set_property("video-filter", video_filters)
+
+            # Sample of adding audio filters to pipeline
+            audio_filters = None
+            previous_audio_filter = None  # @UnusedVariable
+            audio_sink_pad = None
+            audio_src_pad = None
+
+            if audio_format_filter != "":
+                if audio_filters is None:
+                    audio_filters = Gst.Bin("audio_filters")
+
+                previous_audio_filter = audio_capsfilter = (  # @UnusedVariable
+                    Gst.ElementFactory.make("capsfilter", "AudioCapsFilter")
+                )
+                audio_sink_pad = audio_capsfilter.sinkpad
+                audio_src_pad = audio_capsfilter.srcpad
+                audio_capsfilter.set_property(
+                    "caps",
+                    Gst.caps_from_string(audio_format_filter),
+                )
+                audio_filters.add(audio_capsfilter)
+
+            if audio_filters is not None:
+                ghostpad_audio_sink = Gst.GhostPad.new("sink", audio_sink_pad)
+                ghostpad_audio_source = Gst.GhostPad.new("src", audio_src_pad)
+                audio_filters.add_pad(ghostpad_audio_sink)
+                audio_filters.add_pad(ghostpad_audio_source)
+                self.player.set_property("audio-filter", audio_filters)
+
+            if show_subtitles and subtitle_file_path:
+                play_flags |= 0x00000004  # add subtitles
+
+                self.subtitle3dsink = Gst.ElementFactory.make(
+                    "gstsubtitle3dsink", "Subtitle3DSink"
+                )
+                # self.subtitle3dsink = Gst.ElementFactory.make('fakesink', 'Subtitle3DSink')
+                # self.subtitle3dsink.set_property('dump', 1)
+                # self.subtitle3dsink.set_property('silent', 1)
+
+                # self.player.set_property('subtitle-encoding', None) # subtitle encoding defaults to utf8
+                # self.player.set_property('subtitle-font-desc', None) # subtitle font
+                # self.player.set_property('subtitle-font-desc', 'Sans, 12') # subtitle font
+                self.player.set_property(
+                    "subtitle-font-desc", f"{subtitle_font}, {subtitle_size}"
+                )  # subtitle font we need a mono spacing font for the subtitle reformatter to work because it duplicates text and inserts whitespace to force the correct depth position
+
+                self.player.set_property("suburi", subtitle_file_path)  # subtitle file
+                # self.player.set_property('text-offset', float(subtitle_offset)) # time offset for subtitles
+                self.player.set_property(
+                    "text-sink", self.subtitle3dsink
+                )  # https://gstreamer.freedesktop.org/documentation/playback/playbin.html?gi-language=python
 
         self.pageflipglsink.set_property("calibration-mode", calibration_mode)
         self.pageflipglsink.set_property("fullscreen", True)
