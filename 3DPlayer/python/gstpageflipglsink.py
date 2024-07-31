@@ -2565,6 +2565,18 @@ class GstPageflipGLSink(GstBase.BaseSink):
     def do_render(self, inbuffer: Gst.Buffer) -> Gst.FlowReturn:
         "https://gstreamer.freedesktop.org/documentation/base/gstbasesink.html?gi-language=python#GstBaseSinkClass::render"
 
+        # TODO: remove this I'm using it to get fps stats for v4l2src
+        current_time = int(time.time())
+        if (
+            not hasattr(self, "last_second_time")
+            or current_time > self.last_second_time
+        ):
+            if hasattr(self, "last_second_time"):
+                print(f"fps {self.last_second_time}: {self.last_second_count}")
+            self.last_second_time = current_time
+            self.last_second_count = 0
+        self.last_second_count += 1
+
         try:
             # print((inbuffer.get_size(), outbuffer.get_size()))
             # in_struct = self.sinkpad.get_current_caps().get_structure(0)
@@ -2588,18 +2600,6 @@ class GstPageflipGLSink(GstBase.BaseSink):
         except Exception as e:
             traceback.print_exc()
             logging.error(e)
-
-        # TODO: remove this I'm using it to get fps stats for v4l2src
-        current_time = time.time()
-        if (
-            not hasattr(self, "last_second_time")
-            or current_time > self.last_second_time
-        ):
-            if hasattr(self, "last_second_time"):
-                print(f"fps {self.last_second_time}: {self.last_second_count}")
-            self.last_second_time = current_time
-            self.last_second_count = 0
-        self.last_second_count += 1
 
         return Gst.FlowReturn.OK
 
