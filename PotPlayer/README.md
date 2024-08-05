@@ -78,13 +78,27 @@ assume_for_half = "half_sbs" # "half_sbs" ? "half_tab"
   * This option may not have any effect depending on factors I don't fully understand, you have two options.
     * You can use 3d_player to invert the eyes by changing the setting "Emitter Settings -> IR Flip Eyes" to either "0" or "1" 
     * You can set the variable in the AVISynth script to invert the eyes by setting "flip_eyes" to either "0" or "1" 
+* Non 16:9 content has trigger boxes half way down screen.
+  * Currently PotPlayer doesn't support resizing the video size from the AVISynth script, nor does it support embedding multiple videos inside a larger video container. 
+  * If your video is an top-and-bottom video with less than 16:9 aspect ratio, there isn't much that can be done, however you can use "Fullscreen (Stretch)" to watch it in a stretched aspect ratio. 
+  * If however your video is side-by-side it is possible to override the aspect ratio so that using "Extend/Crop" as described below.
+    * Open PotPlayer "Preferences" and navigate to "Video" -> "Extend/Crop"
+    * Depending on if your video is hsbs or fsbs the follow step will differ.
+      * If HSBS, select "Video Extending/Cropping" "Method" "16:9 Extending" and click "Apply"
+      * If FSBS, select "Video Extending/Cropping" "Method" "Extend by aspect ratio (X:Y)" and click "Apply", then down below change "Ratio" to "32" : "9"
+    * Check "Scale only frame height"
+    * Click "Apply" at the bottom and then "OK"
+    * Once again the AVSynth plugin only works in "S/W" decoding mode so you will need to ensure the icon under your video shows "S/W" and not "H/W"
+    * You may need to stop and restart playback for "Extend" setting to start to be applied to the video
+    * Since these adjustments are applied to the raw video before PotPlayer attempts to process it for 3d playback, you will need to switch aspect ratios if you change between fsbs and hsbs, so it is recommended to only turn this on when you need it.
+  * I'm currently investigating how difficult it would be to port the AVISynth script to a "Pixel Shader" it may be possible to get it working using "Pixel Shaders" but a separate script may be required for hsbs, fsbs, tab/ou and htab/hou.
 
 ## Playing 3D Blu-rays
 * Start Xreveal (or DVDFab Passkey) if it isn't already running.
 * Open -> Open Blu-ray
 
 ## Subtitles
-Currently it isn't possible to get stereo subtitles to work 
+Currently it isn't possible to get stereo subtitles to work as far as I can tell but it may be possible in the future.
 
 ## Thanks
 A big thankyou to following two sites have useful information about setting up PotPlayer for 3D playback.
