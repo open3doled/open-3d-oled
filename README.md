@@ -92,7 +92,7 @@ If running windows 11 or 10 with DPI scaling be sure to disable it as follows.
 
 ### Calibration
 
-* Put the sensor bar on the top right corner of your TV and connect it to the PC you will be using to play your 3D videos.
+* Put the sensor bar on the top left corner of your TV and connect it to the PC you will be using to play your 3D videos.
 * Start Open3DOLED 3DPlayer
 * Click the "Open emitter settings" icon button on the main toolbar, and then in the emitter settings window "Connect" to your 3d emitter
 * Click on "Load Settings From Disk" and select a profile for your TV and glasses from the "settings" directory. Some settings files are optimized to reduce vignetting (black at top and bottom of screen) and others are optimized to reduce ghosting (cross talk between left and right eye at top and bottom of screen), choose the settings file matching your preference.
@@ -100,7 +100,7 @@ If running windows 11 or 10 with DPI scaling be sure to disable it as follows.
 * If necessary change the "IR Protocol" to match your glasses, most settings templates should have this set correctly already. (Optional)
 * Click "Update Settings" to send these settings to the emitter (Leave this window open but you can let it go into the background)
 * Click the "Open disply settings" icon button on the main toolbar, and then the checkbox that says "Calibration Mode" at the bottom you can close this window.
-* Click the "Open a video file for playback" icon button on the main toolbar, then click the "Select" button next to "Video File" and from the videos directory choose the file "test_video_red_left_blue_right.mp4" then click "Open"
+* Click the "Open a video file for playback" icon button on the main toolbar, then click the "Select" button next to "Video File" and from the videos directory choose the file "ghosting_test_video_1080p_red_left_blue_right_side_by_side_full.mp4" then click "Open"
 * Use F11 or the "Toggle fullscreen" icon button on the main toolbar to make the video fullscreen if it does not automatically go fullscreen
 * Perform calibration using the onscreen callibration instructions paying consideration to the following points
   * Position the emitter and trigger boxes.
