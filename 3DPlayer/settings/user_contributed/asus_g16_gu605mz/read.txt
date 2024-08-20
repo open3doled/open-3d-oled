@@ -1,0 +1,15 @@
+- tested in linux
+- use nvidia-only gpu (not on-demand)
+- create custom resolution with 120hz vsyc; for instance:
+  "cvt 1920 1200 120" results in: 
+  # 1920x1200 119.90 Hz (CVT) hsync: 154.56 kHz; pclk: 410.50 MHz
+  Modeline "1920x1200_120.00"  410.50  1920 2080 2288 2656  1200 1203 1209 1289 -hsync +vsync
+- use included settings.
+- should result in 0 ghosting and 0 frame jitter!
+
+note: on the intel card, ghosting is not an issue, but glasses jitter every few secons.
+
+
+
+
+
