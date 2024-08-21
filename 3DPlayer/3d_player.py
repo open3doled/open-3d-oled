@@ -507,7 +507,7 @@ class TopWindow:
         seek_position = None
         seek_flags = Gst.SeekFlags.FLUSH | Gst.SeekFlags.KEY_UNIT
         if "seek_percent" in seek_command:
-            seek_position = query_duration // 10 * int(r.split("_")[2])
+            seek_position = query_duration // 10 * int(seek_command.split("_")[2])
             seek_flags |= Gst.SeekFlags.SNAP_BEFORE
         elif "seek_forward_big" == seek_command:
             seek_position = query_position + Gst.SECOND * 60
@@ -1078,7 +1078,7 @@ class TopWindow:
         self.stop_player()
 
 
-if __name__ == "__main__":
+def main():
 
     # parse commandline arguments
     parser = argparse.ArgumentParser(
@@ -1115,64 +1115,8 @@ if __name__ == "__main__":
     )
     parsed_arguments = parser.parse_args()
 
-    if os.name == "nt":
-        os.system("chcp.com 65001")
-
-    # set base path
-    internal_base_path = os.path.dirname(os.path.abspath(__file__))
-    gstreamer_plugins_active = os.path.join(
-        internal_base_path, "gstreamer_plugins_active"
-    )
-    split_base_path = os.path.split(internal_base_path)
-    if "_internal" == split_base_path[1]:
-        base_path = split_base_path[0]
-    else:
-        base_path = internal_base_path
-    # os.environ["GST_DEBUG"] = "3"
-    if os.name == "nt":
-        os.environ["GST_PLUGIN_PATH"] = (
-            f"{gstreamer_plugins_active};{internal_base_path};{os.environ.get('GST_PLUGIN_PATH', '')}"
-        )
-    else:
-        os.environ["GST_PLUGIN_PATH"] = (
-            f"{gstreamer_plugins_active}:{internal_base_path}:{os.environ.get('GST_PLUGIN_PATH', '')}"
-        )
-    dot_graph_files_path = os.path.join(base_path, "dot_graph_files")
-    if not os.path.exists(dot_graph_files_path):
-        os.mkdir(dot_graph_files_path)
-    os.environ["GST_DEBUG_DUMP_DOT_DIR"] = dot_graph_files_path
-    # LIBVA_DRIVER_NAME=i965 vainfo --display drm --device /dev/dri/renderD128
-    # os.environ["GST_VAAPI_ALL_DRIVERS"] = "1" # This environment variable can be set, independently of its value, to disable the drivers white list. By default only intel and mesa va drivers are loaded if they are available. The rest are ignored. With this environment variable defined, all the available va drivers are loaded, even if they are deprecated.
-    # os.environ["LIBVA_DRIVER_NAME"] = "i965" # This environment variable can be set with the drivers name to load. For example, intel's driver is i965, meanwhile mesa is gallium.
-    # os.environ["LIBVA_DRIVERS_PATH"] = "" # This environment variable can be set to a colon-separated list of paths (or a semicolon-separated list on Windows). libva will scan these paths for va drivers.
-    # os.environ["GST_VAAPI_DRM_DEVICE"] = "/dev/dri/renderD128" # This environment variable can be set to a specified DRM device when DRM display is used, it is ignored when other types of displays are used. By default /dev/dri/renderD128 is used for DRM display.
-    # os.environ["GST_PLUGIN_FEATURE_RANK"] = "vaapih264dec:MAX"
-
-    os.environ["SDL_HINT_VIDEO_HIGHDPI_DISABLED"] = (
-        "1"  # https://wiki.libsdl.org/SDL2/SDL_HINT_VIDEO_HIGHDPI_DISABLED https://www.reddit.com/r/sdl/comments/pkvze5/i_wish_i_knew_about_this_feature_months_ago/
-    )
-
-    import gi
-
-    gi.require_version("Gst", "1.0")
-    gi.require_version("GstBase", "1.0")
-    gi.require_version("GstVideo", "1.0")
-    # gi.require_version('GdkX11', '3.0') # windows
-    # from gi.repository import Gst, GObject, GdkX11, GstVideo, GstBase # windows
-    from gi.repository import Gst  # windows
-    from gi.repository import (
-        GObject,  # @UnusedImport
-        GstVideo,  # @UnusedImport
-        GstBase,  # @UnusedImport
-    )  # we need to import these here or pyinstaller won't pickup GstBase-1.0.typelib and GstVideo-1.0.typelib
-
-    # GObject.threads_init()
-    Gst.init(None)
-
     top_window = TopWindow(parsed_arguments)
-
     try:
-
         # window.mainloop()
         while not top_window.close:
             if top_window.player is not None and top_window.video_open:
@@ -1334,3 +1278,59 @@ if __name__ == "__main__":
 
     finally:
         pass
+
+
+if os.name == "nt":
+    os.system("chcp.com 65001")
+
+# set base path
+internal_base_path = os.path.dirname(os.path.abspath(__file__))
+gstreamer_plugins_active = os.path.join(internal_base_path, "gstreamer_plugins_active")
+split_base_path = os.path.split(internal_base_path)
+if "_internal" == split_base_path[1]:
+    base_path = split_base_path[0]
+else:
+    base_path = internal_base_path
+# os.environ["GST_DEBUG"] = "3"
+if os.name == "nt":
+    os.environ["GST_PLUGIN_PATH"] = (
+        f"{gstreamer_plugins_active};{internal_base_path};{os.environ.get('GST_PLUGIN_PATH', '')}"
+    )
+else:
+    os.environ["GST_PLUGIN_PATH"] = (
+        f"{gstreamer_plugins_active}:{internal_base_path}:{os.environ.get('GST_PLUGIN_PATH', '')}"
+    )
+dot_graph_files_path = os.path.join(base_path, "dot_graph_files")
+if not os.path.exists(dot_graph_files_path):
+    os.mkdir(dot_graph_files_path)
+os.environ["GST_DEBUG_DUMP_DOT_DIR"] = dot_graph_files_path
+# LIBVA_DRIVER_NAME=i965 vainfo --display drm --device /dev/dri/renderD128
+# os.environ["GST_VAAPI_ALL_DRIVERS"] = "1" # This environment variable can be set, independently of its value, to disable the drivers white list. By default only intel and mesa va drivers are loaded if they are available. The rest are ignored. With this environment variable defined, all the available va drivers are loaded, even if they are deprecated.
+# os.environ["LIBVA_DRIVER_NAME"] = "i965" # This environment variable can be set with the drivers name to load. For example, intel's driver is i965, meanwhile mesa is gallium.
+# os.environ["LIBVA_DRIVERS_PATH"] = "" # This environment variable can be set to a colon-separated list of paths (or a semicolon-separated list on Windows). libva will scan these paths for va drivers.
+# os.environ["GST_VAAPI_DRM_DEVICE"] = "/dev/dri/renderD128" # This environment variable can be set to a specified DRM device when DRM display is used, it is ignored when other types of displays are used. By default /dev/dri/renderD128 is used for DRM display.
+# os.environ["GST_PLUGIN_FEATURE_RANK"] = "vaapih264dec:MAX"
+
+os.environ["SDL_HINT_VIDEO_HIGHDPI_DISABLED"] = (
+    "1"  # https://wiki.libsdl.org/SDL2/SDL_HINT_VIDEO_HIGHDPI_DISABLED https://www.reddit.com/r/sdl/comments/pkvze5/i_wish_i_knew_about_this_feature_months_ago/
+)
+
+import gi
+
+gi.require_version("Gst", "1.0")
+gi.require_version("GstBase", "1.0")
+gi.require_version("GstVideo", "1.0")
+# gi.require_version('GdkX11', '3.0') # windows
+# from gi.repository import Gst, GObject, GdkX11, GstVideo, GstBase # windows
+from gi.repository import Gst  # windows
+from gi.repository import (
+    GObject,  # @UnusedImport
+    GstVideo,  # @UnusedImport
+    GstBase,  # @UnusedImport
+)  # we need to import these here or pyinstaller won't pickup GstBase-1.0.typelib and GstVideo-1.0.typelib
+
+# GObject.threads_init()
+Gst.init(None)
+
+if __name__ == "__main__":
+    main()

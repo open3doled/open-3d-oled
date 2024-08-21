@@ -2478,7 +2478,7 @@ class GstPageflipGLSink(GstBase.BaseSink):
         self.__parameters = {
             "fullscreen": False,
             "mouse-moved": False,
-            "frame-packing": "side-by-side",
+            "frame-packing": FRAME_PACKING_SIDE_BY_SIDE_FULL,
             "right-eye": "right",
             "target-framerate": "0",
             "display-resolution": "1920x1080",
