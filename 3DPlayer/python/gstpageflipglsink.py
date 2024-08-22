@@ -113,13 +113,20 @@ FORMATS = [
 ]
 
 # Input caps
+# IN_CAPS = Gst.Caps(
+#     Gst.Structure(
+#         "video/x-raw",
+#         format=Gst.ValueList(FORMATS),
+#         width=Gst.IntRange(range(1, GLib.MAXINT)),
+#         height=Gst.IntRange(range(1, GLib.MAXINT)),
+#     )
+# )
+
+# https://stackoverflow.com/questions/2380575/what-is-the-gstreamer-caps-syntax
 IN_CAPS = Gst.Caps(
-    Gst.Structure(
-        "video/x-raw",
-        format=Gst.ValueList(FORMATS),
-        width=Gst.IntRange(range(1, GLib.MAXINT)),
-        height=Gst.IntRange(range(1, GLib.MAXINT)),
-    )
+    f"video/x-raw,format=RGBA,width=[1, {GLib.MAXINT}],height=[1, {GLib.MAXINT}]"
+    f";"
+    f"video/x-raw(memory:CUDAMemory),format=RGBA,width=[1, {GLib.MAXINT}],height=[1, {GLib.MAXINT}]"
 )
 
 
