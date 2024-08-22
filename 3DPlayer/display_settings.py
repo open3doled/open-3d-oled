@@ -88,33 +88,6 @@ class DisplaySettingsDialog:
 
         row_count = 0
 
-        self.target_framerate_frame = tkinter.Frame(top)
-        self.target_framerate_label = tkinter.Label(
-            self.target_framerate_frame, text="Target Framerate: "
-        )
-        self.target_framerate_label.pack(padx=5, side=tkinter.LEFT)
-        self.target_framerate_option_menu = tkinter.OptionMenu(
-            self.target_framerate_frame,
-            self.target_framerate_variable,
-            "0",
-            "50",
-            "59.98",
-            "60",
-            "74.99",
-            "75",
-            "90",
-            "120",
-        )
-        self.target_framerate_option_menu.pack(padx=5, side=tkinter.LEFT)
-        # self.target_framerate_frame.pack()
-        self.target_framerate_option_menu_tooltip = idlelib.tooltip.Hovertip(
-            self.target_framerate_option_menu,
-            f"If set to a value other than 0 this will force pygame to use a frame delay with tick_busy_loop instead of relying on vsync, this should not normally need to be set and is for experimental purposes only. \n(this value will not be updated on an already playing video) \n(default {DEFAULT_TARGET_FRAMERATE})",
-            hover_delay=100,
-        )
-        self.target_framerate_frame.grid(row=row_count, column=0, sticky="w")
-        row_count += 1
-
         self.display_resolution_frame = tkinter.Frame(top)
         self.display_resolution_label = tkinter.Label(
             self.display_resolution_frame, text="Display Resolution: "
@@ -402,6 +375,33 @@ class DisplaySettingsDialog:
         self.disable_3d_on_mouse_move_under_windows_frame.grid(
             row=row_count, column=0, sticky="w"
         )
+        row_count += 1
+
+        self.target_framerate_frame = tkinter.Frame(top)
+        self.target_framerate_label = tkinter.Label(
+            self.target_framerate_frame, text="Target Framerate (Experimental): "
+        )
+        self.target_framerate_label.pack(padx=5, side=tkinter.LEFT)
+        self.target_framerate_option_menu = tkinter.OptionMenu(
+            self.target_framerate_frame,
+            self.target_framerate_variable,
+            "0",
+            "50",
+            "59.98",
+            "60",
+            "74.99",
+            "75",
+            "90",
+            "120",
+        )
+        self.target_framerate_option_menu.pack(padx=5, side=tkinter.LEFT)
+        # self.target_framerate_frame.pack()
+        self.target_framerate_option_menu_tooltip = idlelib.tooltip.Hovertip(
+            self.target_framerate_option_menu,
+            f"If set to a value other than 0 this will force pygame to use a frame delay with tick_busy_loop instead of relying on vsync, this should not normally need to be set and is for experimental purposes only. \n(this value will not be updated on an already playing video) \n(default {DEFAULT_TARGET_FRAMERATE})",
+            hover_delay=100,
+        )
+        self.target_framerate_frame.grid(row=row_count, column=0, sticky="w")
         row_count += 1
 
         self.action_button_frame_1 = tkinter.Frame(top)
