@@ -700,6 +700,9 @@ class TopWindow:
         )
 
         nvcodec_filters = [
+            "cudaconvevrt",
+            "cudaupload",
+            "cudadownload",
             "nvjpegdec",
             "nvmpeg2videodec",
             "nvmpeg4videodec",
