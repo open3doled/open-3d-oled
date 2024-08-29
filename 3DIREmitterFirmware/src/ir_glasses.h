@@ -316,6 +316,33 @@ const ir_glasses_signal_library_t ir_glasses_panasonic_custom = {
             .size = 7,
             .timings = {20, 200, 20, 20, 20, 200, 20}}}};
 
+
+// JX-30 DLP-Link glasses (measured from DLP projector 20 us pulses with delta T of 130 us, but the acceptable ranges with JX-30 glasses were 20 us <= pulses <= 300 us and 60 us <= delta T < 190 us)
+const ir_glasses_signal_library_t ir_glasses_dlp_link = {
+    .signal_count = 2,
+    /*
+    // Needed to hard code this below due to compiler limitation.
+    .signal_index = {
+      [SIGNAL_OPEN_RIGHT_CLOSE_LEFT] = 0,
+      [SIGNAL_OPEN_LEFT_CLOSE_RIGHT] = 1,
+      // You can skip the entries for signals that are not present in the library
+    },
+    //*/
+    .signal_index = {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 1},
+    .signals = {
+        // open_right_close_left_signal
+        {
+            .mode = 0, // haven't measured to check
+            .token_length = 20,
+            .size = 1,
+            .timings = {20}},
+        // open_left_close_right_signal
+        {
+            .mode = 0, // haven't measured to check
+            .token_length = 205,
+            .size = 3,
+            .timings = {0, 125, 20}}}}; // measred as 125 delay and 20 duration but for whatever reason it's making it too short due to processing interrupt timers so I'm just setting to 30.
+
 const ir_glasses_signal_library_t *ir_glasses_available[] = {
     &ir_glasses_samsung07,
     &ir_glasses_xpand,
@@ -324,6 +351,7 @@ const ir_glasses_signal_library_t *ir_glasses_available[] = {
     &ir_glasses_sony,
     &ir_glasses_panasonic,
     &ir_glasses_panasonic_custom,
+    &ir_glasses_dlp_link,
 };
 
 #endif /* _IR_GLASSES_H_ */

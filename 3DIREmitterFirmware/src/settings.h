@@ -17,7 +17,7 @@
 // #define ENABLE_DEBUG_STATUS_LEDS // we are using the pads for the unused button footprints on D2, D4 and D5 to drive some status LEDs.
 // #define ENABLE_DEBUG_STATUS_FLASH_D2_ON_STARTUP 10
 #endif
-#define NUMBER_OF_IR_PROTOCOLS 7
+#define NUMBER_OF_IR_PROTOCOLS 8
 
 // defaults LCD 2560x1080 60hz
 /*
@@ -159,7 +159,7 @@
 
 #define EEPROM_SETTING_ADDRESS 0
 #define EEPROM_SETTING_CHECKVALUE 0x3D3D3D3D
-#define EMITTER_VERSION 18
+#define EMITTER_VERSION 19
 
 /*
 Version History

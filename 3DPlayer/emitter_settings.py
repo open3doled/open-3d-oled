@@ -538,7 +538,7 @@ class EmitterSettingsDialog:
         self.setting_ir_protocol_entry.pack(padx=5, side=tkinter.LEFT)
         self.setting_ir_protocol_tooltip = idlelib.tooltip.Hovertip(
             self.setting_ir_protocol_entry,
-            "0=Samsung07, 1=Xpand, 2=3DVision, 3=Sharp, 4=Sony, 5=Panasonic, 6=PanasonicCustom",
+            "0=Samsung07, 1=Xpand, 2=3DVision, 3=Sharp, 4=Sony, 5=Panasonic, 6=PanasonicCustom, 7=DLPLink \n(DLPLink Only available from firmware version 19 onwards)",
             hover_delay=100,
         )
         self.setting_ir_protocol_frame.grid(row=row_count, column=0, sticky="w")
@@ -925,7 +925,7 @@ class EmitterSettingsDialog:
         self.setting_ir_average_timing_mode_entry.pack(padx=5, side=tkinter.LEFT)
         self.setting_ir_average_timing_mode_tooltip = idlelib.tooltip.Hovertip(
             self.setting_ir_average_timing_mode_entry,
-            "(0=Disable (default), 1=Mode 1) (Mode 1: ) \nThis is a special mode which will find the average screen refresh rate over 1 second, and use that to create a constant interval timer to trigger glasses. \nSome glasses appear to need a constant timer in order to synchronize with the ir signal, this may facilitate this. \n(Only available from firmware version 17 onwards)",
+            "(0=Disable (default), 1=Mode 1) \nMode 1: This is a special mode which will find the average screen refresh rate over 1 second, and use that to create a constant interval timer to trigger glasses. \nMost glasses stock firmwares appear to need a constant timer in order to synchronize with the ir signal, if your display transition times are too variable this may facilitate this. \n(Only available from firmware version 17 onwards)",
             hover_delay=100,
         )
         self.setting_ir_average_timing_mode_frame.grid(
