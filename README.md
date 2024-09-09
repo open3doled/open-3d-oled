@@ -179,10 +179,10 @@ Not Working (Untested)
 ```   
 * This software relies of strong BFI when run on OLED TV's. AMD and Intel graphics cards have a tendancy of turning on ALLM (Adaptive Low Latency Mode) in a way that cannot be turned off. ALLM forces BFI Off. 
   * For AMD the easiest way to disable ALLM is to use a registry hack as below (it requires rebooting after you change the value).
-```
+    ```
    Goto GPU Registry Location: HKLM\System\CurrentControlSet\Control\Class{4d36e968-e325-11ce-bfc1-08002be10318}\0000 (or 0001/0002/..., check inside 0000 to verify that it is indeed your GPU)
    Add or Update the DalHdmiEnableALLM Entry as follows (Dword: DalHdmiEnableALLM, Value:0 for Disabled, 1 for Enabled)
-```
+    ```
   * For Intel [CRU tool](https://www.reddit.com/r/OLED_Gaming/comments/r3poj4/fullscreen_windows_10_games_enable_allm_which/) can also be used but it is more complicated and can be difficult to setup with proper HDMI audio.
 * Emitter not working
 ```
