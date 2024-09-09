@@ -132,6 +132,7 @@ For those who want the best and most versatile playback performnce on Windows it
 Click [here](PotPlayer/README.md) for instructions on how to setup and PotPlayer.
     
 ## FAQ, Useful Commands and Tips
+* The sensor bar once configured does not need to be connected to your PC unless you are using advanced debugging features. It can be connected to the USB power on the back of your TV.
 * Supported TVs
 ```
 Working (Tested)
@@ -183,7 +184,7 @@ Not Working (Untested)
    Goto GPU Registry Location: HKLM\System\CurrentControlSet\Control\Class{4d36e968-e325-11ce-bfc1-08002be10318}\0000 (or 0001/0002/..., check inside 0000 to verify that it is indeed your GPU)
    Add or Update the DalHdmiEnableALLM Entry as follows (Dword: DalHdmiEnableALLM, Value:0 for Disabled, 1 for Enabled)
 ```
-* To disable ALLM for Intel [CRU tool](https://www.reddit.com/r/OLED_Gaming/comments/r3poj4/fullscreen_windows_10_games_enable_allm_which/) can also be used but it is more complicated and can be difficult to setup with proper HDMI audio.
+* To disable ALLM for Intel [CRU tool](https://www.reddit.com/r/OLED_Gaming/comments/r3poj4/fullscreen_windows_10_games_enable_allm_which/) can also be used, [see this video](https://youtu.be/ntp00tMUKzE) showing how it can be done.
 * Emitter not working
 ```
    Sometimes when changing the glasses IR Protocol the emitter will enter an unresponsive state. If this happens save your settings to EEPROM and disconnect and reconnect it's power.
