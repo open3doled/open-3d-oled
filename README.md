@@ -137,6 +137,8 @@ Click [here](PotPlayer/README.md) for instructions on how to setup and PotPlayer
 ```
 Working (Tested)
  - LG C1 OLED (Fully working with Motion Pro high setting with no crosstalk due to ~41% BFI duty cycle)
+   - C1 55 and 83 inch both seem to have a vertical front polarizer which works well with panasonic glasses.
+   - C1 65 appears to have a horizontal front polarizer (at least on one beta testers unit), requiring for the pansonic glasses that you to either flip the LCD elements or hold the glasses backward.
  - Sony OLED XBR 48a9s (Working with clearness high setting but the bottom and top 10% of the screen has crosstalk due to ~61% BFI duty cycle)
  - Viewsonic XG2431 (Works perfectly zero-ghosting without any BFI enabled at up to 144 hz shutter glasses refresh speed, you online need to setup a custom quick frame transport HDMI profile to get a blanking interval that matches more than 40% of the screen duty cycle, see https://forums.blurbusters.com/viewtopic.php?t=8946 or read the document in the corresponding settings folder)
  - Asus VG248QE LightBoost Capable (Works perfectly with [LightBoost enabled](https://blurbusters.com/zero-motion-blur/lightboost/), Works usably with lightboost turned off using "OPT101 Ignore All Duplicates")
