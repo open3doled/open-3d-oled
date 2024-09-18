@@ -154,6 +154,128 @@ Not Working (Untested)
  - LG C2/G2 OLED (Missing 120hz BFI)
  - LG C3/G3 OLED (Missing 120hz BFI)
 ```
+* TV Polarization Warning (PLEASE READ)
+```
+About 90% of TV's I tested at the store are polarized with a vertical front polarizer however 10% (most commonly those with 65 inch displays) have horizontal polarization.
+In the event your TV has a horizontal front polarizer you will need to flip the lens elements and reverse left and right on the panasonic glasses to use them with your TV.
+Alternatively you can hold the glasses, upside down and backwards to watch the movie but this isn't really viable long term.
+Flipping the lens elements is difficult but doable (easier on the gen3 glasses but still difficult) with some practice, expect to break at least afew pairs if it is your first time solder flexible PCB's.
+Also be sure to cover up the lens element with some tissue to avoid solder from flying onto the glasses lens when the ribbon cable unsolders as it is "spring loaded".
+I can provide glasses with flipped lens elements for an additional $20 per pair as resoldering them takes about 40 mins per pair and the probability of breaking or damaging a pair in the process is high.
+
+The Panasonic (and sony if I remember right) glasses natively require a vertical polarizer on the front of the TV to work without flipping the lens.
+It seems to be very variable even from the same manufacturer and same model for example LG C1 55 has vertical but LG C1 65 has horizontal.
+My best current guess is that the polarizer film they use the coat the front of the TV's comes on a roll with a width that is slightly too small to fit two 65 inch screens side by side so tehy rotate it vertically to maximize film utilization.
+If you are unsure about your TV please check using a pair of polaroid sunglasses before purchasing any glasses from me. Cheap polaroid sungless can normally be found at the dollar store for $2 or there abouts.
+Polaroid sungless have a vertical front polarizer just the same as the Panasonic glasses in their default configuration.
+
+I went to my local electronics store and recorded the polarization of various TV's front polarizers they are listed below, but please double check your TV just to be sure!
+
+HISENSE
+  43A6K             v
+  50A6K             v
+  65U7H             v
+  65U8N             v
+  65UX              v
+  
+LG
+  OLED42C3PJA       v
+  OLED48B4PJA       v
+  OLED55B2PJA       v
+  OLED65B2PJA       h
+  OLED65B3PJA       h
+  
+ORION
+  OSW40G10          v
+  
+PANASONIC
+  TH-43LF1          v
+  TH-50MR770        v
+  TH-55LW1          v
+  TH-55MZ1800       v
+  TH-65MX950        v
+  TH-75MX950        v
+  TV-42Z85A         v
+  TV-43W80A         v
+  TV-43W90A         v
+  TV-48Z85A         v
+  TV-50W90A         v
+  TV-55W90A         v
+  TV-55Z90A         v
+  TV-55Z95A         v
+  TV-65W90A         v
+  
+SHARP
+  2T-C42BE1         v
+  4T-C43FN2         v
+  4T-C43GP2         v
+  4T-C50FN2         v
+  4T-C50GP2         v
+  4T-C55FN2         v
+  4T-C55EP1         v
+  4T-C55GN1         v
+  4T-C55GP1         v
+  4T-C55GS1         none
+  4T-C55GN2         v
+  4T-C65FL1         v
+  4T-C65FS1         none
+  4T-C65GN1         v
+  4T-C65GP1         v
+  4T-C65GQ1         h
+  4T-C65GS1         none
+  4T-C75EL1         v
+  4T-C75GN1         v
+  8T-C65DX1         h
+  8T-C75DX1         v
+  
+SONY
+  KJ-43X80L         v
+  KJ-43X85K         v
+  KJ-50Z80L         v
+  KJ-50X85K         v
+  K-55XR70          v
+  K-55XR80          v
+  XRJ-48A90K        v (maybe none not sure)
+  XRJ-50X95K        v
+  XRJ-55A80L        v
+  XRK-55X90L        v
+  XRJ-65A95K        none
+  XRJ-65X90L        v
+  XRJ-65X95L        h (not entirely sure about this one)
+  XRJ-75X90L        v
+  
+TCL
+  40S5400           v
+  40S54H            v
+  43C645            v
+  43P63H            v
+  55C645            v
+  55P655            v
+  
+TOSHIBA
+  REGZA 40V35N      v
+  REGZA 43Z570L     v
+  REGZA 48X8900N    v
+  REGZA 50M550M     v
+  REGZA 50Z570L     v
+  REGZA 55M550M     h
+  REGZA 55Z670N     v
+  REGZA 55Z870N     v
+  REGZA 55Z870M     v
+  REGZA 55X9900N    v
+  REGZA 55X8900N    v
+  REGZA 65Z670N     v
+  REGZA 65Z870N     v
+  REGZA 65Z970N     v
+  REGZA 65X9900N    h
+  REGZA 65X8900N    h
+  REGZA 75Z970N     v
+
+XIAOMI
+  R23Z012A          v
+  R23Z013A          v
+
+```
 * If you are using a non OLED display or a display for which settings are not already available it is recommended that you set "OPT101 Ignore All Duplicates" to 1 under Emitter Settings. This will ensure the highest possibility the emitter can synchronize to your TV, at the cost of not being able to detect duplicate frames and inform the glasses to resynchornize immediately. It will typically result in a resynchronization delay of 1-2 frames on a duplicate frame, you may be able to get satisfactory results without using this by tuning "OPT101 Block Signal Detection Delay" and "OPT101 Block N Subsequent Duplicates" to match your display characteristics.
 * If you are using an LCD you will want to use HDMI QFT "Quick Frame Transport" (if available) to force a long blanking interval between frames. You basically run the monitor clock at for example 240hz but only send 120hz of data. That way 50% of the time the monitor will not be updating the physical screen. During this time the shutter glasses will open and show an image with minimal ghosting. Take a look at these [instructions](3DPlayer/settings/viewsonic_xg2431/how_to_setup_custom_resolution_with_quick_frame_transport.txt) for more details of how to enable this.
 ```
