@@ -163,7 +163,11 @@ Flipping the lens elements is difficult but doable (easier on the gen3 glasses b
 Also be sure to cover up the lens element with some tissue to avoid solder from flying onto the glasses lens when the ribbon cable unsolders as it is "spring loaded".
 I can provide glasses with flipped lens elements for an additional $20 per pair as resoldering them takes about 40 mins per pair and the probability of breaking or damaging a pair in the process is high.
 
-The Panasonic (and sony if I remember right) glasses natively require a vertical polarizer on the front of the TV to work without flipping the lens.
+Computer monitors are a bit more mixed some older and even some newer monitors have +/- 45 degree polarization.
+With +/- 45 degree polarization I believe your best option for brightness is to use nvidia 3d vision glasses, as glasses with either horizontal or vertical front polarizing film will lose half their brightness.
+You can verify if your monitor has 45 degree polarization as if you rotate sunglasses to +45 or -45 one of them should make the screen go dark.
+
+The Panasonic (and sony if I remember right) glasses natively require a non-horizontal (perferably vertical) polarizer on the front of the TV to work without flipping the lens.
 It seems to be very variable even from the same manufacturer and same model for example LG C1 55 has vertical but LG C1 65 has horizontal.
 My best current guess is that the polarizer film they use the coat the front of the TV's comes on a roll with a width that is slightly too small to fit two 65 inch screens side by side so tehy rotate it vertically to maximize film utilization.
 If you are unsure about your TV please check using a pair of polaroid sunglasses before purchasing any glasses from me. Cheap polaroid sungless can normally be found at the dollar store for $2 or there abouts.
