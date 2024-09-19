@@ -242,7 +242,7 @@ SONY
   XRJ-48A90K        v (maybe none not sure)
   XRJ-50X95K        v
   XRJ-55A80L        v
-  XRK-55X90L        v
+  XRJ-55X90L        v
   XRJ-65A95K        none
   XRJ-65X90L        v
   XRJ-65X95L        h (not entirely sure about this one)
