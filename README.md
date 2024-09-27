@@ -23,9 +23,9 @@ In the future custom firmware images that are optimized for software pageflippin
 (I plan to sell these glasses on the webstore initially along with the emitters to help recoup the over 200(?) hours put into this project, they reduce jitter greatly and eliminate crosstalk from dropped frames)  
 
 ## Glasses Warning
-* If you are using Panasonic Gen2 (TY-EW3D2XX) glasses, do NOT turn them on while a USB charging cable is attached or you will destroy the left shutter element from DC bias.
-* If you are using Panasonic Gen3 (TY-EW3D3XX) glasses, ONLY use a micro-usb power cable (like the one included), do not use a micro-usb cable with data lines or you will destroy the right shutter element  from DC bias.
-* I didn't design the hardware for these glasses so unfortunately I cannot fix this issue, anything more than 1-2 seconds risks damaging them so always check the shutter elements when you plug them in and unplug it quickly, just incase you are using the wrong cable. (please be careful).
+* If you are using Panasonic Gen2 (TY-EW3D2XX) glasses, do NOT turn them on while a USB charging cable is attached or you risk destroying the left shutter element from DC bias.
+* If you are using Panasonic Gen3 (TY-EW3D3XX) glasses, ONLY use a micro-usb power cable (like the one included), do not use a micro-usb cable with data lines or you risk destroying the right shutter element  from DC bias.
+* I didn't design the hardware for these glasses so unfortunately I cannot fix this issue, anything more than 1-2 seconds risks damaging them so always check the shutter elements aren't black when you plug them and unplug it quickly if they are, just incase you are using the wrong cable. (please be careful).
 
 ## Getting Started
 
