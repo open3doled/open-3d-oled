@@ -18,9 +18,14 @@ It can also work on LCD TV's and monitors that have fast pixel response time, in
 It also has been tested to work on the latest Sony micro-LED TV's.  
 If your compatibility information for your TV is not listed below, or you are considering buying a TV and would like to know if it might be compatible I would suggest referring to [this fantastic table](https://www.rtings.com/tv/tools/table/138933) provided by rtings.com  
 You can compare, sort and filter by pixel response time, support for BFI 120hz, BFI duty cycle, PWM backlight fruency and duty cycle.  
+In addition to the RTINGs website you will also need to confirm the orientation of the front polarizer on your TV. 
+Most TV's have a vertical front polarizer, but about 10% have a horizontal front polarizer. 
+In the event you have have one of these TV's there is a $30 USD extra fee for me to flip the front polarizer on each pair of glasses.
+I have measured the front polarization of over 70 different modern TV's and provided them in the FAQ, if your TV isn't listed you can check the front polarization using a pair of polarized sunglasses from the dollar store. 
+Polarized sunglasses are vertically polarizer, just like the majority of TVs so if you can see the TV throught the glasses then your TV has a vertical front polarizer (or no polarizer at all).
 There is a webstore in the works where you will be able to buy a pre-built/pre-programmed emitter unit in the next month or so once preliminary beta testing is complete..  
 In the future custom firmware images that are optimized for software pageflipping for popular brands of glasses by Panasonic (and other manufacturers) may be released.  
-(I plan to sell these glasses on the webstore initially along with the emitters to help recoup the over 200(?) hours put into this project, they reduce jitter greatly and eliminate crosstalk from dropped frames)  
+(I plan to sell these glasses on the webstore initially along with the emitters to help recoup the over 400(?) hours put into this project, they reduce jitter greatly and eliminate crosstalk from dropped frames)  
 
 ## Glasses Warning
 * If you are using Panasonic Gen2 (TY-EW3D2XX) glasses, do NOT turn them on while a USB charging cable is attached or you risk destroying the left shutter element from DC bias.
