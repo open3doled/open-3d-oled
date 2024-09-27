@@ -5,7 +5,7 @@ I'm looking for beta testers who have potentially compatible displays.
 I have 49 partially assembled units.
 If you have a 120hz TV and it is either and OLED with BFI (@120hz), or an LCD with fast pixel response time your display may work, checkout [this fantastic table](https://www.rtings.com/tv/tools/table/138933) provided by rtings.com for relevant display parameters.
 Just to be clear the beta units are not free, but produced near cost and bundled with a pair of panasonic glasses with custom firmware optimized for software pageflipping (see below for details about this).
-Prices for the emitter and glasses start at $70 USD with untracked shipping or $90 USD with tracked ems shipping.
+Prices for the emitter and glasses start at $80 USD with untracked shipping or $90 USD with tracked shipping.
 I will help you configure the unit to work with your display and help with any trouble shooting, if the unit does not work with your TV you can return it for a refund (minus cost of shipping).
 In return all I ask is that you share the config settings that work best with your TV.
 If interested contact me at: support at open3doled dot com.
