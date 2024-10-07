@@ -18,7 +18,7 @@
 /* [TV Settings:] */
 
 // Screen bezel to pixel height dimension (lgc155=11)
-tv_bezel_to_pixels_vertical_distance = 10;
+tv_bezel_to_pixels_vertical_distance = 20;
 /*
   15 mm - LG CX OLED Bezel Only
   13 mm - LG C1 OLED 83
@@ -29,10 +29,11 @@ tv_bezel_to_pixels_vertical_distance = 10;
   9 mm - Sony X95K MiniLED
   10 mm - Sony X90CL MiniLED
   6.5 mm - Viewsonic XG2431
+  16 mm - Hisense 100U7K (used 20mm)
 */
 
 // Screen bezel thickness dimension (lgc155=4.7)
-tv_bezel_thickness = 32;
+tv_bezel_thickness = 63;
 /*
   ** add 1.5 mm for felt and tolerance **
   8 mm - LG CX OLED Bezel Only (measure 8 mm)
@@ -45,6 +46,8 @@ tv_bezel_thickness = 32;
   32 mm - Sony X95K MiniLED (it has a rounded back so I've made it a little larger than what looks like 30mm any extra can be filled with spacers)
   32 mm - Sony X95CL MiniLED (it has a rounded back so I've made it a little larger than what looks like 30mm any extra can be filled with spacers)
   29 mm - Viewsonic XG2431 (it has a rounded back so we just use the thickest measurement and you will need adhesive on the top bezel.)
+  58 mm - Hisense 100U7K (used 63mm)
+  
 */
 
 /* [Case Settings:] */
