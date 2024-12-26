@@ -333,6 +333,7 @@ XIAOMI
    pip install git+https://github.com/46cv8/line_profiler.git@max_time ps
 ``` 
 * On Linux based operating systems if you experience dropped/duplicate frames every few seconds you may benefit form disabling compositing if possible. Many window managers will auto bypass compositing with ["fullscreen unredirect"](https://www.reddit.com/r/linux_gaming/comments/u6dckj/comment/i57o5r4/) when you swtich to fullscreen mode, not to be confused with fullscreen windowed mode.
+* For gaming there is a custom version of the Geo3D plugin with trigger boxes added that you are welcome to try, it has limited success but does work on certain titles provided Geo3D works well https://github.com/open3doled/Geo3D/releases
 
 ## Development Installation Instructions
 
