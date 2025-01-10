@@ -72,6 +72,8 @@ assume_for_half = "half_sbs" # "half_sbs" ? "half_tab"
   * The "assume_for_half" parameter is used to define the default oreintation side-by-side top-and-bottom when half width or half height content will be played as there is no way to make this determination from the resolution alone.
 
 ## FAQ
+* The trigger boxes aren't showing an any videos
+  * Make sure you installed the 32 bit version of both PotPlayer and AVISynth+ the 64bit version has been reported to not work.
 * The trigger boxes aren't showing on some videos
   * Make sure "Use Built-in DXVA Video Decoder" is "Off", when it is "On" the AVISynth script will not run. Look for the botton with the text "H/W" next to teh video duration and click it. It should update to show "S/W" and the trigger boxes should show.
 * Clicking "Swap left/right images" is not flipping the eyes.

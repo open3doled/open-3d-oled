@@ -30,6 +30,7 @@ tv_bezel_to_pixels_vertical_distance = 20;
   10 mm - Sony X90CL MiniLED
   6.5 mm - Viewsonic XG2431
   16 mm - Hisense 100U7K (used 20mm)
+  13 mm - TCL 98QM751G (used 15mm)
 */
 
 // Screen bezel thickness dimension (lgc155=4.7)
@@ -47,6 +48,7 @@ tv_bezel_thickness = 63;
   32 mm - Sony X95CL MiniLED (it has a rounded back so I've made it a little larger than what looks like 30mm any extra can be filled with spacers)
   29 mm - Viewsonic XG2431 (it has a rounded back so we just use the thickest measurement and you will need adhesive on the top bezel.)
   58 mm - Hisense 100U7K (used 63mm)
+  44 mm - TCL 98QM751G (used 47mm)
   
 */
 
