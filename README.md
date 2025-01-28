@@ -136,6 +136,12 @@ Windows (in command prompt):
 ## PotPlayer
 For those who want the best and most versatile playback performnce on Windows it is recommended to use [PotPlayer](PotPlayer/README.md). 
 Click [here](PotPlayer/README.md) for instructions on how to setup and PotPlayer.
+
+## Gaming
+* If you have a fast PC that can maintain 120hz and you want to play traditional 2D games that are DX 11 or DX 12 you can try out a modified version of [Geo3D](https://github.com/open3doled/Geo3D/releases) to support the Open3DOLED trigger boxes. Game support is somewhat limited but it does work well for certain games.
+* If you are planning to play a traditional games and use reshades SuperDepth3D or any SteamVR games then check out [WibbleWobble](https://github.com/PHARTGAMES/WibbleWobbleCore) the author kindly added  support for the Open3DOLED trigger boxes.
+  * WibbleWobble launches a separate process that performs 120hz page flipping reliably even when your CPU is under heavy load so that you will get minimal dropped frames.
+  * Additionally WibbleWobble has a custom module to communicate over usb information about which eye is showing. If anyone wants it I can build a custom version of the firmware that accepts these messages to trigger the shutter glasses directly, eliminating the need to put the unit on your TV or monitor when using WibbleWobble for gaming. Just let me know if you want this.
     
 ## FAQ, Useful Commands and Tips
 * The sensor bar once configured does not need to be connected to your PC unless you are using advanced debugging features. It can be connected to the USB power on the back of your TV.
@@ -334,12 +340,6 @@ XIAOMI
    pip install git+https://github.com/46cv8/line_profiler.git@max_time ps
 ``` 
 * On Linux based operating systems if you experience dropped/duplicate frames every few seconds you may benefit form disabling compositing if possible. Many window managers will auto bypass compositing with ["fullscreen unredirect"](https://www.reddit.com/r/linux_gaming/comments/u6dckj/comment/i57o5r4/) when you swtich to fullscreen mode, not to be confused with fullscreen windowed mode.
-
-## Gaming ##
-* If you have a fast PC that can maintain 120hz and you want to play traditional 2D games that are DX 11 or DX 12 you can try out a modified version of [Geo3D](https://github.com/open3doled/Geo3D/releases) to support the Open3DOLED trigger boxes. Game support is somewhat limited but it does work well for certain games.
-* If you are planning to play a traditional games and use reshades SuperDepth3D or any SteamVR games then check out [WibbleWobble](https://github.com/PHARTGAMES/WibbleWobbleCore) the author kindly added  support for the Open3DOLED trigger boxes.
-  * WibbleWobble launches a separate process that performs 120hz page flipping reliably even when your CPU is under heavy load so that you will get minimal dropped frames.
-  * Additionally WibbleWobble has a custom module to communicate over usb information about which eye is showing. If anyone wants it I can build a custom version of the firmware that accepts these messages to trigger the shutter glasses directly, eliminating the need to put the unit on your TV or monitor when using WibbleWobble for gaming. Just let me know if you want this.
 
 ## Development Installation Instructions
 
