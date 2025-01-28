@@ -26,6 +26,7 @@ Polarized sunglasses are vertically polarizer, just like the majority of TVs so 
 There is a webstore in the works where you will be able to buy a pre-built/pre-programmed emitter unit in the next month or so once preliminary beta testing is complete..  
 In the future custom firmware images that are optimized for software pageflipping for popular brands of glasses by Panasonic (and other manufacturers) may be released.  
 (I plan to sell these glasses on the webstore initially along with the emitters to help recoup the over 400(?) hours put into this project, they reduce jitter greatly and eliminate crosstalk from dropped frames)  
+Gaming is also supported through the use [Geo3D](https://github.com/open3doled/Geo3D/releases) and [WibbleWobble](https://github.com/PHARTGAMES/WibbleWobbleCore) see below for more details.
 
 ## Glasses Warning
 * If you are using Panasonic Gen2 (TY-EW3D2XX) glasses, do NOT turn them on while a USB charging cable is attached or you risk destroying the left shutter element from DC bias.
@@ -333,7 +334,12 @@ XIAOMI
    pip install git+https://github.com/46cv8/line_profiler.git@max_time ps
 ``` 
 * On Linux based operating systems if you experience dropped/duplicate frames every few seconds you may benefit form disabling compositing if possible. Many window managers will auto bypass compositing with ["fullscreen unredirect"](https://www.reddit.com/r/linux_gaming/comments/u6dckj/comment/i57o5r4/) when you swtich to fullscreen mode, not to be confused with fullscreen windowed mode.
-* For gaming there is a custom version of the Geo3D plugin with trigger boxes added that you are welcome to try, it has limited success but does work on certain titles provided Geo3D works well https://github.com/open3doled/Geo3D/releases
+
+## Gaming ##
+* If you have a fast PC that can maintain 120hz and you want to play traditional 2D games that are DX 11 or DX 12 you can try out a modified version of [Geo3D](https://github.com/open3doled/Geo3D/releases) to support the Open3DOLED trigger boxes. Game support is somewhat limited but it does work well for certain games.
+* If you are planning to play a traditional games and use reshades SuperDepth3D or any SteamVR games then check out [WibbleWobble](https://github.com/PHARTGAMES/WibbleWobbleCore) the author kindly added  support for the Open3DOLED trigger boxes.
+  * WibbleWobble launches a separate process that performs 120hz page flipping reliably even when your CPU is under heavy load so that you will get minimal dropped frames.
+  * Additionally WibbleWobble has a custom module to communicate over usb information about which eye is showing. If anyone wants it I can build a custom version of the firmware that accepts these messages to trigger the shutter glasses directly, eliminating the need to put the unit on your TV or monitor when using WibbleWobble for gaming. Just let me know if you want this.
 
 ## Development Installation Instructions
 
