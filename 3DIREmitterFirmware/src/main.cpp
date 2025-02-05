@@ -115,6 +115,10 @@ void setup()
                 pwm_backlight_frequency = eeprom_settings.pwm_backlight_frequency;
                 update_pwm_pulses_per_frame();
             }
+            if (eeprom_settings.version >= 20)
+            {
+                ir_drive_mode = eeprom_settings.ir_drive_mode;
+            }
         }
 
         Serial.println("eeprom read_settings");
@@ -150,6 +154,7 @@ void loop()
             uint8_t end;
             /*
              * Generally Applicable Parameters
+             * 18) ir_drive_mode - 0=Optical, 1=PCSerial
              * 1) ir_glasses_selected - 0=Samsung07, 1=Xpand, 2=3DVision, 3=Sharp, 4=Sony, 5=Panasonic, 6=PanasonicCustom
              * 2) ir_frame_delay - how long to delay after getting tv signal before attempting to activate the shutter glasses (in microseconds)
              * 3) ir_frame_duration - how long to delay before switching de-activating the shutter glasses after activating them (in microseconds)
@@ -295,6 +300,15 @@ void loop()
                             target_frametime = temp;
                             update_pwm_pulses_per_frame();
                         }
+                        else if (p == 18)
+                        {
+                            ir_drive_mode = temp;
+                            if (ir_drive_mode == IR_DRIVE_MODE_PC_SERIAL)
+                            {
+                                // It doesn't make sense to use average timing mode when using pc serial.
+                                ir_average_timing_mode = 0;
+                            }
+                        }
                         opt_sensor_SettingsChanged();
                     }
                     else if (command == 7 && p == 1 && temp >= 0 && temp < 3) // update glasses mode
@@ -329,7 +343,7 @@ void loop()
                             opt_sensor_enable_ignore_during_ir,
                             opt_sensor_enable_duplicate_realtime_reporting,
                             opt_sensor_output_stats,
-                            0,
+                            ir_drive_mode,
                             opt_sensor_ignore_all_duplicates,
                             opt_sensor_filter_mode,
                             ir_flip_eyes,
@@ -340,6 +354,25 @@ void loop()
                         EEPROM.put(EEPROM_SETTING_ADDRESS, eeprom_settings);
                         Serial.println("OK");
                         break;
+                    }
+                    else if (ir_drive_mode == IR_DRIVE_MODE_PC_SERIAL && command == 9 && p == 1)
+                    {
+                        if (temp == IR_DRIVE_MODE_PC_SERIAL_LEFT)
+                        {
+                            ir_signal_process_opt_sensor(1, 0);
+#ifdef ENABLE_DEBUG_PIN_OUTPUTS
+                            bitClear(PORT_DEBUG_DETECTED_RIGHT_D5, DEBUG_DETECTED_RIGHT_D5);
+                            bitSet(PORT_DEBUG_DETECTED_LEFT_D4, DEBUG_DETECTED_LEFT_D4);
+#endif
+                        }
+                        else if (temp == IR_DRIVE_MODE_PC_SERIAL_RIGHT)
+                        {
+                            ir_signal_process_opt_sensor(0, 0);
+#ifdef ENABLE_DEBUG_PIN_OUTPUTS
+                            bitClear(PORT_DEBUG_DETECTED_LEFT_D4, DEBUG_DETECTED_LEFT_D4);
+                            bitSet(PORT_DEBUG_DETECTED_RIGHT_D5, DEBUG_DETECTED_RIGHT_D5);
+#endif
+                        }
                     }
 #ifdef OPT_SENSOR_ENABLE_STREAM_READINGS_TO_SERIAL
                     else if (command == 10 && p == 1 && temp >= 0 && temp < 2) // toggle opt_sensor stream readings to serial
@@ -389,33 +422,38 @@ void loop()
                 Serial.print(",");
                 Serial.print(ir_average_timing_mode);
                 Serial.print(",");
-                Serial.println(target_frametime);
+                Serial.print(target_frametime);
+                Serial.print(",");
+                Serial.println(ir_drive_mode);
                 Serial.println("OK");
             }
             input = String();
         }
     }
-    opt_sensor_CheckReadings();
-    current_time = micros();
-    if (current_time >= next_print && current_time - next_print < 60000000)
+    if (ir_drive_mode == IR_DRIVE_MODE_OPTICAL)
     {
-#ifdef OPT_SENSOR_ENABLE_STATS
-        if (opt_sensor_output_stats)
+        opt_sensor_CheckReadings();
+        current_time = micros();
+        if (current_time >= next_print && current_time - next_print < 60000000)
         {
-            opt_sensor_PrintStats();
-            if (opt_sensor_FinishPrintStats())
+#ifdef OPT_SENSOR_ENABLE_STATS
+            if (opt_sensor_output_stats)
             {
-                next_print = current_time + OPT_SENSOR_UPDATE_STAT_PERIOD;
+                opt_sensor_PrintStats();
+                if (opt_sensor_FinishPrintStats())
+                {
+                    next_print = current_time + OPT_SENSOR_UPDATE_STAT_PERIOD;
+                }
             }
-        }
-        else
-        {
+            else
+            {
 #endif
-            opt_sensor_UpdateThresholds();
-            opt_sensor_ClearStats();
-            next_print = current_time + OPT_SENSOR_UPDATE_STAT_PERIOD;
+                opt_sensor_UpdateThresholds();
+                opt_sensor_ClearStats();
+                next_print = current_time + OPT_SENSOR_UPDATE_STAT_PERIOD;
 #ifdef OPT_SENSOR_ENABLE_STATS
-        }
+            }
 #endif
+        }
     }
 }

@@ -8,6 +8,7 @@
 #include "ir_signal.h"
 #include "ir_glasses.h"
 
+volatile uint8_t ir_drive_mode = IR_DRIVE_MODE_OPTICAL;
 volatile uint8_t ir_glasses_selected = 6;
 volatile uint16_t ir_frame_duration = IR_FRAME_DURATION;
 volatile uint16_t ir_frame_delay = IR_FRAME_DELAY;
@@ -53,6 +54,7 @@ uint16_t ir_average_frametime_in_timer_units = 0;
 // ir signals on both left and right eyes using two different comparators.
 void ir_signal_init()
 {
+  ir_drive_mode = IR_DRIVE_MODE_OPTICAL;
   ir_glasses_selected = 6;
   ir_frame_duration = IR_FRAME_DURATION;
   ir_frame_delay = IR_FRAME_DELAY;

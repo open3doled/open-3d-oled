@@ -15,6 +15,7 @@ import avrloader
 import util
 
 # Default IR Settings
+DEFAULT_IR_DRIVE_MODE = "0"
 DEFAULT_IR_PROTOCOL = "6"
 DEFAULT_GLASSES_MODE = "0"
 DEFAULT_IR_FRAME_DELAY = "500"
@@ -522,6 +523,26 @@ class EmitterSettingsDialog:
         self.setting_emitter_firmware_version_frame.grid(
             row=row_count, column=0, sticky="w"
         )
+        row_count += 1
+
+        self.setting_ir_drive_mode_frame = tkinter.Frame(top)
+        self.setting_ir_drive_mode_variable = tkinter.StringVar(top)
+        self.setting_ir_drive_mode_variable.set(DEFAULT_IR_DRIVE_MODE)
+        self.setting_ir_drive_mode_label = tkinter.Label(
+            self.setting_ir_drive_mode_frame, text="IR Drive Mode: "
+        )
+        self.setting_ir_drive_mode_label.pack(padx=5, side=tkinter.LEFT)
+        self.setting_ir_drive_mode_entry = tkinter.Entry(
+            self.setting_ir_drive_mode_frame,
+            textvariable=self.setting_ir_drive_mode_variable,
+        )
+        self.setting_ir_drive_mode_entry.pack(padx=5, side=tkinter.LEFT)
+        self.setting_ir_drive_mode_tooltip = idlelib.tooltip.Hovertip(
+            self.setting_ir_drive_mode_entry,
+            "0=Optical, 1=PCSerial \n(Only available from firmware version 20 onwards)\n(PCSerial only works with WibbleWobble currently, 3d player and PotPlayer both require Optical)\n(default 0 Optical)",
+            hover_delay=100,
+        )
+        self.setting_ir_drive_mode_frame.grid(row=row_count, column=0, sticky="w")
         row_count += 1
 
         self.setting_ir_protocol_frame = tkinter.Frame(top)
@@ -1111,6 +1132,7 @@ class EmitterSettingsDialog:
 
     def get_settings_dictionary(self):
         return {
+            "ir_drive_mode": self.setting_ir_drive_mode_variable.get(),
             "ir_protocol": self.setting_ir_protocol_variable.get(),
             "ir_frame_delay": self.setting_ir_frame_delay_variable.get(),
             "ir_frame_duration": self.setting_ir_frame_duration_variable.get(),
@@ -1314,6 +1336,12 @@ class EmitterSettingsDialog:
                         self.setting_pwm_backlight_frequency_entry.config(
                             state="disabled"
                         )
+                    if self.emitter_firmware_version_int >= 20:
+                        self.setting_ir_drive_mode_variable.set(parameters[18])
+                        self.setting_ir_drive_mode_entry.config(state="normal")
+                    else:
+                        self.setting_ir_drive_mode_variable.set(DEFAULT_IR_DRIVE_MODE)
+                        self.setting_ir_drive_mode_entry.config(state="disabled")
 
     def serial_port_click_connect(self):
         if self.main_app.emitter_serial:
@@ -1401,6 +1429,8 @@ class EmitterSettingsDialog:
                     command += f",{self.setting_ir_average_timing_mode_variable.get()}"
                 if self.emitter_firmware_version_int >= 18:
                     command += f",{self.setting_target_frametime_variable.get()}"
+                if self.emitter_firmware_version_int >= 20:
+                    command += f",{self.setting_ir_drive_mode_variable.get()}"
 
             print(command)
             self.main_app.emitter_serial.line_reader.command(command)
@@ -1436,6 +1466,9 @@ class EmitterSettingsDialog:
             f = open(file_name, "r")
             settings = json.load(f)
             f.close()
+            self.setting_ir_drive_mode_variable.set(
+                settings.get("ir_drive_mode", DEFAULT_IR_DRIVE_MODE)
+            )
             self.setting_ir_protocol_variable.set(
                 settings.get("ir_protocol", DEFAULT_IR_PROTOCOL)
             )

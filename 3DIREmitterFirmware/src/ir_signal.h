@@ -10,6 +10,11 @@
 #define SIGNAL_SEND_QUEUE_SIZE 4
 #define MAX_SIGNALS_TO_GENERATE_WITHOUT_TRIGGER 160 // this must be larger than OPT_FRAMETIME_COUNT_PERIOD
 
+#define IR_DRIVE_MODE_OPTICAL 0
+#define IR_DRIVE_MODE_PC_SERIAL 1
+#define IR_DRIVE_MODE_PC_SERIAL_LEFT 0
+#define IR_DRIVE_MODE_PC_SERIAL_RIGHT 1
+
 typedef enum
 {
   SIGNAL_NONE,
@@ -26,6 +31,7 @@ typedef enum
   SIGNAL_OPEN_LEFT_CLOSE_RIGHT,
 } ir_signal_type;
 
+extern volatile uint8_t ir_drive_mode;
 extern volatile uint8_t ir_glasses_selected;
 extern volatile uint16_t ir_frame_duration;
 extern volatile uint16_t ir_frame_delay;
