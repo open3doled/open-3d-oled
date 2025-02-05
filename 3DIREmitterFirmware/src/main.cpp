@@ -146,12 +146,12 @@ void loop()
     {
         char d = Serial.read();
         input.concat(d);
-        // Serial.println(input);
         if (d == '\n')
         {
             uint8_t command = 0;
             uint8_t start = 0;
             uint8_t end;
+            // Serial.println(input);
             /*
              * Generally Applicable Parameters
              * 18) ir_drive_mode - 0=Optical, 1=PCSerial
@@ -213,7 +213,7 @@ void loop()
              * 10) opt_sensor_output_stats -
              *   output statistics (if built with OPT_SENSOR_ENABLE_STATS) relating to how the opt_sensor module is processing all lines start with "+stats " followed by specific statistics.
              */
-            for (uint8_t p = 0; p < 20; p++)
+            for (uint8_t p = 0; p < 21; p++)
             {
                 end = input.indexOf(",", start);
                 if (end == 255)
@@ -373,6 +373,7 @@ void loop()
                             bitSet(PORT_DEBUG_DETECTED_RIGHT_D5, DEBUG_DETECTED_RIGHT_D5);
 #endif
                         }
+                        break;
                     }
 #ifdef OPT_SENSOR_ENABLE_STREAM_READINGS_TO_SERIAL
                     else if (command == 10 && p == 1 && temp >= 0 && temp < 2) // toggle opt_sensor stream readings to serial
