@@ -18,6 +18,7 @@ volatile uint8_t ir_flip_eyes = 0;
 #ifdef OPT_SENSOR_ENABLE_IGNORE_DURING_IR
 volatile bool ir_led_token_active = false;
 #endif
+uint16_t target_frametime = 0;
 
 const ir_glasses_signal_library_t *volatile ir_glasses_selected_library;
 const ir_glasses_signal_library_t *volatile ir_glasses_selected_library_sub_ir_signal_schedule_send_request;
@@ -63,6 +64,7 @@ void ir_signal_init()
 #ifdef OPT_SENSOR_ENABLE_IGNORE_DURING_IR
   ir_led_token_active = false;
 #endif
+  target_frametime = 0;
 
   for (uint8_t i = 0; i < SIGNAL_SEND_QUEUE_SIZE; i++)
   {
@@ -558,7 +560,7 @@ ISR(TIMER1_COMPC_vect)
  Responsible for converting external state change parameters into the those parameters used internally.
  Schedule the open signal for the current frames eye.
 */
-void ir_signal_process_opt_sensor(uint8_t left_eye, uint16_t frametime)
+void ir_signal_process_trigger(uint8_t left_eye, uint16_t frametime)
 {
   ir_signal_type ir_desired_signal = (left_eye ^ ir_flip_eyes ? SIGNAL_OPEN_LEFT : SIGNAL_OPEN_RIGHT);
   uint8_t desired_signal_index;

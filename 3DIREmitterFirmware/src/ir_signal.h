@@ -39,12 +39,13 @@ extern volatile uint16_t ir_signal_spacing;
 extern volatile uint8_t ir_average_timing_mode;
 extern volatile uint8_t ir_flip_eyes;
 extern volatile bool ir_led_token_active;
+extern uint16_t target_frametime;
 
 void ir_signal_init(void);
 void ir_signal_send(ir_signal_type signal);
 void ir_signal_send_request(ir_signal_type signal);
 void ir_signal_send_finished(void);
 void ir_signal_schedule_send_request(ir_signal_type signal, uint16_t delay);
-void ir_signal_process_opt_sensor(uint8_t left_eye, uint16_t frametime);
+void ir_signal_process_trigger(uint8_t left_eye, uint16_t frametime);
 
 #endif /* _IR_SIGNAL_H_ */

@@ -14,6 +14,7 @@
 #include "settings.h"
 #include "ir_signal.h"
 #include "opt_sensor.h"
+#include "usb_trigger.h"
 
 static uint32_t next_print;
 
@@ -303,11 +304,6 @@ void loop()
                         else if (p == 18)
                         {
                             ir_drive_mode = temp;
-                            if (ir_drive_mode == IR_DRIVE_MODE_PC_SERIAL)
-                            {
-                                // It doesn't make sense to use average timing mode when using pc serial.
-                                ir_average_timing_mode = 0;
-                            }
                         }
                         opt_sensor_SettingsChanged();
                     }
@@ -359,19 +355,11 @@ void loop()
                     {
                         if (temp == IR_DRIVE_MODE_PC_SERIAL_LEFT)
                         {
-                            ir_signal_process_opt_sensor(1, 0);
-#ifdef ENABLE_DEBUG_PIN_OUTPUTS
-                            bitClear(PORT_DEBUG_DETECTED_RIGHT_D5, DEBUG_DETECTED_RIGHT_D5);
-                            bitSet(PORT_DEBUG_DETECTED_LEFT_D4, DEBUG_DETECTED_LEFT_D4);
-#endif
+                            usb_trigger_Update(1);
                         }
                         else if (temp == IR_DRIVE_MODE_PC_SERIAL_RIGHT)
                         {
-                            ir_signal_process_opt_sensor(0, 0);
-#ifdef ENABLE_DEBUG_PIN_OUTPUTS
-                            bitClear(PORT_DEBUG_DETECTED_LEFT_D4, DEBUG_DETECTED_LEFT_D4);
-                            bitSet(PORT_DEBUG_DETECTED_RIGHT_D5, DEBUG_DETECTED_RIGHT_D5);
-#endif
+                            usb_trigger_Update(0);
                         }
                         break;
                     }
