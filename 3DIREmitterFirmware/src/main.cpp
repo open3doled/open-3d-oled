@@ -60,7 +60,6 @@ void setup()
 #endif
 #endif
     ir_signal_init();
-    opt_sensor_Init();
     EEPROMSettings eeprom_settings;
     EEPROM.get(EEPROM_SETTING_ADDRESS, eeprom_settings);
     if (eeprom_settings.check_value == EEPROM_SETTING_CHECKVALUE)
@@ -123,6 +122,14 @@ void setup()
         }
 
         Serial.println("eeprom read_settings");
+    }
+    if (ir_drive_mode == IR_DRIVE_MODE_OPTICAL)
+    {
+        opt_sensor_init();
+    }
+    else if (ir_drive_mode == IR_DRIVE_MODE_PC_SERIAL)
+    {
+        usb_trigger_init();
     }
     Serial.println("init complete");
 }
@@ -303,9 +310,21 @@ void loop()
                         }
                         else if (p == 18)
                         {
-                            ir_drive_mode = temp;
+                            if (ir_drive_mode != temp)
+                            {
+                                if (ir_drive_mode == IR_DRIVE_MODE_OPTICAL)
+                                {
+                                    usb_trigger_stop();
+                                    opt_sensor_init();
+                                }
+                                else if (ir_drive_mode == IR_DRIVE_MODE_PC_SERIAL)
+                                {
+                                    opt_sensor_stop();
+                                    usb_trigger_init();
+                                }
+                            }
                         }
-                        opt_sensor_SettingsChanged();
+                        opt_sensor_settings_changed();
                     }
                     else if (command == 7 && p == 1 && temp >= 0 && temp < 3) // update glasses mode
                     {
@@ -355,11 +374,11 @@ void loop()
                     {
                         if (temp == IR_DRIVE_MODE_PC_SERIAL_LEFT)
                         {
-                            usb_trigger_Update(1);
+                            usb_trigger_update(1);
                         }
                         else if (temp == IR_DRIVE_MODE_PC_SERIAL_RIGHT)
                         {
-                            usb_trigger_Update(0);
+                            usb_trigger_update(0);
                         }
                         break;
                     }
@@ -421,15 +440,15 @@ void loop()
     }
     if (ir_drive_mode == IR_DRIVE_MODE_OPTICAL)
     {
-        opt_sensor_CheckReadings();
+        opt_sensor_check_readings();
         current_time = micros();
         if (current_time >= next_print && current_time - next_print < 60000000)
         {
 #ifdef OPT_SENSOR_ENABLE_STATS
             if (opt_sensor_output_stats)
             {
-                opt_sensor_PrintStats();
-                if (opt_sensor_FinishPrintStats())
+                opt_sensor_print_stats();
+                if (opt_sensor_finish_print_stats())
                 {
                     next_print = current_time + OPT_SENSOR_UPDATE_STAT_PERIOD;
                 }
@@ -437,8 +456,8 @@ void loop()
             else
             {
 #endif
-                opt_sensor_UpdateThresholds();
-                opt_sensor_ClearStats();
+                opt_sensor_update_thresholds();
+                opt_sensor_clear_stats();
                 next_print = current_time + OPT_SENSOR_UPDATE_STAT_PERIOD;
 #ifdef OPT_SENSOR_ENABLE_STATS
             }

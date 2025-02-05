@@ -106,7 +106,7 @@ void update_pwm_pulses_per_frame(void)
     }
 }
 
-void opt_sensor_Init(void)
+void opt_sensor_init(void)
 {
 #ifdef OPT_SENSOR_ENABLE_IGNORE_DURING_IR
     ir_led_token_active_countdown = 0;
@@ -186,8 +186,13 @@ void opt_sensor_Init(void)
                                                   // ADCSRA is set) takes 25 ADC clock cycles in order to initialize the analog circuitry.
 }
 
+void opt_sensor_stop(void)
+{
+    ADCSRA &= ~(_BV(ADEN) | _BV(ADIE));
+}
+
 #ifdef OPT_SENSOR_ENABLE_STATS
-void opt_sensor_PrintStats(void)
+void opt_sensor_print_stats(void)
 {
     switch (opt_sensor_stats_count)
     {
@@ -204,8 +209,8 @@ void opt_sensor_PrintStats(void)
             opt_sensor_ss_readings_threshold_high[ch] = opt_sensor_readings_threshold_high[ch];
             opt_sensor_ss_readings_threshold_low[ch] = opt_sensor_readings_threshold_low[ch];
         }
-        opt_sensor_UpdateThresholds();
-        opt_sensor_ClearStats();
+        opt_sensor_update_thresholds();
+        opt_sensor_clear_stats();
         break;
     case 1 * OPT_SENSOR_STATS_SERIAL_OUTPUT_FREQUENCY:
         Serial.print("+stats general reading_counter:");
@@ -283,7 +288,7 @@ void opt_sensor_PrintStats(void)
     opt_sensor_stats_count++;
 }
 
-bool opt_sensor_FinishPrintStats(void)
+bool opt_sensor_finish_print_stats(void)
 {
     bool done = (opt_sensor_stats_count > (4 + 8 * 2) * OPT_SENSOR_STATS_SERIAL_OUTPUT_FREQUENCY);
     if (done)
@@ -294,7 +299,7 @@ bool opt_sensor_FinishPrintStats(void)
 }
 #endif
 
-void opt_sensor_UpdateThresholds(void)
+void opt_sensor_update_thresholds(void)
 {
     opt_sensor_readings_active = true;
     for (uint8_t c = 0; c < OPT_SENSOR_CHANNELS; c++)
@@ -308,7 +313,7 @@ void opt_sensor_UpdateThresholds(void)
     }
 }
 
-void opt_sensor_SettingsChanged(void)
+void opt_sensor_settings_changed(void)
 {
     if (opt_sensor_ignore_all_duplicates)
     {
@@ -318,7 +323,7 @@ void opt_sensor_SettingsChanged(void)
     }
 }
 
-void opt_sensor_CheckReadings(void)
+void opt_sensor_check_readings(void)
 {
     uint8_t checked_readings[2];
 #ifdef OPT_SENSOR_ENABLE_IGNORE_DURING_IR
@@ -593,7 +598,7 @@ void opt_sensor_CheckReadings(void)
 #endif
 }
 
-void opt_sensor_ClearStats(void)
+void opt_sensor_clear_stats(void)
 {
     opt_sensor_reading_counter = 0;
     opt_sensor_duplicate_frames_counter = 0;

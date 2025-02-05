@@ -10,8 +10,9 @@
 
 #include <stdint.h>
 
-void usb_trigger_Init(void);
-void usb_trigger_SettingsChanged(void);
-void usb_trigger_Update(uint8_t left_eye);
+void usb_trigger_init(void);
+void usb_trigger_stop(void);
+void usb_trigger_settings_changed(void);
+void usb_trigger_update(uint8_t left_eye);
 
 #endif /* _USB_TRIGGER_H_ */

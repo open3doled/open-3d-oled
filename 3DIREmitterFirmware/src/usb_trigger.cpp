@@ -15,11 +15,10 @@ uint16_t usb_trigger_frametime_average = 0;
 bool usb_trigger_frametime_average_set = false;
 bool usb_trigger_resync_average_timing_mode_required = false;
 bool usb_trigger_average_timing_mode_resync = false;
-bool usb_trigger_frametime_average_updated = false;
 uint8_t usb_trigger_last_update_left_eye = 0;
 bool usb_trigger_last_update_left_eye_set = false;
 
-void usb_trigger_Init(void)
+void usb_trigger_init(void)
 {
     usb_trigger_frametime_frame_counter = 0;
     usb_trigger_frametime_start_time = 0;
@@ -27,16 +26,19 @@ void usb_trigger_Init(void)
     usb_trigger_frametime_average_set = false;
     usb_trigger_resync_average_timing_mode_required = false;
     usb_trigger_average_timing_mode_resync = false;
-    usb_trigger_frametime_average_updated = false;
 }
 
-void usb_trigger_SettingsChanged(void)
+void usb_trigger_stop(void)
+{
+}
+
+void usb_trigger_settings_changed(void)
 {
     usb_trigger_frametime_frame_counter = 0;
     usb_trigger_frametime_start_time = 0;
 }
 
-void usb_trigger_Update(uint8_t left_eye)
+void usb_trigger_update(uint8_t left_eye)
 {
 #ifdef ENABLE_DEBUG_PIN_OUTPUTS
     if (left_eye)
@@ -50,55 +52,46 @@ void usb_trigger_Update(uint8_t left_eye)
         bitSet(PORT_DEBUG_DETECTED_RIGHT_D5, DEBUG_DETECTED_RIGHT_D5);
     }
 #endif
+
     if (ir_average_timing_mode == 1)
     {
-        usb_trigger_current_time = 0;
-        if (usb_trigger_current_time == 0)
+        usb_trigger_current_time = micros();
+
+        if (usb_trigger_last_update_left_eye_set && usb_trigger_last_update_left_eye == left_eye)
         {
-            usb_trigger_current_time = micros();
+            usb_trigger_resync_average_timing_mode_required = true;
         }
-        if (usb_trigger_last_update_left_eye_set)
+
+        uint16_t new_frametime = usb_trigger_current_time - usb_trigger_frametime_start_time;
+
+        if (usb_trigger_frametime_average_set)
         {
-            if (usb_trigger_last_update_left_eye == left_eye)
+            // Rolling average update using bit shifting
+            // Equivalent to: avg = (15/16) * avg + (1/16) * new_value
+            uint16_t new_usb_trigger_frametime_average = usb_trigger_frametime_average - (usb_trigger_frametime_average >> 4); // Subtract 1/16 of current average
+            new_usb_trigger_frametime_average += new_frametime >> 4;                                                         // Add 1/16 of new frametime
+
+            // Ensure new_frametime is within 30 microseconds of the target before updating
+            if (target_frametime == 0 || (new_usb_trigger_frametime_average >= target_frametime - 30 && new_usb_trigger_frametime_average <= target_frametime + 30))
             {
-                usb_trigger_resync_average_timing_mode_required = true;
+                usb_trigger_frametime_average = new_usb_trigger_frametime_average;
             }
-        }
-        if (usb_trigger_frametime_average_set && (usb_trigger_resync_average_timing_mode_required))
-        {
-#ifdef ENABLE_DEBUG_PIN_OUTPUTS
-            bitSet(PORT_DEBUG_AVERAGE_TIMING_MODE_RESYNC_D14, DEBUG_AVERAGE_TIMING_MODE_RESYNC_D14);
-#endif
+
+            // Call IR signal process trigger every time
             ir_signal_process_trigger(left_eye, usb_trigger_frametime_average);
-            usb_trigger_resync_average_timing_mode_required = false;
         }
-        if (usb_trigger_frametime_frame_counter == USB_FRAMETIME_COUNT_PERIOD)
+        else
         {
-            uint16_t new_frametime_average = (usb_trigger_current_time - usb_trigger_frametime_start_time) >> USB_FRAMETIME_COUNT_PERIOD_2PN;
-            if (target_frametime == 0 || (target_frametime - 30 < new_frametime_average && new_frametime_average < target_frametime + 30))
+            // Ensure new_frametime is within 100 microseconds of the target before updating
+            if (target_frametime == 0 || (new_frametime >= target_frametime - 100 && new_frametime <= target_frametime + 100))
             {
-                // if a target_frametime is specified we only permit deviation by 30 us above or below the target.
-                // For a 120hz display this equates to 120 +/- 0.438
-                // With a 120hz display and USB_FRAMETIME_COUNT_PERIOD_2PN of 128 a single duplicate uncounted frame would result in an average frametime of 8333.3333×121÷120 = 8402.777744167 which is 70 microseconds longer and thus would be ignored.
-                usb_trigger_frametime_average = new_frametime_average;
+                // First-time initialization
+                usb_trigger_frametime_average = new_frametime;
                 usb_trigger_frametime_average_set = true;
-                usb_trigger_frametime_average_updated = true;
             }
-            if (usb_trigger_frametime_average_set)
-            {
-#ifdef ENABLE_DEBUG_PIN_OUTPUTS
-                bitSet(PORT_DEBUG_AVERAGE_TIMING_MODE_RESYNC_D14, DEBUG_AVERAGE_TIMING_MODE_RESYNC_D14);
-#endif
-                ir_signal_process_trigger(left_eye, usb_trigger_frametime_average);
-                usb_trigger_resync_average_timing_mode_required = false;
-            }
-            usb_trigger_frametime_frame_counter = 0;
         }
-        if (usb_trigger_frametime_frame_counter == 0)
-        {
-            usb_trigger_frametime_start_time = usb_trigger_current_time;
-        }
-        usb_trigger_frametime_frame_counter++;
+
+        usb_trigger_frametime_start_time = usb_trigger_current_time;
         usb_trigger_last_update_left_eye = left_eye;
         usb_trigger_last_update_left_eye_set = true;
     }

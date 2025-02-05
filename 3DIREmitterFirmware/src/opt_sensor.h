@@ -30,14 +30,15 @@ extern uint8_t opt_sensor_enable_stream_readings_to_serial;
 #endif
 
 void update_pwm_pulses_per_frame(void);
-void opt_sensor_Init(void);
+void opt_sensor_init(void);
+void opt_sensor_stop(void);
 #ifdef OPT_SENSOR_ENABLE_STATS
-void opt_sensor_PrintStats(void);
-bool opt_sensor_FinishPrintStats(void);
+void opt_sensor_print_stats(void);
+bool opt_sensor_finish_print_stats(void);
 #endif
-void opt_sensor_UpdateThresholds(void);
-void opt_sensor_SettingsChanged(void);
-void opt_sensor_CheckReadings(void);
-void opt_sensor_ClearStats(void);
+void opt_sensor_update_thresholds(void);
+void opt_sensor_settings_changed(void);
+void opt_sensor_check_readings(void);
+void opt_sensor_clear_stats(void);
 
 #endif /* _OPT_SENSOR_SENSOR_H_ */
