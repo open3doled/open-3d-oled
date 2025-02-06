@@ -85,9 +85,9 @@ void usb_trigger_update(uint8_t left_eye)
             uint32_t new_usb_trigger_frametime_average_shifted = usb_trigger_frametime_average_shifted - (usb_trigger_frametime_average_shifted >> FRAME_HISTORY_SHIFT);
             new_usb_trigger_frametime_average_shifted += new_frametime;
 
-            // Ensure new_frametime is within 30 microseconds of the target before updating
+            // Ensure new_frametime is within 30 microseconds of the target before updating (unless we have no target frame time or we are still initializing)
             uint16_t new_usb_trigger_frametime_average = new_usb_trigger_frametime_average_shifted >> FRAME_HISTORY_SHIFT;
-            if (target_frametime == 0 || (new_usb_trigger_frametime_average >= target_frametime - 60 && new_usb_trigger_frametime_average <= target_frametime + 60))
+            if (target_frametime == 0 || !usb_trigger_time_history_filled || (new_usb_trigger_frametime_average >= target_frametime - 60 && new_usb_trigger_frametime_average <= target_frametime + 60))
             {
                 usb_trigger_frametime_average_shifted = new_usb_trigger_frametime_average_shifted;
             }
@@ -95,8 +95,17 @@ void usb_trigger_update(uint8_t left_eye)
             // **Compute Phase Correction Using a 32-Frame Lookback (only if history is filled)**
             if (usb_trigger_time_history_filled)
             {
+                uint32_t expected_time = 0;
                 uint8_t past_index = (usb_trigger_time_history_index - FRAME_HISTORY_SIZE) & (FRAME_HISTORY_SIZE - 1);
-                uint32_t expected_time = usb_trigger_time_history[past_index] + usb_trigger_frametime_average_shifted;
+                uint8_t step = FRAME_HISTORY_SIZE >> 1; // Step size for sampling history
+
+                for (uint8_t i = 0; i < 4; i++)
+                {
+                    expected_time += (usb_trigger_time_history[past_index] + (usb_trigger_frametime_average_shifted >> i)) >> 2;
+                    past_index = (past_index + step) & (FRAME_HISTORY_SIZE - 1);
+                    step >>= 1; // Reduce step size progressively
+                }
+
                 int16_t time_error = (int16_t)(usb_trigger_current_time - expected_time);
                 int16_t frame_delay_adjustment = time_error - (time_error >> 4); // Correction (~15/16 of error)
 
@@ -105,7 +114,7 @@ void usb_trigger_update(uint8_t left_eye)
 
                 //*
                 logger_counter++;
-                if (logger_counter % 128 == 0)
+                if (logger_counter % 120 == 0)
                 {
                     Serial.print(usb_trigger_current_time);
                     Serial.print(",");
