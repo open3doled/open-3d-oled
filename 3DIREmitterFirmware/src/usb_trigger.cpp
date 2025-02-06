@@ -96,6 +96,8 @@ void usb_trigger_update(uint8_t left_eye)
             // **Compute Phase Correction Using a 32-Frame Lookback (only if history is filled)**
             if (usb_trigger_time_history_filled)
             {
+                // Use a selection of 4 samples biased towards recent values
+                //*
                 uint32_t expected_time = 0;
                 uint8_t past_index = (usb_trigger_time_history_index - FRAME_HISTORY_SIZE) & (FRAME_HISTORY_SIZE - 1);
                 uint8_t step = FRAME_HISTORY_SIZE >> 1; // Step size for sampling history
@@ -106,8 +108,21 @@ void usb_trigger_update(uint8_t left_eye)
                     past_index = (past_index + step) & (FRAME_HISTORY_SIZE - 1);
                     step >>= 1; // Reduce step size progressively
                 }
+                //*/
 
-                int16_t time_error = (int16_t)(usb_trigger_current_time - expected_time);
+                // Use all samples
+                /*
+                uint32_t expected_time = 0;
+                uint8_t past_index = (usb_trigger_time_history_index - FRAME_HISTORY_SIZE) & (FRAME_HISTORY_SIZE - 1);
+                for (uint8_t i = 0; i < FRAME_HISTORY_SIZE; i++)
+                {
+                    expected_time += usb_trigger_time_history[past_index] >> FRAME_HISTORY_SHIFT;
+                    past_index = (past_index + 1) & (FRAME_HISTORY_SIZE - 1);
+                }
+                expected_time += (usb_trigger_frametime_average_shifted >> 1) + (usb_trigger_frametime_average_shifted >> (FRAME_HISTORY_SHIFT + 1));
+                //*/
+
+                int16_t time_error = (int16_t)(expected_time - usb_trigger_current_time);
                 int16_t frame_delay_adjustment = time_error - (time_error >> 4); // Correction (~15/16 of error)
 
                 // Call IR signal process trigger with improved phase adjustment
@@ -153,4 +168,9 @@ void usb_trigger_update(uint8_t left_eye)
 
     usb_trigger_frametime_start_time = usb_trigger_current_time;
     usb_trigger_frametime_start_time_set = true;
+
+#ifdef ENABLE_DEBUG_PIN_OUTPUTS
+    bitClear(PORT_DEBUG_DETECTED_RIGHT_D5, DEBUG_DETECTED_RIGHT_D5);
+    bitClear(PORT_DEBUG_DETECTED_LEFT_D4, DEBUG_DETECTED_LEFT_D4);
+#endif
 }
