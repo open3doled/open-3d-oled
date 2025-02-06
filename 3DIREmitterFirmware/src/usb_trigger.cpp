@@ -64,6 +64,7 @@ void usb_trigger_update(uint8_t left_eye)
     }
 #endif
 
+    uint16_t override_tcnt1 = TCNT1;
     usb_trigger_current_time = micros();
 
     if (usb_trigger_frametime_start_time_set == true)
@@ -87,7 +88,7 @@ void usb_trigger_update(uint8_t left_eye)
 
             // Ensure new_frametime is within 30 microseconds of the target before updating (unless we have no target frame time or we are still initializing)
             uint16_t new_usb_trigger_frametime_average = new_usb_trigger_frametime_average_shifted >> FRAME_HISTORY_SHIFT;
-            if (target_frametime == 0 || !usb_trigger_time_history_filled || (new_usb_trigger_frametime_average >= target_frametime - 60 && new_usb_trigger_frametime_average <= target_frametime + 60))
+            if (target_frametime == 0 || !usb_trigger_time_history_filled || (new_usb_trigger_frametime_average >= target_frametime - 30 && new_usb_trigger_frametime_average <= target_frametime + 30))
             {
                 usb_trigger_frametime_average_shifted = new_usb_trigger_frametime_average_shifted;
             }
@@ -110,7 +111,7 @@ void usb_trigger_update(uint8_t left_eye)
                 int16_t frame_delay_adjustment = time_error - (time_error >> 4); // Correction (~15/16 of error)
 
                 // Call IR signal process trigger with improved phase adjustment
-                ir_signal_process_trigger(left_eye, usb_trigger_frametime_average_shifted >> FRAME_HISTORY_SHIFT, frame_delay_adjustment);
+                ir_signal_process_trigger(left_eye, usb_trigger_frametime_average_shifted >> FRAME_HISTORY_SHIFT, frame_delay_adjustment, override_tcnt1);
 
                 //*
                 logger_counter++;
