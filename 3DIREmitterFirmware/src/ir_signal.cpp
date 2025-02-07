@@ -599,9 +599,15 @@ void ir_signal_process_trigger(uint8_t left_eye)
       ir_signal_next_timer1_compb_scheduled_signal = SIGNAL_NONE;
       bitClear(TIMSK1, OCIE1B);
       bitSet(TIFR1, OCF1B);
+      ir_average_timing_mode_last_open_timer1_tcnt_set[1] = false;
+      ir_signal_trigger_frame_delay_adjustment[1] = 0;
+      ir_average_timing_mode_running[1] = false;
       ir_signal_next_timer1_compc_scheduled_signal = SIGNAL_NONE;
       bitClear(TIMSK1, OCIE1C);
       bitSet(TIFR1, OCF1C);
+      ir_average_timing_mode_last_open_timer1_tcnt_set[0] = false;
+      ir_signal_trigger_frame_delay_adjustment[0] = 0;
+      ir_average_timing_mode_running[0] = false;
     }
     ir_glasses_selected_library_sub_ir_signal_schedule_send_request = ir_glasses_selected_library;
     scheduled_signal_index = ir_glasses_selected_library_sub_ir_signal_schedule_send_request->signal_index[ir_desired_signal];

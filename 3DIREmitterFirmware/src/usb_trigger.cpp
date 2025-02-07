@@ -37,9 +37,10 @@ void usb_trigger_update(uint8_t left_eye)
 
     // Call IR signal process trigger with improved phase adjustment
     ir_signal_process_trigger(left_eye);
-
-#ifdef ENABLE_DEBUG_PIN_OUTPUTS
-    bitClear(PORT_DEBUG_DETECTED_RIGHT_D5, DEBUG_DETECTED_RIGHT_D5);
-    bitClear(PORT_DEBUG_DETECTED_LEFT_D4, DEBUG_DETECTED_LEFT_D4);
-#endif
+    /*
+    #ifdef ENABLE_DEBUG_PIN_OUTPUTS
+        bitClear(PORT_DEBUG_DETECTED_RIGHT_D5, DEBUG_DETECTED_RIGHT_D5);
+        bitClear(PORT_DEBUG_DETECTED_LEFT_D4, DEBUG_DETECTED_LEFT_D4);
+    #endif
+    //*/
 }
