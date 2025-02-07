@@ -48,6 +48,8 @@ ir_signal_type ir_signal_next_timer1_compc_start_signal = SIGNAL_NONE;
 uint16_t ir_signal_next_timer1_compc_start_time = 0;
 uint16_t ir_average_timing_mode_no_trigger_counter = 0;
 volatile bool ir_average_timing_mode_running[2] = {false}; // 0 - left, 1 - right
+volatile uint16_t ir_average_timing_mode_last_open_timer1_tcnt[2] = {0};
+volatile bool ir_average_timing_mode_last_open_timer1_tcnt_set[2] = {false};
 
 #define FRAME_HISTORY_SIZE 64
 #define FRAME_HISTORY_SHIFT 6 // Log2(FRAME_HISTORY_SIZE) for efficient division
@@ -59,9 +61,6 @@ uint16_t ir_signal_trigger_current_timer1_tcnt = 0;
 uint16_t ir_signal_trigger_last_timer1_tcnt = 0;
 bool ir_signal_trigger_last_time_set = false;
 bool ir_signal_trigger_frametime_average_set = false;
-bool ir_signal_trigger_time_history_filled = false;
-uint32_t ir_signal_trigger_time_history[FRAME_HISTORY_SIZE] = {0};
-uint8_t ir_signal_trigger_time_history_index = 0;
 uint32_t ir_signal_trigger_frametime_average_shifted = 0;
 volatile uint16_t ir_signal_trigger_frametime_average = 0;
 volatile int16_t ir_signal_trigger_frame_delay_adjustment[2] = {0};
@@ -100,6 +99,8 @@ void ir_signal_init()
   ir_signal_next_timer1_compc_start_time = 0;
   ir_average_timing_mode_no_trigger_counter = 0;
   memset((void *)ir_average_timing_mode_running, 0, sizeof(ir_average_timing_mode_running));
+  memset((void *)ir_average_timing_mode_last_open_timer1_tcnt, 0, sizeof(ir_average_timing_mode_last_open_timer1_tcnt));
+  memset((void *)ir_average_timing_mode_last_open_timer1_tcnt_set, 0, sizeof(ir_average_timing_mode_last_open_timer1_tcnt_set));
 
   ir_signal_trigger_current_time = 0;
   ir_signal_trigger_last_time = 0;
@@ -107,9 +108,6 @@ void ir_signal_init()
   ir_signal_trigger_last_timer1_tcnt = 0;
   ir_signal_trigger_last_time_set = false;
   ir_signal_trigger_frametime_average_set = false;
-  ir_signal_trigger_time_history_filled = false; // Reset flag
-  memset((void *)ir_signal_trigger_time_history, 0, sizeof(ir_signal_trigger_time_history));
-  ir_signal_trigger_time_history_index = 0;
   ir_signal_trigger_frametime_average_shifted = 0;
   ir_signal_trigger_frametime_average = 0;
   memset((void *)ir_signal_trigger_frame_delay_adjustment, 0, sizeof(ir_signal_trigger_frame_delay_adjustment));
@@ -390,8 +388,10 @@ ISR(TIMER1_COMPB_vect)
   if (scheduled_signal == SIGNAL_OPEN_LEFT)
   {
     ir_signal_next_timer1_compb_scheduled_signal = SIGNAL_CLOSE_LEFT;
+    ir_average_timing_mode_last_open_timer1_tcnt[1] = OCR1B - (ir_frame_delay << 1) + scheduled_signal_time_temp; // not sure if the token_length we are using here is the right one
     scheduled_signal_time_temp = OCR1B + ((ir_frame_duration - scheduled_signal_time_temp) << 1);
     OCR1B = scheduled_signal_time_temp;
+    ir_average_timing_mode_last_open_timer1_tcnt_set[1] = true;
   }
   else
   {
@@ -431,8 +431,10 @@ ISR(TIMER1_COMPC_vect)
   if (scheduled_signal == SIGNAL_OPEN_RIGHT)
   {
     ir_signal_next_timer1_compc_scheduled_signal = SIGNAL_CLOSE_RIGHT;
+    ir_average_timing_mode_last_open_timer1_tcnt[0] = OCR1C - (ir_frame_delay << 1) + scheduled_signal_time_temp; // not sure if the token_length we are using here is the right one
     scheduled_signal_time_temp = OCR1C + ((ir_frame_duration - scheduled_signal_time_temp) << 1);
     OCR1C = scheduled_signal_time_temp;
+    ir_average_timing_mode_last_open_timer1_tcnt_set[0] = true;
   }
   else
   {
@@ -494,10 +496,12 @@ void ir_signal_process_trigger(uint8_t left_eye)
       {
         // no updates for more than 1 frame reset all averaging counters.
         ir_signal_trigger_frametime_average_set = false;
-        ir_signal_trigger_time_history_filled = false; // Reset flag
-        ir_signal_trigger_time_history_index = 0;
         ir_signal_trigger_frametime_average_shifted = 0;
         cli();
+        ir_average_timing_mode_last_open_timer1_tcnt[0] = 0;
+        ir_average_timing_mode_last_open_timer1_tcnt[1] = 0;
+        ir_average_timing_mode_last_open_timer1_tcnt_set[0] = false;
+        ir_average_timing_mode_last_open_timer1_tcnt_set[1] = false;
         ir_signal_trigger_frametime_average = 0;
         ir_signal_trigger_frame_delay_adjustment[0] = 0;
         ir_signal_trigger_frame_delay_adjustment[1] = 0;
@@ -514,7 +518,7 @@ void ir_signal_process_trigger(uint8_t left_eye)
 
         // Ensure new_frametime is within 30 microseconds of the target before updating (unless we have no target frame time or we are still initializing)
         uint16_t new_ir_signal_trigger_frametime_average = new_ir_signal_trigger_frametime_average_shifted >> FRAME_HISTORY_SHIFT;
-        if (target_frametime == 0 || !ir_signal_trigger_time_history_filled || (new_ir_signal_trigger_frametime_average >= target_frametime - 30 && new_ir_signal_trigger_frametime_average <= target_frametime + 30))
+        if (target_frametime == 0 || (new_frametime >= target_frametime - 50 && new_frametime <= target_frametime + 50))
         {
           ir_signal_trigger_frametime_average_shifted = new_ir_signal_trigger_frametime_average_shifted;
           cli();
@@ -522,49 +526,29 @@ void ir_signal_process_trigger(uint8_t left_eye)
           sei();
         }
 
-        // **Compute Phase Correction Using a 32-Frame Lookback (only if history is filled)**
-        if (ir_signal_trigger_time_history_filled)
+        if (ir_average_timing_mode_last_open_timer1_tcnt_set[left_eye])
         {
-          // Use a selection of 4 samples biased towards recent values
-          //*
-          uint32_t expected_time = 0;
-          uint8_t past_index = (ir_signal_trigger_time_history_index - FRAME_HISTORY_SIZE) & (FRAME_HISTORY_SIZE - 1);
-          uint8_t step = FRAME_HISTORY_SIZE >> 1; // Step size for sampling history
+          uint16_t expected_time = (ir_average_timing_mode_last_open_timer1_tcnt[left_eye]) + (ir_signal_trigger_frametime_average << 2); // tcnt in timer units and frametime is in microseconds but needs to doubled for a full left right cycle as it is the display refresh frame time, then doubled again to make it into timer units.
 
-          for (uint8_t i = 0; i < 4; i++)
-          {
-            expected_time += (ir_signal_trigger_time_history[past_index] + (ir_signal_trigger_frametime_average_shifted >> i)) >> 2;
-            past_index = (past_index + step) & (FRAME_HISTORY_SIZE - 1);
-            step >>= 1; // Reduce step size progressively
-          }
-          //*/
-
-          // Use all samples
-          /*
-          uint32_t expected_time = 0;
-          uint8_t past_index = (ir_signal_trigger_time_history_index - FRAME_HISTORY_SIZE) & (FRAME_HISTORY_SIZE - 1);
-          for (uint8_t i = 0; i < FRAME_HISTORY_SIZE; i++)
-          {
-              expected_time += ir_signal_trigger_time_history[past_index] >> FRAME_HISTORY_SHIFT;
-              past_index = (past_index + 1) & (FRAME_HISTORY_SIZE - 1);
-          }
-          expected_time += (ir_signal_trigger_frametime_average_shifted >> 1) + (ir_signal_trigger_frametime_average_shifted >> (FRAME_HISTORY_SHIFT + 1));
-          //*/
-
-          int16_t time_error = (int16_t)(expected_time - ir_signal_trigger_current_time);
-          int16_t temp_frame_delay_adjustment = time_error - (time_error >> 4); // Correction (~15/16 of error)
+          uint16_t raw_diff = ir_signal_trigger_current_timer1_tcnt - expected_time;
+          int16_t time_error = (int16_t)(raw_diff) >> 1;         // Convert from timer units (0.5 µs each) to microseconds.
+          int16_t temp_frame_delay_adjustment = time_error >> 4; // Correction (~1/16th of error)
           cli();
           ir_signal_trigger_frame_delay_adjustment[0] += temp_frame_delay_adjustment;
           ir_signal_trigger_frame_delay_adjustment[1] += temp_frame_delay_adjustment;
           sei();
 
-          //*
+          /*
           ir_signal_trigger_logger_counter++;
-          if (ir_signal_trigger_logger_counter % 120 == 0)
+          if (ir_signal_trigger_logger_counter % 1 == 0)
           {
             Serial.print(ir_signal_trigger_current_time);
             Serial.print(",");
+            Serial.print(ir_signal_trigger_current_timer1_tcnt);
+            Serial.print(",");
             Serial.print(expected_time);
+            Serial.print(",");
+            Serial.print(raw_diff);
             Serial.print(",");
             Serial.print(time_error);
             Serial.print(",");
@@ -590,16 +574,6 @@ void ir_signal_process_trigger(uint8_t left_eye)
           ir_signal_trigger_frame_delay_adjustment[1] = 0;
           sei();
         }
-      }
-
-      // **Update Rolling Time History**
-      ir_signal_trigger_time_history[ir_signal_trigger_time_history_index] = ir_signal_trigger_current_time;        // Store new value
-      ir_signal_trigger_time_history_index = (ir_signal_trigger_time_history_index + 1) & (FRAME_HISTORY_SIZE - 1); // Circular buffer
-
-      // **Mark history as valid after collecting FRAME_HISTORY_SIZE entries**
-      if (ir_signal_trigger_time_history_index == 0)
-      {
-        ir_signal_trigger_time_history_filled = true;
       }
     }
 
