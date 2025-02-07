@@ -19,6 +19,12 @@
 #endif
 #define NUMBER_OF_IR_PROTOCOLS 8
 
+#define IR_DRIVE_MODE_OPTICAL 0
+#define IR_DRIVE_MODE_PC_SERIAL 1
+#define IR_DRIVE_MODE_PC_SERIAL_LEFT 0
+#define IR_DRIVE_MODE_PC_SERIAL_RIGHT 1
+#define IR_DRIVE_MODE_MINIDIN3 2
+
 // defaults LCD 2560x1080 60hz
 /*
 #define OPT_SENSOR_BLOCK_SIGNAL_DETECTION_DELAY 15000 // in micros (some value around 90% of the frame rate, large enough to avoid false positive when signal is going down but small enough that dynamic framerate detection delay still works for displays without BFI)

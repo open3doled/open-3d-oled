@@ -13,6 +13,7 @@
 
 #include "settings.h"
 #include "ir_signal.h"
+#include "minidin3_trigger.h"
 #include "opt_sensor.h"
 #include "usb_trigger.h"
 
@@ -130,6 +131,10 @@ void setup()
     else if (ir_drive_mode == IR_DRIVE_MODE_PC_SERIAL)
     {
         usb_trigger_init();
+    }
+    else if (ir_drive_mode == IR_DRIVE_MODE_MINIDIN3)
+    {
+        minidin3_trigger_init();
     }
     Serial.println("init complete");
 }
@@ -314,14 +319,29 @@ void loop()
                             {
                                 if (ir_drive_mode == IR_DRIVE_MODE_OPTICAL)
                                 {
-                                    usb_trigger_stop();
-                                    opt_sensor_init();
+                                    opt_sensor_stop();
                                 }
                                 else if (ir_drive_mode == IR_DRIVE_MODE_PC_SERIAL)
                                 {
-                                    opt_sensor_stop();
+                                    usb_trigger_stop();
+                                }
+                                else if (ir_drive_mode == IR_DRIVE_MODE_MINIDIN3)
+                                {
+                                    minidin3_trigger_stop();
+                                }
+                                if (temp == IR_DRIVE_MODE_OPTICAL)
+                                {
+                                    opt_sensor_init();
+                                }
+                                else if (temp == IR_DRIVE_MODE_PC_SERIAL)
+                                {
                                     usb_trigger_init();
                                 }
+                                else if (temp == IR_DRIVE_MODE_MINIDIN3)
+                                {
+                                    minidin3_trigger_init();
+                                }
+                                ir_drive_mode = temp;
                             }
                         }
                         opt_sensor_settings_changed();
