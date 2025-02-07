@@ -46,6 +46,6 @@ void ir_signal_send(ir_signal_type signal);
 void ir_signal_send_request(ir_signal_type signal);
 void ir_signal_send_finished(void);
 void ir_signal_schedule_send_request(ir_signal_type signal, uint16_t delay);
-void ir_signal_process_trigger(uint8_t left_eye, uint16_t frametime, int16_t ir_frame_delay_adjustment, uint16_t override_tcnt1);
+void ir_signal_process_trigger(uint8_t left_eye);
 
 #endif /* _IR_SIGNAL_H_ */

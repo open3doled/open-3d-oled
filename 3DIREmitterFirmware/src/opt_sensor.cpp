@@ -437,7 +437,7 @@ void opt_sensor_check_readings(void)
 #ifdef ENABLE_DEBUG_PIN_OUTPUTS
                                         bitSet(PORT_DEBUG_AVERAGE_TIMING_MODE_RESYNC_D14, DEBUG_AVERAGE_TIMING_MODE_RESYNC_D14);
 #endif
-                                        ir_signal_process_trigger(opt_sensor_detected_signal_start_eye, opt_sensor_frametime_average, 0, 0);
+                                        ir_signal_process_trigger(opt_sensor_detected_signal_start_eye);
                                         opt_sensor_resync_average_timing_mode_required = false;
                                         opt_sensor_average_timing_mode_resync = true;
                                     }
@@ -458,7 +458,7 @@ void opt_sensor_check_readings(void)
 #ifdef ENABLE_DEBUG_PIN_OUTPUTS
                                             bitSet(PORT_DEBUG_AVERAGE_TIMING_MODE_RESYNC_D14, DEBUG_AVERAGE_TIMING_MODE_RESYNC_D14);
 #endif
-                                            ir_signal_process_trigger(opt_sensor_detected_signal_start_eye, opt_sensor_frametime_average, 0, 0);
+                                            ir_signal_process_trigger(opt_sensor_detected_signal_start_eye);
                                             opt_sensor_resync_average_timing_mode_required = false;
                                             opt_sensor_average_timing_mode_resync = true;
                                         }
@@ -472,7 +472,7 @@ void opt_sensor_check_readings(void)
                                 }
                                 else
                                 {
-                                    ir_signal_process_trigger(opt_sensor_detected_signal_start_eye, opt_sensor_frametime_average, 0, 0);
+                                    ir_signal_process_trigger(opt_sensor_detected_signal_start_eye);
                                 }
                                 opt_sensor_initiated_sending_ir_signal = true;
                             }
