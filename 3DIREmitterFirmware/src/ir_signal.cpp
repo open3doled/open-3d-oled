@@ -38,18 +38,9 @@ uint16_t ir_signal_send_last_open_left_tcnt1;
 ir_signal_type ir_signal_next_timer1_compb_scheduled_signal = SIGNAL_NONE;
 ir_signal_type ir_signal_next_timer1_compb_start_signal = SIGNAL_NONE;
 uint16_t ir_signal_next_timer1_compb_start_time = 0;
-ir_signal_type ir_signal_next_timer1_compb_next_scheduled_signal = SIGNAL_NONE;
-ir_signal_type ir_signal_next_timer1_compb_next_start_signal = SIGNAL_NONE;
-uint16_t ir_signal_next_timer1_compb_next_start_time = 0;
 ir_signal_type ir_signal_next_timer1_compc_scheduled_signal = SIGNAL_NONE;
 ir_signal_type ir_signal_next_timer1_compc_start_signal = SIGNAL_NONE;
 uint16_t ir_signal_next_timer1_compc_start_time = 0;
-ir_signal_type ir_signal_next_timer1_compc_next_scheduled_signal = SIGNAL_NONE;
-ir_signal_type ir_signal_next_timer1_compc_next_start_signal = SIGNAL_NONE;
-uint16_t ir_signal_next_timer1_compc_next_start_time = 0;
-
-uint16_t ir_average_timing_mode_no_trigger_counter = 0;
-uint16_t ir_average_frametime_in_timer_units = 0;
 
 // This should initialize timer1 for sending ir signals and timer4 for scheduling
 // ir signals on both left and right eyes using two different comparators.
@@ -78,13 +69,6 @@ void ir_signal_init()
   ir_signal_next_timer1_compb_start_time = 0;
   ir_signal_next_timer1_compc_scheduled_signal = SIGNAL_NONE;
   ir_signal_next_timer1_compc_start_time = 0;
-  ir_signal_next_timer1_compb_next_scheduled_signal = SIGNAL_NONE;
-  ir_signal_next_timer1_compb_next_start_time = 0;
-  ir_signal_next_timer1_compc_next_scheduled_signal = SIGNAL_NONE;
-  ir_signal_next_timer1_compc_next_start_time = 0;
-
-  ir_average_timing_mode_no_trigger_counter = 0;
-  ir_average_frametime_in_timer_units = 0;
 
   // Initialize timer1 for scheduling IR signal sends
   TCCR1C = 0; // Timer stopped, normal mode
@@ -368,20 +352,6 @@ void ir_signal_schedule_send_request(ir_signal_type signal, uint16_t timer1_tcnt
     }
   }
 
-  while (ir_average_timing_mode == 1 && timer1_tcnt_target > ir_average_frametime_in_timer_units)
-  {
-    timer1_tcnt_target -= ir_average_frametime_in_timer_units;
-  }
-
-  if (ir_average_timing_mode == 1)
-  {
-    // In timing mode we always stop all existing timers to allow for phase correction
-    bitClear(TIMSK1, OCIE1B);
-    bitClear(TIMSK1, OCIE1C);
-    ir_signal_next_timer1_compb_scheduled_signal = SIGNAL_NONE;
-    ir_signal_next_timer1_compc_scheduled_signal = SIGNAL_NONE;
-  }
-
   if (signal == SIGNAL_OPEN_LEFT || signal == SIGNAL_OPEN_LEFT_CLOSE_RIGHT)
   {
     if (ir_signal_next_timer1_compb_scheduled_signal == SIGNAL_NONE)
@@ -393,20 +363,6 @@ void ir_signal_schedule_send_request(ir_signal_type signal, uint16_t timer1_tcnt
       ir_signal_next_timer1_compb_scheduled_signal = signal;
       ir_signal_next_timer1_compb_start_signal = signal;
       ir_signal_next_timer1_compb_start_time = timer1_tcnt_target;
-      if (ir_average_timing_mode == 1)
-      {
-        ir_signal_next_timer1_compc_start_signal = (signal == SIGNAL_OPEN_LEFT_CLOSE_RIGHT ? SIGNAL_OPEN_RIGHT_CLOSE_LEFT : SIGNAL_OPEN_RIGHT);
-        ir_signal_next_timer1_compc_start_time = timer1_tcnt_target;
-      }
-      sei();
-    }
-    else if (ir_average_timing_mode == 0 && ir_signal_next_timer1_compb_next_scheduled_signal == SIGNAL_NONE)
-    {
-      // We only allow queing commands when not running in timing mode
-      cli();
-      ir_signal_next_timer1_compb_next_scheduled_signal = signal;
-      ir_signal_next_timer1_compb_next_start_signal = signal;
-      ir_signal_next_timer1_compb_next_start_time = timer1_tcnt_target;
       sei();
     }
   }
@@ -421,20 +377,6 @@ void ir_signal_schedule_send_request(ir_signal_type signal, uint16_t timer1_tcnt
       ir_signal_next_timer1_compc_scheduled_signal = signal;
       ir_signal_next_timer1_compc_start_signal = signal;
       ir_signal_next_timer1_compc_start_time = timer1_tcnt_target;
-      if (ir_average_timing_mode == 1)
-      {
-        ir_signal_next_timer1_compb_start_signal = (signal == SIGNAL_OPEN_RIGHT_CLOSE_LEFT ? SIGNAL_OPEN_LEFT_CLOSE_RIGHT : SIGNAL_OPEN_LEFT);
-        ir_signal_next_timer1_compb_start_time = timer1_tcnt_target;
-      }
-      sei();
-    }
-    else if (ir_average_timing_mode == 0 && ir_signal_next_timer1_compc_next_scheduled_signal == SIGNAL_NONE)
-    {
-      // We only allow queing commands when not running in timing mode
-      cli();
-      ir_signal_next_timer1_compc_next_scheduled_signal = signal;
-      ir_signal_next_timer1_compc_next_start_signal = signal;
-      ir_signal_next_timer1_compc_next_start_time = timer1_tcnt_target;
       sei();
     }
   }
@@ -467,32 +409,7 @@ ISR(TIMER1_COMPB_vect)
     }
     ir_signal_next_timer1_compb_scheduled_signal = SIGNAL_CLOSE_LEFT;
     scheduled_signal_time_temp = OCR1B + ((ir_frame_duration - scheduled_signal_time_temp) << 1);
-    while (ir_average_timing_mode == 1 && scheduled_signal_time_temp > ir_average_frametime_in_timer_units)
-    {
-      scheduled_signal_time_temp -= ir_average_frametime_in_timer_units;
-    }
     OCR1B = scheduled_signal_time_temp;
-  }
-  else if (ir_average_timing_mode == 1 && (scheduled_signal == SIGNAL_CLOSE_LEFT || scheduled_signal == SIGNAL_OPEN_LEFT_CLOSE_RIGHT))
-  {
-    if (ir_average_timing_mode_no_trigger_counter < MAX_SIGNALS_TO_GENERATE_WITHOUT_TRIGGER)
-    {
-      ir_average_timing_mode_no_trigger_counter++;
-      ir_signal_next_timer1_compc_scheduled_signal = ir_signal_next_timer1_compc_start_signal;
-      OCR1C = ir_signal_next_timer1_compc_start_time;
-      bitSet(TIFR1, OCF1C);
-      bitSet(TIMSK1, OCIE1C);
-    }
-    ir_signal_next_timer1_compb_scheduled_signal = SIGNAL_NONE;
-    bitClear(TIMSK1, OCIE1B);
-  }
-  else if (ir_average_timing_mode == 0 && ir_signal_next_timer1_compb_next_scheduled_signal != SIGNAL_NONE)
-  {
-    // We only allow queing commands when not running in timing mode
-    ir_signal_next_timer1_compb_scheduled_signal = ir_signal_next_timer1_compb_next_scheduled_signal;
-    OCR1B = ir_signal_next_timer1_compb_next_start_time;
-    ir_signal_next_timer1_compb_next_scheduled_signal = SIGNAL_NONE;
-    ir_signal_next_timer1_compb_next_start_time = 0;
   }
   else
   {
@@ -521,32 +438,7 @@ ISR(TIMER1_COMPC_vect)
     }
     ir_signal_next_timer1_compc_scheduled_signal = SIGNAL_CLOSE_RIGHT;
     scheduled_signal_time_temp = OCR1C + ((ir_frame_duration - scheduled_signal_time_temp) << 1);
-    while (ir_average_timing_mode == 1 && scheduled_signal_time_temp > ir_average_frametime_in_timer_units)
-    {
-      scheduled_signal_time_temp -= ir_average_frametime_in_timer_units;
-    }
     OCR1C = scheduled_signal_time_temp;
-  }
-  else if (ir_average_timing_mode == 1 && (scheduled_signal == SIGNAL_CLOSE_RIGHT || scheduled_signal == SIGNAL_OPEN_RIGHT_CLOSE_LEFT))
-  {
-    if (ir_average_timing_mode_no_trigger_counter < MAX_SIGNALS_TO_GENERATE_WITHOUT_TRIGGER)
-    {
-      ir_average_timing_mode_no_trigger_counter++;
-      ir_signal_next_timer1_compb_scheduled_signal = ir_signal_next_timer1_compb_start_signal;
-      OCR1B = ir_signal_next_timer1_compb_start_time;
-      bitSet(TIFR1, OCF1B);
-      bitSet(TIMSK1, OCIE1B);
-    }
-    ir_signal_next_timer1_compc_scheduled_signal = SIGNAL_NONE;
-    bitClear(TIMSK1, OCIE1C);
-  }
-  else if (ir_average_timing_mode == 0 && ir_signal_next_timer1_compc_next_scheduled_signal != SIGNAL_NONE)
-  {
-    // We only allow queing commands when not running in timing mode
-    ir_signal_next_timer1_compc_scheduled_signal = ir_signal_next_timer1_compc_next_scheduled_signal;
-    OCR1C = ir_signal_next_timer1_compc_next_start_time;
-    ir_signal_next_timer1_compc_next_scheduled_signal = SIGNAL_NONE;
-    ir_signal_next_timer1_compc_next_start_time = 0;
   }
   else
   {
@@ -577,34 +469,6 @@ void ir_signal_process_trigger(uint8_t left_eye)
   }
   cli();
   uint16_t current_tcnt1 = TCNT1;
-
-  if (ir_average_timing_mode == 1)
-  {
-    // bitToggle(PORT_DEBUG_PORT_D15, DEBUG_PORT_D15); // debug
-    ir_average_timing_mode_no_trigger_counter = 0;
-    ir_average_frametime_in_timer_units = frametime << 1;
-    TCCR1B |= _BV(WGM12);
-    OCR1A = ir_average_frametime_in_timer_units;
-    //*
-    if (ir_signal_next_timer1_compb_start_time > ir_average_frametime_in_timer_units)
-    {
-      ir_signal_next_timer1_compb_start_time = 0;
-    }
-    if (ir_signal_next_timer1_compc_start_time > ir_average_frametime_in_timer_units)
-    {
-      ir_signal_next_timer1_compc_start_time = 0;
-    }
-    if (current_tcnt1 > ir_average_frametime_in_timer_units)
-    {
-      TCNT1 = 0;
-      current_tcnt1 = 0;
-    }
-    //*/
-  }
-  else
-  {
-    TCCR1B &= ~(_BV(WGM12));
-  }
   sei();
   ir_signal_schedule_send_request(ir_desired_signal, current_tcnt1 + (ir_frame_delay << 1));
 }
