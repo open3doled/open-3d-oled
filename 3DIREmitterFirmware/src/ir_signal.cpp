@@ -48,6 +48,7 @@ ir_signal_type ir_signal_next_timer1_compc_start_signal = SIGNAL_NONE;
 uint16_t ir_signal_next_timer1_compc_start_time = 0;
 uint16_t ir_average_timing_mode_no_trigger_counter = 0;
 volatile bool ir_average_timing_mode_running[2] = {false}; // 0 - left, 1 - right
+volatile bool ir_average_timing_mode_stop[2] = {false};    // 0 - left, 1 - right
 volatile uint16_t ir_average_timing_mode_last_open_timer1_tcnt[2] = {0};
 volatile bool ir_average_timing_mode_last_open_timer1_tcnt_set[2] = {false};
 
@@ -99,6 +100,7 @@ void ir_signal_init()
   ir_signal_next_timer1_compc_start_time = 0;
   ir_average_timing_mode_no_trigger_counter = 0;
   memset((void *)ir_average_timing_mode_running, 0, sizeof(ir_average_timing_mode_running));
+  memset((void *)ir_average_timing_mode_stop, 0, sizeof(ir_average_timing_mode_stop));
   memset((void *)ir_average_timing_mode_last_open_timer1_tcnt, 0, sizeof(ir_average_timing_mode_last_open_timer1_tcnt));
   memset((void *)ir_average_timing_mode_last_open_timer1_tcnt_set, 0, sizeof(ir_average_timing_mode_last_open_timer1_tcnt_set));
 
@@ -387,15 +389,26 @@ ISR(TIMER1_COMPB_vect)
 
   if (scheduled_signal == SIGNAL_OPEN_LEFT)
   {
-    ir_signal_next_timer1_compb_scheduled_signal = SIGNAL_CLOSE_LEFT;
-    ir_average_timing_mode_last_open_timer1_tcnt[1] = OCR1B - (ir_frame_delay << 1) + scheduled_signal_time_temp; // not sure if the token_length we are using here is the right one
-    scheduled_signal_time_temp = OCR1B + ((ir_frame_duration - scheduled_signal_time_temp) << 1);
-    OCR1B = scheduled_signal_time_temp;
-    ir_average_timing_mode_last_open_timer1_tcnt_set[1] = true;
+    if (ir_average_timing_mode == 1 && ir_average_timing_mode_stop[1] == true) // If average timing mode has been stopped we are not going to execute the signal so we don't need to schedule a correspond close
+    {
+      ir_signal_next_timer1_compb_scheduled_signal = SIGNAL_NONE;
+      ir_average_timing_mode_stop[1] = false;
+      ir_average_timing_mode_running[1] = false;
+      bitClear(TIMSK1, OCIE1B);
+    }
+    else
+    {
+      ir_signal_next_timer1_compb_scheduled_signal = SIGNAL_CLOSE_LEFT;
+      ir_average_timing_mode_last_open_timer1_tcnt[1] = OCR1B - (ir_frame_delay << 1) + scheduled_signal_time_temp; // not sure if the token_length we are using here is the right one
+      scheduled_signal_time_temp = OCR1B + ((ir_frame_duration - scheduled_signal_time_temp) << 1);
+      OCR1B = scheduled_signal_time_temp;
+      ir_average_timing_mode_last_open_timer1_tcnt_set[1] = true;
+      ir_signal_send_request(scheduled_signal);
+    }
   }
   else
   {
-    if (ir_average_timing_mode == 1 && ir_average_timing_mode_running[1] == true && ir_average_timing_mode_no_trigger_counter < MAX_SIGNALS_TO_GENERATE_WITHOUT_TRIGGER)
+    if (ir_average_timing_mode == 1 && ir_average_timing_mode_stop[1] == false && ir_average_timing_mode_no_trigger_counter < MAX_SIGNALS_TO_GENERATE_WITHOUT_TRIGGER)
     {
       ir_average_timing_mode_no_trigger_counter++;
       ir_signal_next_timer1_compb_scheduled_signal = ir_signal_next_timer1_compb_start_signal;
@@ -406,11 +419,12 @@ ISR(TIMER1_COMPB_vect)
     else
     {
       ir_signal_next_timer1_compb_scheduled_signal = SIGNAL_NONE;
+      ir_average_timing_mode_stop[1] = false;
       ir_average_timing_mode_running[1] = false;
       bitClear(TIMSK1, OCIE1B);
     }
+    ir_signal_send_request(scheduled_signal);
   }
-  ir_signal_send_request(scheduled_signal);
 }
 
 ISR(TIMER1_COMPC_vect)
@@ -430,15 +444,26 @@ ISR(TIMER1_COMPC_vect)
   }
   if (scheduled_signal == SIGNAL_OPEN_RIGHT)
   {
-    ir_signal_next_timer1_compc_scheduled_signal = SIGNAL_CLOSE_RIGHT;
-    ir_average_timing_mode_last_open_timer1_tcnt[0] = OCR1C - (ir_frame_delay << 1) + scheduled_signal_time_temp; // not sure if the token_length we are using here is the right one
-    scheduled_signal_time_temp = OCR1C + ((ir_frame_duration - scheduled_signal_time_temp) << 1);
-    OCR1C = scheduled_signal_time_temp;
-    ir_average_timing_mode_last_open_timer1_tcnt_set[0] = true;
+    if (ir_average_timing_mode == 1 && ir_average_timing_mode_stop[0] == true) // If average timing mode has been stopped we are not going to execute the signal so we don't need to schedule a correspond close
+    {
+      ir_signal_next_timer1_compc_scheduled_signal = SIGNAL_NONE;
+      ir_average_timing_mode_stop[0] = false;
+      ir_average_timing_mode_running[0] = false;
+      bitClear(TIMSK1, OCIE1C);
+    }
+    else
+    {
+      ir_signal_next_timer1_compc_scheduled_signal = SIGNAL_CLOSE_RIGHT;
+      ir_average_timing_mode_last_open_timer1_tcnt[0] = OCR1C - (ir_frame_delay << 1) + scheduled_signal_time_temp; // not sure if the token_length we are using here is the right one
+      scheduled_signal_time_temp = OCR1C + ((ir_frame_duration - scheduled_signal_time_temp) << 1);
+      OCR1C = scheduled_signal_time_temp;
+      ir_average_timing_mode_last_open_timer1_tcnt_set[0] = true;
+      ir_signal_send_request(scheduled_signal);
+    }
   }
   else
   {
-    if (ir_average_timing_mode == 1 && ir_average_timing_mode_running[0] == true && ir_average_timing_mode_no_trigger_counter < MAX_SIGNALS_TO_GENERATE_WITHOUT_TRIGGER)
+    if (ir_average_timing_mode == 1 && ir_average_timing_mode_stop[0] == false && ir_average_timing_mode_no_trigger_counter < MAX_SIGNALS_TO_GENERATE_WITHOUT_TRIGGER)
     {
       ir_average_timing_mode_no_trigger_counter++;
       ir_signal_next_timer1_compc_scheduled_signal = ir_signal_next_timer1_compc_start_signal;
@@ -449,11 +474,12 @@ ISR(TIMER1_COMPC_vect)
     else
     {
       ir_signal_next_timer1_compc_scheduled_signal = SIGNAL_NONE;
+      ir_average_timing_mode_stop[0] = false;
       ir_average_timing_mode_running[0] = false;
       bitClear(TIMSK1, OCIE1C);
     }
+    ir_signal_send_request(scheduled_signal);
   }
-  ir_signal_send_request(scheduled_signal);
 }
 
 /*
@@ -528,21 +554,22 @@ void ir_signal_process_trigger(uint8_t left_eye)
 
         if (ir_average_timing_mode_last_open_timer1_tcnt_set[left_eye])
         {
+          bitToggle(PORT_DEBUG_PORT_D15, DEBUG_PORT_D15);
           uint16_t expected_time = (ir_average_timing_mode_last_open_timer1_tcnt[left_eye]) + (ir_signal_trigger_frametime_average << 2); // tcnt in timer units and frametime is in microseconds but needs to doubled for a full left right cycle as it is the display refresh frame time, then doubled again to make it into timer units.
 
           uint16_t raw_diff = ir_signal_trigger_current_timer1_tcnt - expected_time;
           int16_t time_error = (int16_t)(raw_diff) >> 1; // Convert from timer units (0.5 µs each) to microseconds.
           int16_t temp_frame_delay_adjustment;
           bool temp_detected_dropped_frame = false;
-          if (time_error >= (((int16_t)ir_signal_trigger_frametime_average) - 500) && time_error <= ((int16_t)ir_signal_trigger_frametime_average) + 500)
+          if (time_error >= (((int16_t)ir_signal_trigger_frametime_average) - 1000) && time_error <= ((int16_t)ir_signal_trigger_frametime_average) + 1000)
           {
-            temp_frame_delay_adjustment = ir_signal_trigger_frametime_average; // If time error is approximately average frametime we probably have a dropped frame so just fully invert.
+            // temp_frame_delay_adjustment = ir_signal_trigger_frametime_average; // If time error is approximately average frametime we probably have a dropped frame so just fully invert.
             ir_signal_trigger_logger_counter = 0;
             temp_detected_dropped_frame = true;
           }
-          else if (time_error >= (-((int16_t)ir_signal_trigger_frametime_average) - 500) && time_error <= -((int16_t)ir_signal_trigger_frametime_average) + 500)
+          else if (time_error >= (-((int16_t)ir_signal_trigger_frametime_average) - 1000) && time_error <= -((int16_t)ir_signal_trigger_frametime_average) + 1000)
           {
-            temp_frame_delay_adjustment = -ir_signal_trigger_frametime_average; // If time error is approximately average frametime we probably have a dropped frame so just fully invert.
+            // temp_frame_delay_adjustment = -ir_signal_trigger_frametime_average; // If time error is approximately average frametime we probably have a dropped frame so just fully invert.
             ir_signal_trigger_logger_counter = 0;
             temp_detected_dropped_frame = true;
           }
@@ -553,27 +580,27 @@ void ir_signal_process_trigger(uint8_t left_eye)
           cli();
           ir_signal_trigger_frame_delay_adjustment[0] += temp_frame_delay_adjustment;
           ir_signal_trigger_frame_delay_adjustment[1] += temp_frame_delay_adjustment;
+          //*
           if (temp_detected_dropped_frame)
           {
-            if (left_eye)
-            {
-              ir_signal_next_timer1_compc_scheduled_signal = SIGNAL_NONE;
-              bitClear(TIMSK1, OCIE1C);
-              bitSet(TIFR1, OCF1C);
-              ir_average_timing_mode_last_open_timer1_tcnt_set[0] = false;
-              ir_signal_trigger_frame_delay_adjustment[0] = 0;
-              ir_average_timing_mode_running[0] = false;
-            }
-            else
-            {
-              ir_signal_next_timer1_compb_scheduled_signal = SIGNAL_NONE;
-              bitClear(TIMSK1, OCIE1B);
-              bitSet(TIFR1, OCF1B);
-              ir_average_timing_mode_last_open_timer1_tcnt_set[1] = false;
-              ir_signal_trigger_frame_delay_adjustment[1] = 0;
-              ir_average_timing_mode_running[1] = false;
-            }
+
+            bitToggle(PORT_DEBUG_DUPLICATE_FRAME_D16, DEBUG_DUPLICATE_FRAME_D16);
+            // ir_signal_next_timer1_compc_scheduled_signal = SIGNAL_NONE;
+            // bitClear(TIMSK1, OCIE1C);
+            // bitSet(TIFR1, OCF1C);
+            ir_average_timing_mode_last_open_timer1_tcnt_set[0] = false;
+            ir_signal_trigger_frame_delay_adjustment[0] = 0;
+            ir_average_timing_mode_stop[0] = true;
+            ir_average_timing_mode_running[0] = false;
+            // ir_signal_next_timer1_compb_scheduled_signal = SIGNAL_NONE;
+            // bitClear(TIMSK1, OCIE1B);
+            // bitSet(TIFR1, OCF1B);
+            ir_average_timing_mode_last_open_timer1_tcnt_set[1] = false;
+            ir_signal_trigger_frame_delay_adjustment[1] = 0;
+            ir_average_timing_mode_stop[1] = true;
+            ir_average_timing_mode_running[1] = false;
           }
+          //*/
           sei();
 
           //*
@@ -635,13 +662,13 @@ void ir_signal_process_trigger(uint8_t left_eye)
     if (ir_glasses_selected_library != ir_glasses_selected_library_sub_ir_signal_schedule_send_request)
     {
       // If the selected glasses have changed we need to stop everything.
-      ir_signal_next_timer1_compb_scheduled_signal = SIGNAL_NONE;
+      // ir_signal_next_timer1_compb_scheduled_signal = SIGNAL_NONE;
       bitClear(TIMSK1, OCIE1B);
       bitSet(TIFR1, OCF1B);
       ir_average_timing_mode_last_open_timer1_tcnt_set[1] = false;
       ir_signal_trigger_frame_delay_adjustment[1] = 0;
       ir_average_timing_mode_running[1] = false;
-      ir_signal_next_timer1_compc_scheduled_signal = SIGNAL_NONE;
+      // ir_signal_next_timer1_compc_scheduled_signal = SIGNAL_NONE;
       bitClear(TIMSK1, OCIE1C);
       bitSet(TIFR1, OCF1C);
       ir_average_timing_mode_last_open_timer1_tcnt_set[0] = false;
