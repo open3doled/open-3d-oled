@@ -65,7 +65,7 @@ bool ir_signal_trigger_frametime_average_set = false;
 uint32_t ir_signal_trigger_frametime_average_shifted = 0;
 volatile uint16_t ir_signal_trigger_frametime_average = 0;
 volatile int16_t ir_signal_trigger_frame_delay_adjustment[2] = {0};
-volatile uint16_t ir_signal_trigger_logger_counter = 0;
+// volatile uint16_t ir_signal_trigger_logger_counter = 0;
 
 // This should initialize timer1 for sending ir signals and timer4 for scheduling
 // ir signals on both left and right eyes using two different comparators.
@@ -113,7 +113,7 @@ void ir_signal_init()
   ir_signal_trigger_frametime_average_shifted = 0;
   ir_signal_trigger_frametime_average = 0;
   memset((void *)ir_signal_trigger_frame_delay_adjustment, 0, sizeof(ir_signal_trigger_frame_delay_adjustment));
-  ir_signal_trigger_logger_counter = 0;
+  // ir_signal_trigger_logger_counter = 0;
   sei();
 
   // Initialize timer1 for scheduling IR signal sends
@@ -554,7 +554,6 @@ void ir_signal_process_trigger(uint8_t left_eye)
 
         if (ir_average_timing_mode_last_open_timer1_tcnt_set[left_eye])
         {
-          bitToggle(PORT_DEBUG_PORT_D15, DEBUG_PORT_D15);
           uint16_t expected_time = (ir_average_timing_mode_last_open_timer1_tcnt[left_eye]) + (ir_signal_trigger_frametime_average << 2); // tcnt in timer units and frametime is in microseconds but needs to doubled for a full left right cycle as it is the display refresh frame time, then doubled again to make it into timer units.
 
           uint16_t raw_diff = ir_signal_trigger_current_timer1_tcnt - expected_time;
@@ -563,14 +562,12 @@ void ir_signal_process_trigger(uint8_t left_eye)
           bool temp_detected_dropped_frame = false;
           if (time_error >= (((int16_t)ir_signal_trigger_frametime_average) - 1000) && time_error <= ((int16_t)ir_signal_trigger_frametime_average) + 1000)
           {
-            // temp_frame_delay_adjustment = ir_signal_trigger_frametime_average; // If time error is approximately average frametime we probably have a dropped frame so just fully invert.
-            ir_signal_trigger_logger_counter = 0;
+            // temp_frame_delay_adjustment = ir_signal_trigger_frametime_average; // METHOD 2: If time error is approximately average frametime we probably have a dropped frame so just fully invert.
             temp_detected_dropped_frame = true;
           }
           else if (time_error >= (-((int16_t)ir_signal_trigger_frametime_average) - 1000) && time_error <= -((int16_t)ir_signal_trigger_frametime_average) + 1000)
           {
-            // temp_frame_delay_adjustment = -ir_signal_trigger_frametime_average; // If time error is approximately average frametime we probably have a dropped frame so just fully invert.
-            ir_signal_trigger_logger_counter = 0;
+            // temp_frame_delay_adjustment = -ir_signal_trigger_frametime_average; // METHOD 2: If time error is approximately average frametime we probably have a dropped frame so just fully invert.
             temp_detected_dropped_frame = true;
           }
           else
@@ -584,26 +581,37 @@ void ir_signal_process_trigger(uint8_t left_eye)
           if (temp_detected_dropped_frame)
           {
 
-            bitToggle(PORT_DEBUG_DUPLICATE_FRAME_D16, DEBUG_DUPLICATE_FRAME_D16);
-            // ir_signal_next_timer1_compc_scheduled_signal = SIGNAL_NONE;
-            // bitClear(TIMSK1, OCIE1C);
-            // bitSet(TIFR1, OCF1C);
+            // On duplicate just bump the comparators and last updates by one frame cycle
+            OCR1B += ir_signal_trigger_frametime_average << 1;
+            OCR1C += ir_signal_trigger_frametime_average << 1;
+            ir_average_timing_mode_last_open_timer1_tcnt[0] += ir_signal_trigger_frametime_average << 1;
+            ir_average_timing_mode_last_open_timer1_tcnt[1] += ir_signal_trigger_frametime_average << 1;
+            ir_signal_trigger_frame_delay_adjustment[0] = 0;
+            ir_signal_trigger_frame_delay_adjustment[1] = 0;
+            // ir_signal_trigger_logger_counter = 0;
+
+            // METHOD2: It may be preferable to end the current average timing mode and let it re-initialize itself this can be done as below
+            /*
+            ir_signal_next_timer1_compc_scheduled_signal = SIGNAL_NONE;
+            bitClear(TIMSK1, OCIE1C);
+            bitSet(TIFR1, OCF1C);
             ir_average_timing_mode_last_open_timer1_tcnt_set[0] = false;
             ir_signal_trigger_frame_delay_adjustment[0] = 0;
             ir_average_timing_mode_stop[0] = true;
             ir_average_timing_mode_running[0] = false;
-            // ir_signal_next_timer1_compb_scheduled_signal = SIGNAL_NONE;
-            // bitClear(TIMSK1, OCIE1B);
-            // bitSet(TIFR1, OCF1B);
+            ir_signal_next_timer1_compb_scheduled_signal = SIGNAL_NONE;
+            bitClear(TIMSK1, OCIE1B);
+            bitSet(TIFR1, OCF1B);
             ir_average_timing_mode_last_open_timer1_tcnt_set[1] = false;
             ir_signal_trigger_frame_delay_adjustment[1] = 0;
             ir_average_timing_mode_stop[1] = true;
             ir_average_timing_mode_running[1] = false;
+            //*/
           }
           //*/
           sei();
 
-          //*
+          /*
           ir_signal_trigger_logger_counter++;
           // if (ir_signal_trigger_logger_counter % 1 == 0)
           if (ir_signal_trigger_logger_counter <= 10)
