@@ -619,13 +619,13 @@ void ir_signal_process_trigger(uint8_t left_eye)
             diff_time_left_right = (int16_t)((temp_ir_average_timing_mode_last_open_timer1_tcnt[1]) - (temp_ir_average_timing_mode_last_open_timer1_tcnt[0]) - (temp_ir_signal_trigger_frametime_average_effective << 1)) >> 1;
             diff_time_right_left = (int16_t)((temp_ir_average_timing_mode_last_open_timer1_tcnt[0]) - (temp_ir_average_timing_mode_last_open_timer1_tcnt[1]) - (temp_ir_signal_trigger_frametime_average_effective << 1)) >> 1;
             sei();
-            if (diff_time_left_right > -500 && diff_time_left_right < 500)
+            if (diff_time_left_right > -5000 && diff_time_left_right < 5000)
             {
               // because we adjust both we only need half for each, and we also only apply half the adjustment factor incase there is something wrong.
               temp_ir_signal_trigger_frame_delay_adjustment[0] += diff_time_left_right >> 2;
               temp_ir_signal_trigger_frame_delay_adjustment[1] -= diff_time_left_right >> 2;
             }
-            else if (diff_time_right_left > -500 && diff_time_right_left < 500)
+            else if (diff_time_right_left > -5000 && diff_time_right_left < 5000)
             {
               // because we adjust both we only need half for each, and we also only apply half the adjustment factor incase there is something wrong.
               temp_ir_signal_trigger_frame_delay_adjustment[0] -= diff_time_right_left >> 2;
