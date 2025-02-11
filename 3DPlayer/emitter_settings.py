@@ -1138,7 +1138,7 @@ class EmitterSettingsDialog:
             "ir_frame_duration": self.setting_ir_frame_duration_variable.get(),
             "ir_signal_spacing": self.setting_ir_signal_spacing_variable.get(),
             "ir_flip_eyes": self.setting_ir_flip_eyes_variable.get(),
-            "ir_average_timing_mode": self.setting_ir_flip_eyes_variable.get(),
+            "ir_average_timing_mode": self.setting_ir_average_timing_mode_variable.get(),
             "target_frametime": self.setting_target_frametime_variable.get(),
             "pwm_backlight_frequency": self.setting_pwm_backlight_frequency_variable.get(),
             "opt_block_signal_detection_delay": self.setting_opt_block_signal_detection_delay_variable.get(),

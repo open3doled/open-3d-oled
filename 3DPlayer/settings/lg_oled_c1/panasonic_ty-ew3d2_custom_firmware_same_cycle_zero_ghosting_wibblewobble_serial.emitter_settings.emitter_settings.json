@@ -5,7 +5,7 @@
   "ir_frame_duration": "6800",
   "ir_signal_spacing": "30",
   "ir_flip_eyes": "0",
-  "ir_average_timing_mode": "0",
+  "ir_average_timing_mode": "1",
   "target_frametime": "8333",
   "pwm_backlight_frequency": "120",
   "opt_block_signal_detection_delay": "6500",
