@@ -543,12 +543,11 @@ void ir_signal_process_trigger(uint8_t left_eye)
         new_ir_signal_trigger_frametime_average_shifted += new_frametime;
 
         // Ensure new_frametime is within 30 microseconds of the target before updating (unless we have no target frame time or we are still initializing)
-        uint16_t new_ir_signal_trigger_frametime_average = new_ir_signal_trigger_frametime_average_shifted >> FRAME_HISTORY_SHIFT;
         if (target_frametime == 0 || (new_frametime >= target_frametime - 50 && new_frametime <= target_frametime + 50))
         {
           ir_signal_trigger_frametime_average_shifted = new_ir_signal_trigger_frametime_average_shifted;
           cli();
-          ir_signal_trigger_frametime_average = new_ir_signal_trigger_frametime_average;
+          ir_signal_trigger_frametime_average = new_ir_signal_trigger_frametime_average_shifted >> FRAME_HISTORY_SHIFT;
           sei();
         }
 
@@ -560,6 +559,12 @@ void ir_signal_process_trigger(uint8_t left_eye)
           int16_t time_error = (int16_t)(raw_diff) >> 1; // Convert from timer units (0.5 µs each) to microseconds.
           int16_t temp_frame_delay_adjustment;
           bool temp_detected_dropped_frame = false;
+          // if ir_average_timing_mode_last_open_timer1_tcnt is actually from this cycle and not from the prior cycle (<-1.5*frametime_average) due to the update coming in late then we need to add 2*ir_signal_trigger_frametime_average to time_error
+          if (time_error < (-((int16_t)ir_signal_trigger_frametime_average) - ((int16_t)ir_signal_trigger_frametime_average >> 1)))
+          {
+            // Serial.println(time_error);
+            time_error += (ir_signal_trigger_frametime_average << 1);
+          }
           if (time_error >= (((int16_t)ir_signal_trigger_frametime_average) - 1000) && time_error <= ((int16_t)ir_signal_trigger_frametime_average) + 1000)
           {
             // temp_frame_delay_adjustment = ir_signal_trigger_frametime_average; // METHOD 2: If time error is approximately average frametime we probably have a dropped frame so just fully invert.
@@ -572,7 +577,8 @@ void ir_signal_process_trigger(uint8_t left_eye)
           }
           else
           {
-            temp_frame_delay_adjustment = time_error >> 4; // Otherwise applya a correction (~1/16th of error)
+            // temp_frame_delay_adjustment = time_error >> 4; // Otherwise applya a correction (~1/16th of error)
+            temp_frame_delay_adjustment = time_error >> 5; // Otherwise applya a correction (~1/32nd of error)
           }
           cli();
           ir_signal_trigger_frame_delay_adjustment[0] += temp_frame_delay_adjustment;
@@ -580,7 +586,6 @@ void ir_signal_process_trigger(uint8_t left_eye)
           //*
           if (temp_detected_dropped_frame)
           {
-
             // On duplicate just bump the comparators and last updates by one frame cycle
             OCR1B += ir_signal_trigger_frametime_average << 1;
             OCR1C += ir_signal_trigger_frametime_average << 1;
@@ -613,10 +618,12 @@ void ir_signal_process_trigger(uint8_t left_eye)
 
           /*
           ir_signal_trigger_logger_counter++;
-          // if (ir_signal_trigger_logger_counter % 1 == 0)
-          if (ir_signal_trigger_logger_counter <= 10)
+          if (ir_signal_trigger_logger_counter % 1 == 0)
+          // if (ir_signal_trigger_logger_counter <= 10)
           {
-            Serial.print(ir_signal_trigger_current_time);
+            // Serial.print(ir_signal_trigger_current_time);
+            // Serial.print(",");
+            Serial.print(ir_average_timing_mode_last_open_timer1_tcnt[left_eye]);
             Serial.print(",");
             Serial.print(ir_signal_trigger_current_timer1_tcnt);
             Serial.print(",");
@@ -625,12 +632,12 @@ void ir_signal_process_trigger(uint8_t left_eye)
             Serial.print(raw_diff);
             Serial.print(",");
             Serial.print(time_error);
-            Serial.print(",");
-            Serial.print(ir_signal_trigger_frame_delay_adjustment[0]);
-            Serial.print(",");
-            Serial.print(ir_signal_trigger_frame_delay_adjustment[1]);
-            Serial.print(",");
-            Serial.print(ir_signal_trigger_frametime_average_shifted >> FRAME_HISTORY_SHIFT);
+            // Serial.print(",");
+            // Serial.print(ir_signal_trigger_frame_delay_adjustment[0]);
+            // Serial.print(",");
+            // Serial.print(ir_signal_trigger_frame_delay_adjustment[1]);
+            // Serial.print(",");
+            // Serial.print(ir_signal_trigger_frametime_average_shifted >> FRAME_HISTORY_SHIFT);
             Serial.println();
           }
           //*/
