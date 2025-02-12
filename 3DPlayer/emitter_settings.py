@@ -677,6 +677,50 @@ class EmitterSettingsDialog:
         self.setting_ir_flip_eyes_frame.grid(row=row_count, column=0, sticky="w")
         row_count += 1
 
+        self.setting_ir_average_timing_mode_frame = tkinter.Frame(top)
+        self.setting_ir_average_timing_mode_variable = tkinter.StringVar(top)
+        self.setting_ir_average_timing_mode_variable.set(DEFAULT_IR_AVERAGE_TIMING_MODE)
+        self.setting_ir_average_timing_mode_label = tkinter.Label(
+            self.setting_ir_average_timing_mode_frame,
+            text="IR Average Timing Mode: ",
+        )
+        self.setting_ir_average_timing_mode_label.pack(padx=5, side=tkinter.LEFT)
+        self.setting_ir_average_timing_mode_entry = tkinter.Entry(
+            self.setting_ir_average_timing_mode_frame,
+            textvariable=self.setting_ir_average_timing_mode_variable,
+        )
+        self.setting_ir_average_timing_mode_entry.pack(padx=5, side=tkinter.LEFT)
+        self.setting_ir_average_timing_mode_tooltip = idlelib.tooltip.Hovertip(
+            self.setting_ir_average_timing_mode_entry,
+            "(0=Disable (default), 1=Mode 1) \nMode 1: This will turn on real-time averaging to eliminate jitter from optical and serial frame triggers. It will help if you experience flicker on custom firmware glasses or stock firmware glasses fail to initiate there shutter pattern. \nMost glasses stock firmwares appear to need a constant timer in order to synchronize with the ir signal this will help. \n Also if your display transition times are too variable this may help stablize the signal. \nIMPORTANT: Be sure to set 'Target Frametime' below for best results. \n(New better version available from firmware version 20 onwards, avoid using if your firmware is older) \n(default: 0)",
+            hover_delay=100,
+        )
+        self.setting_ir_average_timing_mode_frame.grid(
+            row=row_count, column=0, sticky="w"
+        )
+        row_count += 1
+
+        self.setting_target_frametime_frame = tkinter.Frame(top)
+        self.setting_target_frametime_variable = tkinter.StringVar(top)
+        self.setting_target_frametime_variable.set(DEFAULT_TARGET_FRAMETIME)
+        self.setting_target_frametime_label = tkinter.Label(
+            self.setting_target_frametime_frame,
+            text="Target Frametime: ",
+        )
+        self.setting_target_frametime_label.pack(padx=5, side=tkinter.LEFT)
+        self.setting_target_frametime_entry = tkinter.Entry(
+            self.setting_target_frametime_frame,
+            textvariable=self.setting_target_frametime_variable,
+        )
+        self.setting_target_frametime_entry.pack(padx=5, side=tkinter.LEFT)
+        self.setting_target_frametime_tooltip = idlelib.tooltip.Hovertip(
+            self.setting_target_frametime_entry,
+            "(the expected time to elapse between frames in microseconds this is 1000000/(monitor refresh rate)) \nThis is used to filter out invalid average frametimes when running with 'IR Average Timing Mode'. \n (120 hz corresponds to 8333) \nIMPORTANT: If you want ot use 'IR Average Timing Mode' set this accurately for best results.  (default 0 - don't filter average frametimes at all). (default: 0)",
+            hover_delay=100,
+        )
+        self.setting_target_frametime_frame.grid(row=row_count, column=0, sticky="w")
+        row_count += 1
+
         self.setting_opt_block_signal_detection_delay_frame = tkinter.Frame(top)
         self.setting_opt_block_signal_detection_delay_variable = tkinter.StringVar(top)
         self.setting_opt_block_signal_detection_delay_variable.set(
@@ -929,83 +973,6 @@ class EmitterSettingsDialog:
         )
         debug_row_count += 1
 
-        self.setting_ir_average_timing_mode_frame = tkinter.Frame(
-            self.experimental_and_debug_frame
-        )
-        self.setting_ir_average_timing_mode_variable = tkinter.StringVar(top)
-        self.setting_ir_average_timing_mode_variable.set(DEFAULT_IR_AVERAGE_TIMING_MODE)
-        self.setting_ir_average_timing_mode_label = tkinter.Label(
-            self.setting_ir_average_timing_mode_frame,
-            text="IR Average Timing Mode: ",
-        )
-        self.setting_ir_average_timing_mode_label.pack(padx=5, side=tkinter.LEFT)
-        self.setting_ir_average_timing_mode_entry = tkinter.Entry(
-            self.setting_ir_average_timing_mode_frame,
-            textvariable=self.setting_ir_average_timing_mode_variable,
-        )
-        self.setting_ir_average_timing_mode_entry.pack(padx=5, side=tkinter.LEFT)
-        self.setting_ir_average_timing_mode_tooltip = idlelib.tooltip.Hovertip(
-            self.setting_ir_average_timing_mode_entry,
-            "(0=Disable (default), 1=Mode 1) \nMode 1: This is a special mode which will find the average screen refresh rate over 1 second, and use that to create a constant interval timer to trigger glasses. \nMost glasses stock firmwares appear to need a constant timer in order to synchronize with the ir signal, if your display transition times are too variable this may facilitate this. \n(Only available from firmware version 17 onwards)",
-            hover_delay=100,
-        )
-        self.setting_ir_average_timing_mode_frame.grid(
-            row=debug_row_count, column=0, sticky="w"
-        )
-        debug_row_count += 1
-
-        self.setting_target_frametime_frame = tkinter.Frame(
-            self.experimental_and_debug_frame
-        )
-        self.setting_target_frametime_variable = tkinter.StringVar(top)
-        self.setting_target_frametime_variable.set(DEFAULT_TARGET_FRAMETIME)
-        self.setting_target_frametime_label = tkinter.Label(
-            self.setting_target_frametime_frame,
-            text="Target Frametime: ",
-        )
-        self.setting_target_frametime_label.pack(padx=5, side=tkinter.LEFT)
-        self.setting_target_frametime_entry = tkinter.Entry(
-            self.setting_target_frametime_frame,
-            textvariable=self.setting_target_frametime_variable,
-        )
-        self.setting_target_frametime_entry.pack(padx=5, side=tkinter.LEFT)
-        self.setting_target_frametime_tooltip = idlelib.tooltip.Hovertip(
-            self.setting_target_frametime_entry,
-            "(the expected time to elapse between frames in microseconds this is 1000000/(monitor refresh rate)) \nThis is used to filter out invalid average frametimes computed when running with 'IR Average Timing Mode'. \nWith PWM displays and 'Ignore All Duplicates' enabled when you have a duplicate frame sent from your PC the sensor will detect a duplicate for each PWM backlight pulse, \nin these situations the computed average frametime will be invalid so we just ignore it. (120 hz corresponds to 8333) (default 0 - don't filter average frametimes at all).",
-            hover_delay=100,
-        )
-        self.setting_target_frametime_frame.grid(
-            row=debug_row_count, column=0, sticky="w"
-        )
-        debug_row_count += 1
-
-        self.setting_pwm_backlight_frequency_frame = tkinter.Frame(
-            self.experimental_and_debug_frame
-        )
-        self.setting_pwm_backlight_frequency_variable = tkinter.StringVar(top)
-        self.setting_pwm_backlight_frequency_variable.set(
-            DEFAULT_PWM_BACKLIGHT_FREQUENCY
-        )
-        self.setting_pwm_backlight_frequency_label = tkinter.Label(
-            self.setting_pwm_backlight_frequency_frame,
-            text="PWM Backlight Frequency: ",
-        )
-        self.setting_pwm_backlight_frequency_label.pack(padx=5, side=tkinter.LEFT)
-        self.setting_pwm_backlight_frequency_entry = tkinter.Entry(
-            self.setting_pwm_backlight_frequency_frame,
-            textvariable=self.setting_pwm_backlight_frequency_variable,
-        )
-        self.setting_pwm_backlight_frequency_entry.pack(padx=5, side=tkinter.LEFT)
-        self.setting_pwm_backlight_frequency_tooltip = idlelib.tooltip.Hovertip(
-            self.setting_pwm_backlight_frequency_entry,
-            "(The number of cycles per second for the PWM backlight in the display) \nWhen running in 'IR Average Timing Mode' with PWM displays and 'Ignore All Duplicates' enabled this is used to deterine when the number of duplicates exceeds that of a single display frame. \nBy making this determination we can resynchronize the built in timer on the next detected frame, thus only having 1 frame of ghosting. \nOn many PWM backlit displays this is 720hz but you can also refer to the following table on RTINGs if you unsure https://www.rtings.com/tv/tools/table/138933 \nSetting this value too low will result in every trigger box updating the timer unnecessarily with the last average frametime, setting it too high is generally OK so long as you don't exceed (framerate / 2 * actual_pwm_backlight_frequency), \nif you exceed that it will only resynchonize once a second instead of after every duplicate frame \nSo for an actual_pwm_backlight_frequency of 720, values between 680 and 1300 should work. \n(default 0 - unknown so we only resynchronize every second or so unless 'Ignore All Duplicates' is unchecked and this is not a PWM backlit display)",
-            hover_delay=100,
-        )
-        self.setting_pwm_backlight_frequency_frame.grid(
-            row=debug_row_count, column=0, sticky="w"
-        )
-        debug_row_count += 1
-
         self.frequency_analysis_based_duplicate_frame_detection_frame_top_frame = (
             tkinter.Frame(
                 self.experimental_and_debug_frame, relief="raised", borderwidth=1
@@ -1140,7 +1107,6 @@ class EmitterSettingsDialog:
             "ir_flip_eyes": self.setting_ir_flip_eyes_variable.get(),
             "ir_average_timing_mode": self.setting_ir_average_timing_mode_variable.get(),
             "target_frametime": self.setting_target_frametime_variable.get(),
-            "pwm_backlight_frequency": self.setting_pwm_backlight_frequency_variable.get(),
             "opt_block_signal_detection_delay": self.setting_opt_block_signal_detection_delay_variable.get(),
             "opt_ignore_all_duplicates": self.setting_opt_ignore_all_duplicates_variable.get(),
             "opt_sensor_filter_mode_variable": self.setting_opt_sensor_filter_mode_variable.get(),
@@ -1157,12 +1123,19 @@ class EmitterSettingsDialog:
             response = self.main_app.emitter_serial.line_reader.command("0")[0].split(
                 " "
             )
+            print(response)
             if response[0] == "parameters":
                 parameters = response[1].split(",")
                 if int(parameters[0]) < 10:
                     parameters = [3] + parameters
                 emitter_firmware_version = parameters[0]
                 self.emitter_firmware_version_int = int(emitter_firmware_version)
+                # remove what was param_12 or setting_pwm_backlight_frequency_variable
+                if (
+                    self.emitter_firmware_version_int > 14
+                    and self.emitter_firmware_version_int < 21
+                ):
+                    parameters = parameters[0:11] + parameters[12:]
                 if self.emitter_firmware_version_int < 14:
                     (
                         ir_protocol,
@@ -1238,7 +1211,6 @@ class EmitterSettingsDialog:
                     self.setting_ir_flip_eyes_variable.set(DEFAULT_IR_FLIP_EYES)
                     self.setting_ir_flip_eyes_entry.config(state="disabled")
                     self.setting_target_frametime_entry.config(state="disabled")
-                    self.setting_pwm_backlight_frequency_entry.config(state="disabled")
                 else:
                     (
                         ir_protocol,
@@ -1251,11 +1223,10 @@ class EmitterSettingsDialog:
                         opt_enable_ignore_during_ir,
                         opt_enable_duplicate_realtime_reporting,
                         opt_output_stats,
-                        param_12,
                         opt_ignore_all_duplicates,
                         opt_sensor_filter_mode,
                         ir_flip_eyes,
-                    ) = parameters[1:15]
+                    ) = parameters[1:14]
 
                     self.setting_emitter_firmware_version_variable.set(
                         emitter_firmware_version
@@ -1296,7 +1267,7 @@ class EmitterSettingsDialog:
                     self.setting_ir_flip_eyes_entry.config(state="normal")
                     if self.emitter_firmware_version_int >= 16:
                         self.setting_opt_detection_threshold_low_variable.set(
-                            parameters[15]
+                            parameters[14]
                         )
                         self.setting_opt_detection_threshold_low_entry.config(
                             state="normal"
@@ -1309,7 +1280,7 @@ class EmitterSettingsDialog:
                             state="disabled"
                         )
                     if self.emitter_firmware_version_int >= 17:
-                        self.setting_ir_average_timing_mode_variable.set(parameters[16])
+                        self.setting_ir_average_timing_mode_variable.set(parameters[15])
                         self.setting_ir_average_timing_mode_entry.config(state="normal")
                     else:
                         self.setting_ir_average_timing_mode_variable.set(
@@ -1319,25 +1290,15 @@ class EmitterSettingsDialog:
                             state="disabled"
                         )
                     if self.emitter_firmware_version_int >= 18:
-                        self.setting_target_frametime_variable.set(parameters[17])
+                        self.setting_target_frametime_variable.set(parameters[16])
                         self.setting_target_frametime_entry.config(state="normal")
-                        self.setting_pwm_backlight_frequency_variable.set(param_12)
-                        self.setting_pwm_backlight_frequency_entry.config(
-                            state="normal"
-                        )
                     else:
                         self.setting_target_frametime_variable.set(
                             DEFAULT_TARGET_FRAMETIME
                         )
                         self.setting_target_frametime_entry.config(state="disabled")
-                        self.setting_pwm_backlight_frequency_variable.set(
-                            DEFAULT_PWM_BACKLIGHT_FREQUENCY
-                        )
-                        self.setting_pwm_backlight_frequency_entry.config(
-                            state="disabled"
-                        )
                     if self.emitter_firmware_version_int >= 20:
-                        self.setting_ir_drive_mode_variable.set(parameters[18])
+                        self.setting_ir_drive_mode_variable.set(parameters[17])
                         self.setting_ir_drive_mode_entry.config(state="normal")
                     else:
                         self.setting_ir_drive_mode_variable.set(DEFAULT_IR_DRIVE_MODE)
@@ -1412,8 +1373,10 @@ class EmitterSettingsDialog:
                     f"{self.setting_opt_enable_duplicate_realtime_reporting_variable.get()},"
                     f"{self.setting_opt_output_stats_variable.get()},"
                 )
-                if self.emitter_firmware_version_int >= 18:
-                    command += f"{self.setting_pwm_backlight_frequency_variable.get()},"
+                if self.emitter_firmware_version_int >= 21:
+                    pass
+                elif self.emitter_firmware_version_int >= 18:
+                    command += f"0,"  # was setting_pwm_backlight_frequency_variable
                 else:
                     command += f"{DEFAULT_OPT_BLOCK_N_SUBSEQUENT_DUPLICATES},"
                 command += (
@@ -1497,12 +1460,6 @@ class EmitterSettingsDialog:
                 settings.get(
                     "target_frametime",
                     DEFAULT_TARGET_FRAMETIME,
-                )
-            )
-            self.setting_pwm_backlight_frequency_variable.set(
-                settings.get(
-                    "pwm_backlight_frequency",
-                    DEFAULT_PWM_BACKLIGHT_FREQUENCY,
                 )
             )
             self.setting_opt_block_signal_detection_delay_variable.set(

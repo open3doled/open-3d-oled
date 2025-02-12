@@ -5,7 +5,7 @@
 #ifndef _SETTINGS_H_
 #define _SETTINGS_H_
 
-//#define ENABLE_DEBUG_PIN_OUTPUTS
+// #define ENABLE_DEBUG_PIN_OUTPUTS
 #define ENABLE_LOOP_TOGGLE_DEBUG_PIN_D9             // will toggle on/off every time the loop goes round
 #define OPT_SENSOR_ENABLE_STREAM_READINGS_TO_SERIAL // adds code for command "10" to stream the opt_sensor readings for the left and right eye over serial to the computer (this is a debug mode, don't use at the same time as show stats or you will get garbled output)
 #define OPT_SENSOR_ENABLE_IGNORE_DURING_IR          // ignore opt_sensor sensor readings when LED is triggering due to power/light distortions that may cause opt_sensor sensor reading inconsistencies. (only applies when setting variable is set as well)
@@ -169,6 +169,7 @@
 
 /*
 Version History
+21 - removed pwm_backlight_frequency
 20 - Added drive_mode and serial based triggering for use with WibbleWobble
 19 - Added DLP-link protocol
 18 - Removed opt_sensor_block_n_subsequent_duplicates and added target_frametime and pwm_backlight_frequency
@@ -203,7 +204,6 @@ struct EEPROMSettings
   uint8_t opt_sensor_detection_threshold_low; // was opt_sensor_ignore_all_duplicates;
   uint8_t ir_average_timing_mode;             // was opt_sensor_filter_mode;
   uint16_t target_frametime;
-  uint16_t pwm_backlight_frequency;
 };
 
 #endif /* _SETTINGS_H_ */

@@ -31,8 +31,6 @@ uint8_t opt_sensor_output_stats = 0;
 uint8_t opt_sensor_detection_threshold_high = 128;
 uint8_t opt_sensor_detection_threshold_low = 32;
 uint32_t opt_sensor_block_signal_detection_delay = OPT_SENSOR_BLOCK_SIGNAL_DETECTION_DELAY;
-uint16_t pwm_backlight_frequency = 0;
-uint8_t pwm_pulses_per_frame = 0;
 uint8_t opt_sensor_ignore_all_duplicates = 0;
 uint8_t opt_sensor_filter_mode = 0;
 uint8_t opt_sensor_min_threshold_value_to_activate = OPT_SENSOR_MIN_THRESHOLD_VALUE_TO_ACTIVATE;
@@ -86,18 +84,6 @@ uint8_t opt_sensor_ss_readings_threshold_low[OPT_SENSOR_CHANNELS];
 // const uint8_t admux[OPT_SENSOR_CHANNELS] = {ADC7D, ADC6D, ADC5D, ADC4D}; // ADC MUX channels.
 const uint8_t admux[OPT_SENSOR_CHANNELS] = {ADC7D, ADC6D}; // ADC MUX channels. (right eye, left eye)
 
-void update_pwm_pulses_per_frame(void)
-{
-    if (target_frametime > 0 && pwm_backlight_frequency > 0)
-    {
-        pwm_pulses_per_frame = ((uint32_t)pwm_backlight_frequency) / (((uint32_t)1000000) / ((uint32_t)target_frametime + 70)); // we add 70 to frametime here just so we hae a bit of safety above the rounding error so we don't round down.
-    }
-    else
-    {
-        pwm_pulses_per_frame = 0;
-    }
-}
-
 void opt_sensor_init(void)
 {
 #ifdef OPT_SENSOR_ENABLE_IGNORE_DURING_IR
@@ -115,8 +101,6 @@ void opt_sensor_init(void)
     opt_sensor_detection_threshold_high = 128;
     opt_sensor_detection_threshold_low = 32;
     opt_sensor_block_signal_detection_delay = OPT_SENSOR_BLOCK_SIGNAL_DETECTION_DELAY;
-    pwm_backlight_frequency = 0;
-    pwm_pulses_per_frame = 0;
     opt_sensor_ignore_all_duplicates = 0;
     opt_sensor_filter_mode = 0;
     opt_sensor_min_threshold_value_to_activate = OPT_SENSOR_MIN_THRESHOLD_VALUE_TO_ACTIVATE;

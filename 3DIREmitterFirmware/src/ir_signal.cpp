@@ -538,7 +538,7 @@ void ir_signal_process_trigger(uint8_t left_eye)
     {
       uint16_t new_frametime = ir_signal_trigger_current_time - ir_signal_trigger_last_time;
 
-      if (new_frametime > (target_frametime << 1))
+      if (target_frametime > 0 && new_frametime > (target_frametime << 1))
       {
         // no updates for more than 1 frame reset all averaging counters.
         ir_signal_trigger_frametime_average_set = false;

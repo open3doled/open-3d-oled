@@ -14,8 +14,6 @@
 #define OPT_FRAMETIME_COUNT_PERIOD (1 << OPT_FRAMETIME_COUNT_PERIOD_2PN)
 
 extern uint32_t opt_sensor_block_signal_detection_delay;
-extern uint16_t pwm_backlight_frequency;
-extern uint8_t pwm_pulses_per_frame;
 extern uint8_t opt_sensor_ignore_all_duplicates;
 extern uint8_t opt_sensor_filter_mode;
 extern uint8_t opt_sensor_min_threshold_value_to_activate;
@@ -29,7 +27,6 @@ extern uint8_t opt_sensor_enable_frequency_analysis_based_duplicate_frame_detect
 extern uint8_t opt_sensor_enable_stream_readings_to_serial;
 #endif
 
-void update_pwm_pulses_per_frame(void);
 void opt_sensor_init(void);
 void opt_sensor_stop(void);
 #ifdef OPT_SENSOR_ENABLE_STATS
