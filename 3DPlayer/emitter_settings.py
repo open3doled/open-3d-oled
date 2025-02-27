@@ -715,7 +715,7 @@ class EmitterSettingsDialog:
         self.setting_target_frametime_entry.pack(padx=5, side=tkinter.LEFT)
         self.setting_target_frametime_tooltip = idlelib.tooltip.Hovertip(
             self.setting_target_frametime_entry,
-            "(the expected time to elapse between frames in microseconds this is 1000000/(monitor refresh rate)) \nThis is used to filter out invalid average frametimes when running with 'IR Average Timing Mode'. \n (120 hz corresponds to 8333) \nIMPORTANT: If you want ot use 'IR Average Timing Mode' set this accurately for best results.  (default 0 - don't filter average frametimes at all). (default: 0)",
+            "(the expected time to elapse between frames in microseconds this is 1000000/(monitor refresh rate)) \nThis is used to filter out invalid average frametimes when running with 'IR Average Timing Mode'. \n (120 hz corresponds to 8333) \nIMPORTANT: If you want ot use 'IR Average Timing Mode' set this accurately for best results.  \n(default 0 - don't filter average frametimes at all)",
             hover_delay=100,
         )
         self.setting_target_frametime_frame.grid(row=row_count, column=0, sticky="w")
@@ -767,7 +767,7 @@ class EmitterSettingsDialog:
         self.setting_opt_ignore_all_duplicates_entry.pack(padx=5, side=tkinter.LEFT)
         self.setting_opt_ignore_all_duplicates_tooltip = idlelib.tooltip.Hovertip(
             self.setting_opt_ignore_all_duplicates_entry,
-            "(0=Disable, 1=Enable) On displays with too much jitter or PWM backlit displays you will need to set this to 1. \nThe software will not send any signal to the glasses on what might be a duplicate frame but will instead ignore it. \nThis will mean that glasses only attempt resynchronization when the alternate eye trigger is sent by the display. (If you are using a display without some form of BFI or a PWM backlit display it is highly recommended you enable this) (default 0 - off)",
+            "(0=Disable, 1=Enable) On displays with too much jitter or PWM backlit displays you will need to set this to 1. \nThe software will not send any signal to the glasses on what might be a duplicate frame but will instead ignore it. \nThis will mean that glasses only attempt resynchronization when the alternate eye trigger is sent by the display. \n(If you are using a display without some form of BFI or a PWM backlit display it is highly recommended you enable this) \n(default 0 - off)",
             hover_delay=100,
         )
         self.setting_opt_ignore_all_duplicates_frame.grid(
@@ -823,7 +823,7 @@ class EmitterSettingsDialog:
         self.setting_opt_detection_threshold_high_entry.pack(padx=5, side=tkinter.LEFT)
         self.setting_opt_detection_threshold_high_tooltip = idlelib.tooltip.Hovertip(
             self.setting_opt_detection_threshold_high_entry,
-            "(as a value between 1-255) the level above which an increasing light intensity is detected as the beggining of a new frame, \nsetting this lower will make the device aware of new frames earlier but also increase the likelihood of duplicate \nframe detection if the light intensity doesn't fall below this threshold before the opt_block_signal_detection_delay \ncompletes.",
+            "(as a value between 1-255) the level above which an increasing light intensity is detected as the beggining of a new frame, \nsetting this lower will make the device aware of new frames earlier but also increase the likelihood of duplicate \nframe detection if the light intensity doesn't fall below this threshold before the opt_block_signal_detection_delay \ncompletes. \n(default: 128)",
             hover_delay=100,
         )
         self.setting_opt_detection_threshold_high_frame.grid(
@@ -848,7 +848,7 @@ class EmitterSettingsDialog:
         self.setting_opt_detection_threshold_low_entry.pack(padx=5, side=tkinter.LEFT)
         self.setting_opt_detection_threshold_low_tooltip = idlelib.tooltip.Hovertip(
             self.setting_opt_detection_threshold_low_entry,
-            "(as a value between 1-255) the level above which an increasing light intensity is detected as the beggining of a new frame, \nsetting this lower will make the device aware of new frames earlier but also increase the likelihood of duplicate \nframe detection if the light intensity doesn't fall below this threshold before the opt_block_signal_detection_delay \ncompletes.",
+            "(as a value between 1-255) the level below which the other eyes trigger box light intensity must be \ndetected in order for the newly rising trigger box to signal the beggining of a new frame, \nsetting this too low may make the device miss new frames from the triggering box with increasing light intensity \nif the last trigger box has not yet faded adequitly. \n(default: 32)",
             hover_delay=100,
         )
         self.setting_opt_detection_threshold_low_frame.grid(
