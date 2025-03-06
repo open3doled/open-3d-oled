@@ -15,6 +15,7 @@
 #include "ir_signal.h"
 #include "minidin3_trigger.h"
 #include "opt_sensor.h"
+#include "rf_trigger.h"
 #include "usb_trigger.h"
 
 static uint32_t next_print;
@@ -133,6 +134,10 @@ void setup()
     else if (ir_drive_mode == IR_DRIVE_MODE_MINIDIN3)
     {
         minidin3_trigger_init();
+    }
+    else if (ir_drive_mode == IR_DRIVE_MODE_RF_TRIGGER)
+    {
+        rf_trigger_init();
     }
     Serial.println("init complete");
 }
@@ -315,6 +320,10 @@ void loop()
                                 {
                                     minidin3_trigger_stop();
                                 }
+                                else if (ir_drive_mode == IR_DRIVE_MODE_RF_TRIGGER)
+                                {
+                                    rf_trigger_stop();
+                                }
                                 if (temp == IR_DRIVE_MODE_OPTICAL)
                                 {
                                     opt_sensor_init();
@@ -326,6 +335,10 @@ void loop()
                                 else if (temp == IR_DRIVE_MODE_MINIDIN3)
                                 {
                                     minidin3_trigger_init();
+                                }
+                                else if (temp == IR_DRIVE_MODE_RF_TRIGGER)
+                                {
+                                    rf_trigger_init();
                                 }
                                 ir_drive_mode = temp;
                             }
@@ -466,5 +479,22 @@ void loop()
             }
 #endif
         }
+    }
+    else if (ir_drive_mode == IR_DRIVE_MODE_RF_TRIGGER)
+    {
+        rf_trigger_check_cycle_power();
+    }
+}
+
+// Pin change interrupt service routine
+ISR(PCINT0_vect)
+{
+    if (ir_drive_mode == IR_DRIVE_MODE_MINIDIN3)
+    {
+        minidin3_trigger_update();
+    }
+    else if (ir_drive_mode == IR_DRIVE_MODE_RF_TRIGGER)
+    {
+        rf_trigger_update();
     }
 }

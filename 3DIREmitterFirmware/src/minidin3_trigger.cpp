@@ -20,6 +20,7 @@ void minidin3_trigger_init(void)
   //*
   bitClear(PORT_MINIDIN3_3D_STEREO_SYNC_LEFT_OPEN_D10, MINIDIN3_3D_STEREO_SYNC_LEFT_OPEN_D10);
   //*/
+  cli();
   // Enable pin change interrupt for PCINT0
   bitSet(PCICR, PCIE0);
   // Enable interrupt on the specific pin
@@ -30,8 +31,10 @@ void minidin3_trigger_init(void)
 
 void minidin3_trigger_stop(void)
 {
+  cli();
   bitClear(PCICR, PCIE0);
   bitClear(PCMSK0, PCINT6);
+  sei();
 }
 
 void minidin3_trigger_settings_changed(void)
@@ -57,10 +60,4 @@ void minidin3_trigger_update(void)
 #endif
     ir_signal_process_trigger(0);
   }
-}
-
-// Pin change interrupt service routine
-ISR(PCINT0_vect)
-{
-  minidin3_trigger_update();
 }

@@ -1,0 +1,19 @@
+{
+  "ir_protocol": "6",
+  "ir_frame_delay": "4000",
+  "ir_frame_duration": "2000",
+  "ir_signal_spacing": "30",
+  "ir_flip_eyes": "1",
+  "ir_average_timing_mode": "1",
+  "target_frametime": "0",
+  "pwm_backlight_frequency": "0",
+  "opt_block_signal_detection_delay": "8000",
+  "opt_ignore_all_duplicates": "0",
+  "opt_sensor_filter_mode_variable": "0",
+  "opt_min_threshold_value_to_activate": "10",
+  "opt_detection_threshold_high": "128",
+  "opt_detection_threshold_low": "32",
+  "opt_enable_ignore_during_ir": "0",
+  "opt_enable_duplicate_realtime_reporting": "0",
+  "opt_output_stats": "0"
+}

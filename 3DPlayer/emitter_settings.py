@@ -539,7 +539,7 @@ class EmitterSettingsDialog:
         self.setting_ir_drive_mode_entry.pack(padx=5, side=tkinter.LEFT)
         self.setting_ir_drive_mode_tooltip = idlelib.tooltip.Hovertip(
             self.setting_ir_drive_mode_entry,
-            "0=Optical, 1=PCSerial 2-Minidin3(D10) \n(Only available from firmware version 20 onwards)\n(PCSerial only works with WibbleWobble currently, 3d player and PotPlayer both require Optical, Minidin3 requires soldering a connector with datapin to D10)\n(default 0 Optical)",
+            "0=Optical, 1=PCSerial 2=Minidin3(D10), 3=RFTrigger(D10,D16,D14,D15,D21) \n(Only available from firmware version 20 onwards)\n(PCSerial only works with WibbleWobble currently, 3d player and PotPlayer both require Optical, \nMinidin3 requires soldering a connector with datapin to D10, \nRFTrigger lets you wire up a broken pair of RF glasses control board to the input pins to relay them as IR signals)\n(default 0 Optical)",
             hover_delay=100,
         )
         self.setting_ir_drive_mode_frame.grid(row=row_count, column=0, sticky="w")
