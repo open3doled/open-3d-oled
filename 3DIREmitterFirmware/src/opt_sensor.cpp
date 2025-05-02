@@ -514,7 +514,7 @@ void opt_sensor_clear_stats(void)
 }
 
 // Interrupt handler called each time an ADC reading is ready.
-ISR(ADC_vect)
+void opt_sensor_adc_isr_handler(void)
 {
     uint8_t reading = ADCH;
 #ifdef OPT_SENSOR_FILTER_ADC_SIGNAL

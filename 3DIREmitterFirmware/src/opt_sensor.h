@@ -37,5 +37,6 @@ void opt_sensor_update_thresholds(void);
 void opt_sensor_settings_changed(void);
 void opt_sensor_check_readings(void);
 void opt_sensor_clear_stats(void);
+void opt_sensor_adc_isr_handler(void);
 
 #endif /* _OPT_SENSOR_SENSOR_H_ */

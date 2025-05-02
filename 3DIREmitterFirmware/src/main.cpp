@@ -17,6 +17,7 @@
 #include "opt_sensor.h"
 #include "rf_trigger.h"
 #include "usb_trigger.h"
+#include "dlplink_sensor.h"
 
 static uint32_t next_print;
 
@@ -138,6 +139,10 @@ void setup()
     else if (ir_drive_mode == IR_DRIVE_MODE_RF_TRIGGER)
     {
         rf_trigger_init();
+    }
+    else if (ir_drive_mode == IR_DRIVE_MODE_DLP_LINK)
+    {
+        dlplink_sensor_init();
     }
     Serial.println("init complete");
 }
@@ -324,6 +329,10 @@ void loop()
                                 {
                                     rf_trigger_stop();
                                 }
+                                else if (ir_drive_mode == IR_DRIVE_MODE_DLP_LINK)
+                                {
+                                    dlplink_sensor_stop();
+                                }
                                 if (temp == IR_DRIVE_MODE_OPTICAL)
                                 {
                                     opt_sensor_init();
@@ -339,6 +348,10 @@ void loop()
                                 else if (temp == IR_DRIVE_MODE_RF_TRIGGER)
                                 {
                                     rf_trigger_init();
+                                }
+                                else if (temp == IR_DRIVE_MODE_DLP_LINK)
+                                {
+                                    dlplink_sensor_init();
                                 }
                                 ir_drive_mode = temp;
                             }
@@ -484,6 +497,10 @@ void loop()
     {
         rf_trigger_check_cycle_power();
     }
+    else if (ir_drive_mode == IR_DRIVE_MODE_DLP_LINK)
+    {
+        dlplink_sensor_check_readings();
+    }
 }
 
 // Pin change interrupt service routine
@@ -496,5 +513,23 @@ ISR(PCINT0_vect)
     else if (ir_drive_mode == IR_DRIVE_MODE_RF_TRIGGER)
     {
         rf_trigger_update();
+    }
+}
+
+// ISR for ADC conversion complete:
+// Dispatch to the appropriate sensor handler based on the IR drive mode
+ISR(ADC_vect)
+{
+    if (ir_drive_mode == IR_DRIVE_MODE_DLP_LINK)
+    {
+        dlplink_sensor_adc_isr_handler();
+    }
+    else if (ir_drive_mode == IR_DRIVE_MODE_OPTICAL)
+    {
+        opt_sensor_adc_isr_handler();
+    }
+    else
+    {
+        // ... handle other modes or default
     }
 }
