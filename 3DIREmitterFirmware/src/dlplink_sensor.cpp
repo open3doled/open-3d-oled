@@ -96,7 +96,8 @@ void dlplink_sensor_check_readings(void)
                  (last_eye == EYE_LEFT ? 'L' : 'R'));
 #else
         printf("DLP-Link: pulses=%lu, last_width=%u us, jitter=%+d us, last_eye=%c\n",
-               pulse_count, last_pulse_width_us, last_jitter_us,
+               pulse_count,
+               last_pulse_width_us, last_jitter_us,
                (last_eye == EYE_LEFT ? 'L' : 'R'));
 #endif
     }
@@ -107,17 +108,6 @@ void dlplink_sensor_adc_isr_handler(void)
     uint8_t value = ADCH; // 8-bit ADC sample
     uint32_t now = 0;
     bool now_set = false;
-
-    // Helper: call micros() once per ISR
-    auto get_now = [&]() -> uint32_t
-    {
-        if (!now_set)
-        {
-            now = micros();
-            now_set = true;
-        }
-        return now;
-    };
 
     // 4) IR ignore countdown
 #ifdef DLP_SENSOR_IR_IGNORE_COUNT
@@ -151,8 +141,12 @@ void dlplink_sensor_adc_isr_handler(void)
     // 1) Post-pulse blocking
     if (!in_pulse && block_until_time)
     {
-        uint32_t t = get_now();
-        if (t < block_until_time)
+        if (!now_set)
+        {
+            now = micros();
+            now_set = true;
+        }
+        if (now < block_until_time)
             return;
         block_until_time = 0;
     }
@@ -162,8 +156,13 @@ void dlplink_sensor_adc_isr_handler(void)
         // Detect rising edge (pulse start)
         if (value > dlplink_sensor_detection_threshold_high)
         {
+            if (!now_set)
+            {
+                now = micros();
+                now_set = true;
+            }
             in_pulse = true;
-            current_pulse_start_time = get_now();
+            current_pulse_start_time = now;
         }
     }
     else
@@ -171,7 +170,12 @@ void dlplink_sensor_adc_isr_handler(void)
         // Detect falling edge (pulse end)
         if (value < dlplink_sensor_detection_threshold_low)
         {
-            uint32_t end_time = get_now();
+            if (!now_set)
+            {
+                now = micros();
+                now_set = true;
+            }
+            uint32_t end_time = now;
             uint32_t start_time = current_pulse_start_time;
             uint16_t pulse_width = (uint16_t)(end_time - start_time);
 
