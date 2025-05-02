@@ -12,8 +12,16 @@ uint8_t dlplink_sensor_detection_threshold_low = 40;         // Low threshold fo
 uint8_t dlplink_sensor_enable_ignore_during_ir = 1;          // Ignore sensor during IR transmission (1=enabled)
 
 // External flags (provided by other modules)
-extern volatile uint8_t ir_led_token_active; // Flag indicating IR LED transmission is active
-extern uint8_t opt_sensor_output_stats;      // Flag indicating whether +stats mode is enabled
+extern volatile bool ir_led_token_active; // Flag indicating IR LED transmission is active
+extern uint8_t opt_sensor_output_stats;   // Flag indicating whether +stats mode is enabled
+
+// DLP-Link pulse timing constants (in microseconds)
+#define DLP_SENSOR_MIN_PULSE_US 20
+#define DLP_SENSOR_MAX_PULSE_US 32
+#define DLP_SENSOR_PULSE_GRACE_US 5 // Grace margin for ADC ISR timing
+
+// IR ignore countdown (loops) after IR LED active
+#define DLP_SENSOR_IR_IGNORE_COUNT 10
 
 // Internal state for pulse detection (static, persistent across interrupts)
 static bool active = false;                   // Detection active after initial threshold exceeded
@@ -23,13 +31,14 @@ static uint32_t current_pulse_start_time = 0; // Timestamp of the current pulse'
 static uint16_t baseline_est = 0;             // Estimated frame interval (baseline period in µs)
 static uint16_t prev_interval = 0;            // Last measured inter-pulse interval (for baseline refinement)
 static uint32_t block_until_time = 0;         // Time until which new pulse detection is blocked (after a pulse)
+static uint32_t ir_led_token_active_countdown = 0;
 
 // Variables for communication with main loop (volatile because they are set in ISR and read in main)
 static volatile uint32_t pulse_count = 0;         // Total pulses detected
 static volatile uint16_t last_pulse_width_us = 0; // Last pulse duration in microseconds
-static volatile int16_t last_jitter_us = 0;       // Last measured jitter (µs, positive=longer interval, negative=shorter)
-static volatile uint8_t last_eye = 0;             // Last detected eye (0 = Left, 1 = Right)
-static volatile uint8_t trigger_eye = 0;          // Eye value for the pending trigger event
+static volatile int16_t last_jitter_us = 0;       // Last measured jitter (µs, positive=longer, negative=shorter)
+static volatile uint8_t last_eye = EYE_LEFT;      // Last detected eye (0=Left,1=Right)
+static volatile uint8_t trigger_eye = EYE_LEFT;   // Eye value for the pending trigger event
 static volatile bool trigger_pending = false;     // Whether a trigger event is waiting to be processed in main
 
 void dlplink_sensor_init(void)
@@ -42,6 +51,7 @@ void dlplink_sensor_init(void)
     baseline_est = 0;
     prev_interval = 0;
     block_until_time = 0;
+    ir_led_token_active_countdown = 0;
     pulse_count = 0;
     trigger_pending = false;
     trigger_eye = EYE_LEFT;
@@ -59,7 +69,7 @@ void dlplink_sensor_init(void)
     ADCSRA = (1 << ADEN)                    // Enable ADC
              | (1 << ADATE)                 // Auto-trigger enable (free-run)
              | (1 << ADIE)                  // Enable ADC interrupt
-             | (1 << ADPS1) | (1 << ADPS0); // Prescaler = 8 (ADC clock ~2 MHz for high-speed sampling)
+             | (1 << ADPS1) | (1 << ADPS0); // Prescaler = 8 (ADC clock ~2 MHz)
     ADCSRA |= (1 << ADSC);                  // Start ADC conversions
 }
 
@@ -73,7 +83,7 @@ void dlplink_sensor_check_readings(void)
     // If an eye trigger event was set in the ISR, process it
     if (trigger_pending)
     {
-        ir_signal_process_trigger(trigger_eye); // Invoke the IR trigger processing with the identified eye
+        ir_signal_process_trigger(trigger_eye);
         trigger_pending = false;
     }
 
@@ -94,119 +104,146 @@ void dlplink_sensor_check_readings(void)
 
 void dlplink_sensor_adc_isr_handler(void)
 {
-    // Read the latest ADC sample (8-bit value from ADCH since ADLAR=1)
-    uint8_t value = ADCH;
+    uint8_t value = ADCH; // 8-bit ADC sample
+    uint32_t now = 0;
+    bool now_set = false;
 
-    // Optionally ignore sensor input during IR LED transmission to avoid interference
-    if (dlplink_sensor_enable_ignore_during_ir && ir_led_token_active)
+    // Helper: call micros() once per ISR
+    auto get_now = [&]() -> uint32_t
     {
-        return;
-    }
+        if (!now_set)
+        {
+            now = micros();
+            now_set = true;
+        }
+        return now;
+    };
 
-    // Activation check: ensure ambient light exceeds minimum threshold before detecting pulses
+    // 4) IR ignore countdown
+#ifdef DLP_SENSOR_IR_IGNORE_COUNT
+    if (dlplink_sensor_enable_ignore_during_ir)
+    {
+        if (ir_led_token_active)
+        {
+            ir_led_token_active_countdown = DLP_SENSOR_IR_IGNORE_COUNT;
+        }
+        if (ir_led_token_active_countdown > 0)
+        {
+            ir_led_token_active_countdown--;
+            return;
+        }
+    }
+#endif
+
+    // Activation threshold
     if (!active)
     {
         if (value > dlplink_sensor_min_threshold_value_to_activate)
         {
-            active = true; // Sensor is now active and ready to detect pulses
+            active = true;
         }
         else
         {
-            return; // Not yet activated (ambient signal too low), ignore readings
+            return;
         }
     }
 
-    // If not currently in a pulse, enforce the post-pulse ignore delay (blocking interval)
+    // 1) Post-pulse blocking
     if (!in_pulse && block_until_time)
     {
-        uint32_t now = micros();
-        if (now < block_until_time)
-        {
-            // Still within blocking period after last pulse, ignore new pulse starts
+        uint32_t t = get_now();
+        if (t < block_until_time)
             return;
-        }
-        // Blocking interval elapsed, allow detection of new pulses
         block_until_time = 0;
     }
 
     if (!in_pulse)
     {
-        // Idle state: check for a pulse start (rising above high threshold)
+        // Detect rising edge (pulse start)
         if (value > dlplink_sensor_detection_threshold_high)
         {
-            // Rising edge detected – begin a new pulse
             in_pulse = true;
-            current_pulse_start_time = micros(); // record start time of this pulse
+            current_pulse_start_time = get_now();
         }
-        // Otherwise, remain in idle state
     }
     else
     {
-        // In-pulse state: check for pulse end (falling below low threshold)
+        // Detect falling edge (pulse end)
         if (value < dlplink_sensor_detection_threshold_low)
         {
-            // Falling edge detected – pulse ended
-            uint32_t pulse_end_time = micros();
+            uint32_t end_time = get_now();
             uint32_t start_time = current_pulse_start_time;
-            uint16_t pulse_width = (uint16_t)(pulse_end_time - start_time);
+            uint16_t pulse_width = (uint16_t)(end_time - start_time);
 
-            // Update pulse statistics
+            // 1) Validate pulse width
+            uint16_t min_pw = DLP_SENSOR_MIN_PULSE_US - DLP_SENSOR_PULSE_GRACE_US;
+            uint16_t max_pw = DLP_SENSOR_MAX_PULSE_US + DLP_SENSOR_PULSE_GRACE_US;
+            if (pulse_width < min_pw || pulse_width > max_pw)
+            {
+                in_pulse = false;
+                return;
+            }
+
+            // Update stats
             pulse_count++;
             last_pulse_width_us = pulse_width;
 
+            // Compute interval since last pulse
+            uint32_t interval = start_time - last_pulse_start_time;
+            int32_t diff = (int32_t)interval - (int32_t)baseline_est;
+
+            // 2) Eye classification with jitter window
+            uint8_t eye;
+            if (diff > 80)
+                eye = EYE_RIGHT;
+            else if (diff < -80)
+                eye = EYE_LEFT;
+            else
+                eye = last_eye;
+
+            // 3) Baseline update only on eye flip (except initial pulses)
             if (pulse_count == 1)
             {
-                // First pulse: no previous pulse to compare, so eye cannot be determined
                 last_jitter_us = 0;
-                trigger_pending = false; // Do not trigger on the very first pulse
+                trigger_pending = false;
             }
             else if (pulse_count == 2)
             {
-                // Second pulse: calculate first inter-pulse interval and estimate baseline
-                uint32_t interval = start_time - last_pulse_start_time;
-                // Estimate frame period (baseline) based on the first interval
-                if (interval > 14000)
-                {
-                    baseline_est = 16667; // assume ~60 Hz frame rate
-                }
-                else if (interval > 7500)
-                {
-                    baseline_est = 8333; // assume ~120 Hz frame rate
-                }
+                // Initial baseline estimation with extra ranges
+                if (interval > 14500)
+                    baseline_est = 16667; // ~60Hz
+                else if (interval > 13500)
+                    baseline_est = 12500; // ~80Hz
+                else if (interval > 11000)
+                    baseline_est = 10417; // ~96Hz
+                else if (interval > 10000)
+                    baseline_est = 10000; // ~100Hz
+                else if (interval > 8000)
+                    baseline_est = 8333; // ~120Hz
                 else
-                {
-                    baseline_est = 6944; // assume ~144 Hz frame rate
-                }
+                    baseline_est = 6944; // ~144Hz
                 prev_interval = (uint16_t)interval;
-                // Determine eye: a longer interval means last frame was left-eye, hence current is right-eye
-                uint8_t eye = (interval > baseline_est ? EYE_RIGHT : EYE_LEFT);
+                last_jitter_us = diff;
                 last_eye = eye;
                 trigger_eye = eye;
                 trigger_pending = true;
-                // Record jitter (interval difference from baseline estimate)
-                last_jitter_us = (int16_t)((int32_t)interval - (int32_t)baseline_est);
             }
             else
             {
-                // Third or subsequent pulse: refine baseline and determine eye normally
-                uint32_t interval = start_time - last_pulse_start_time;
-                // Refine the baseline estimate as the average of the last two intervals
-                baseline_est = (uint16_t)(((uint32_t)prev_interval + interval) / 2);
-                prev_interval = (uint16_t)interval;
-                // Determine eye from interval vs baseline: longer = Right, shorter = Left
-                uint8_t eye = (interval > baseline_est ? EYE_RIGHT : EYE_LEFT);
+                if (eye != last_eye)
+                {
+                    baseline_est = (uint16_t)(((uint32_t)prev_interval + interval) / 2);
+                    prev_interval = (uint16_t)interval;
+                }
+                last_jitter_us = diff;
                 last_eye = eye;
                 trigger_eye = eye;
                 trigger_pending = true;
-                // Calculate jitter relative to current baseline
-                last_jitter_us = (int16_t)((int32_t)interval - (int32_t)baseline_est);
             }
 
-            // Update the reference start time for the next interval measurement
-            last_pulse_start_time = start_time;
-            // Block new pulse detection for the configured delay to avoid immediate re-trigger
+            // 1) Post-pulse block
             block_until_time = start_time + dlplink_sensor_block_signal_detection_delay;
-            // Reset state to idle, ready for the next pulse
+            last_pulse_start_time = start_time;
             in_pulse = false;
         }
     }
