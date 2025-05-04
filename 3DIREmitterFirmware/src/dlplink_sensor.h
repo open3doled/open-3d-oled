@@ -17,5 +17,6 @@ void dlplink_sensor_init(void);
 void dlplink_sensor_stop(void);
 void dlplink_sensor_check_readings(void);
 void dlplink_sensor_adc_isr_handler(void);
+void dlplink_sensor_print_stats(void);
 
 #endif /* DLPLINK_SENSOR_H */

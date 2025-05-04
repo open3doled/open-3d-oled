@@ -18,7 +18,7 @@ extern uint8_t opt_sensor_output_stats;   // Flag indicating whether +stats mode
 // DLP-Link pulse timing constants (in microseconds)
 #define DLP_SENSOR_MIN_PULSE_US 20
 #define DLP_SENSOR_MAX_PULSE_US 32
-#define DLP_SENSOR_PULSE_GRACE_US 5 // Grace margin for ADC ISR timing
+#define DLP_SENSOR_PULSE_GRACE_US 20 // Grace margin for ADC ISR timing
 
 // IR ignore countdown (loops) after IR LED active
 #define DLP_SENSOR_IR_IGNORE_COUNT 10
@@ -28,7 +28,6 @@ static bool active = false;                   // Detection active after initial 
 static bool in_pulse = false;                 // Currently in a pulse (between rise and fall)
 static uint32_t last_pulse_start_time = 0;    // Timestamp of the previous pulse's start (for interval measurement)
 static uint32_t current_pulse_start_time = 0; // Timestamp of the current pulse's start
-static uint16_t baseline_est = 0;             // Estimated frame interval (baseline period in µs)
 static uint16_t prev_interval = 0;            // Last measured inter-pulse interval (for baseline refinement)
 static uint32_t block_until_time = 0;         // Time until which new pulse detection is blocked (after a pulse)
 static uint32_t ir_led_token_active_countdown = 0;
@@ -36,6 +35,7 @@ static uint32_t ir_led_token_active_countdown = 0;
 // Variables for communication with main loop (volatile because they are set in ISR and read in main)
 static volatile uint32_t pulse_count = 0;         // Total pulses detected
 static volatile uint16_t last_pulse_width_us = 0; // Last pulse duration in microseconds
+static volatile uint16_t baseline_est = 0;        // Estimated frame interval (baseline period in µs)
 static volatile int16_t last_jitter_us = 0;       // Last measured jitter (µs, positive=longer, negative=shorter)
 static volatile uint8_t last_eye = EYE_LEFT;      // Last detected eye (0=Left,1=Right)
 static volatile uint8_t trigger_eye = EYE_LEFT;   // Eye value for the pending trigger event
@@ -60,17 +60,21 @@ void dlplink_sensor_init(void)
     last_jitter_us = 0;
 
     // Configure ADC for free-running mode on ADC6 (DLP-Link sensor channel)
-    ADCSRA &= ~(1 << ADEN);                 // Disable ADC to configure
-    ADMUX = (1 << REFS0)                    // AVcc as reference voltage
-            | (1 << ADLAR)                  // Left-adjust result (8-bit reading from ADCH)
-            | 6;                            // Select ADC6 channel
-    ADCSRB = 0x00;                          // Free running mode, no auto-trigger source (ADTS=000)
-    DIDR0 |= (1 << DLP_SENSOR_CHANNEL);     // Disable digital input on ADC6 pin
-    ADCSRA = (1 << ADEN)                    // Enable ADC
-             | (1 << ADATE)                 // Auto-trigger enable (free-run)
-             | (1 << ADIE)                  // Enable ADC interrupt
-             | (1 << ADPS1) | (1 << ADPS0); // Prescaler = 8 (ADC clock ~2 MHz)
-    ADCSRA |= (1 << ADSC);                  // Start ADC conversions
+    ADCSRA &= ~(1 << ADEN);                                // Disable ADC to configure
+    ADMUX = (1 << REFS0)                                   // AVcc as reference voltage
+            | (1 << ADLAR)                                 // Left-adjust result (8-bit reading from ADCH)
+            | 6;                                           // Select ADC6 channel
+    ADCSRB = 0x00 | _BV(ADHSM);                            // Free running mode, no auto-trigger source (ADTS=000)
+    DIDR0 |= (1 << DLP_SENSOR_CHANNEL);                    // Disable digital input on ADC6 pin
+    ADCSRA = (1 << ADEN)                                   // Enable ADC
+             | (1 << ADSC)                                 // start conversion
+             | (1 << ADIF)                                 // Clear interrupt flag
+                                                           // | (1 << ADATE)                                // Auto-trigger enable (free-run)
+             | (1 << ADIE)                                 // Enable ADC interrupt
+                                                           // | (0 << ADPS2) | (1 << ADPS1) | (0 << ADPS0); // Prescaler = 4 (ADC clock ~2 MHz)
+                                                           // | (0 << ADPS2) | (1 << ADPS1) | (1 << ADPS0); // Prescaler = 8 (ADC clock ~2 MHz)
+             | (1 << ADPS2) | (0 << ADPS1) | (0 << ADPS0); // Prescaler = 16 (ADC clock ~2 MHz)
+    ADCSRA |= (1 << ADSC);                                 // Start ADC conversions
 }
 
 void dlplink_sensor_stop(void)
@@ -86,20 +90,27 @@ void dlplink_sensor_check_readings(void)
         ir_signal_process_trigger(trigger_eye);
         trigger_pending = false;
     }
+}
 
+void dlplink_sensor_print_stats(void)
+{
     // If +stats mode is enabled, print DLP-Link sensor statistics
     if (opt_sensor_output_stats)
     {
-#ifdef __AVR__
-        printf_P(PSTR("DLP-Link: pulses=%lu, last_width=%u us, jitter=%+d us, last_eye=%c\n"),
-                 pulse_count, last_pulse_width_us, last_jitter_us,
-                 (last_eye == EYE_LEFT ? 'L' : 'R'));
-#else
-        printf("DLP-Link: pulses=%lu, last_width=%u us, jitter=%+d us, last_eye=%c\n",
-               pulse_count,
-               last_pulse_width_us, last_jitter_us,
-               (last_eye == EYE_LEFT ? 'L' : 'R'));
-#endif
+        Serial.print("+stats dlplink pulses:");
+        Serial.print(pulse_count);
+        Serial.print(" last_width:");
+        Serial.print(last_pulse_width_us);
+        Serial.print(" baseline_est:");
+        Serial.print(baseline_est);
+        Serial.print(" jitter:");
+        Serial.print(last_jitter_us);
+        Serial.print(" in_pulse:");
+        Serial.print(in_pulse);
+        Serial.print(" trigger_pending:");
+        Serial.print(trigger_pending);
+        Serial.print(" last_eye:");
+        Serial.println((last_eye == EYE_LEFT ? 'L' : 'R'));
     }
 }
 
@@ -108,6 +119,8 @@ void dlplink_sensor_adc_isr_handler(void)
     uint8_t value = ADCH; // 8-bit ADC sample
     uint32_t now = 0;
     bool now_set = false;
+
+    bitToggle(PORT_DEBUG_PORT_D2, DEBUG_PORT_D2);
 
     // 4) IR ignore countdown
 #ifdef DLP_SENSOR_IR_IGNORE_COUNT
@@ -120,6 +133,7 @@ void dlplink_sensor_adc_isr_handler(void)
         if (ir_led_token_active_countdown > 0)
         {
             ir_led_token_active_countdown--;
+            ADCSRA |= (1 << ADIF) | (1 << ADSC); // Clear interrupt flag and start ADC conversions
             return;
         }
     }
@@ -134,6 +148,7 @@ void dlplink_sensor_adc_isr_handler(void)
         }
         else
         {
+            ADCSRA |= (1 << ADIF) | (1 << ADSC); // Clear interrupt flag and start ADC conversions
             return;
         }
     }
@@ -147,7 +162,10 @@ void dlplink_sensor_adc_isr_handler(void)
             now_set = true;
         }
         if (now < block_until_time)
+        {
+            ADCSRA |= (1 << ADIF) | (1 << ADSC); // Clear interrupt flag and start ADC conversions
             return;
+        }
         block_until_time = 0;
     }
 
@@ -185,6 +203,7 @@ void dlplink_sensor_adc_isr_handler(void)
             if (pulse_width < min_pw || pulse_width > max_pw)
             {
                 in_pulse = false;
+                ADCSRA |= (1 << ADIF) | (1 << ADSC); // Clear interrupt flag and start ADC conversions
                 return;
             }
 
@@ -196,11 +215,18 @@ void dlplink_sensor_adc_isr_handler(void)
             uint32_t interval = start_time - last_pulse_start_time;
             int32_t diff = (int32_t)interval - (int32_t)baseline_est;
 
+            // 2x diff should match the values in the datasheet page 38 https://www.ti.com/lit/ds/symlink/dlpc3434.pdf
+            // Specifically 15836 / [diff] = Refresh Hz
+            // diff ~= 15836 / Refresh Hz
+            // diff ~= 15836 * Refresh Period
+            // Refresh Period = [diff] / 15836
+            // 15836 = 0x3DDC
+
             // 2) Eye classification with jitter window
             uint8_t eye;
-            if (diff > 80)
+            if (diff > 30)
                 eye = EYE_RIGHT;
-            else if (diff < -80)
+            else if (diff < -30)
                 eye = EYE_LEFT;
             else
                 eye = last_eye;
@@ -251,4 +277,5 @@ void dlplink_sensor_adc_isr_handler(void)
             in_pulse = false;
         }
     }
+    ADCSRA |= (1 << ADIF) | (1 << ADSC); // Clear interrupt flag and start ADC conversions
 }

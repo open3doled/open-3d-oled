@@ -500,6 +500,15 @@ void loop()
     else if (ir_drive_mode == IR_DRIVE_MODE_DLP_LINK)
     {
         dlplink_sensor_check_readings();
+        if (opt_sensor_output_stats)
+        {
+            current_time = micros();
+            if (current_time >= next_print)
+            {
+                dlplink_sensor_print_stats();
+                next_print = current_time + OPT_SENSOR_UPDATE_STAT_PERIOD;
+            }
+        }
     }
 }
 
