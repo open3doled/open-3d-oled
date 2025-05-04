@@ -507,9 +507,7 @@ void loop()
     }
     else if (ir_drive_mode == IR_DRIVE_MODE_DLP_LINK)
     {
-        bitSet(PORT_DEBUG_PWM_READING_RIGHT_D10, DEBUG_PWM_READING_RIGHT_D10);
         dlplink_sensor_check_readings();
-        bitClear(PORT_DEBUG_PWM_READING_RIGHT_D10, DEBUG_PWM_READING_RIGHT_D10);
         if (opt_sensor_output_stats)
         {
             current_time = micros();
