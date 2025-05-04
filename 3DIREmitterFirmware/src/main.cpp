@@ -96,9 +96,12 @@ void setup()
             ir_frame_duration = eeprom_settings.ir_frame_duration;
             ir_signal_spacing = eeprom_settings.ir_signal_spacing;
             opt_sensor_block_signal_detection_delay = eeprom_settings.opt_sensor_block_signal_detection_delay;
+            dlplink_sensor_block_signal_detection_delay = eeprom_settings.opt_sensor_block_signal_detection_delay;
             opt_sensor_min_threshold_value_to_activate = eeprom_settings.opt_sensor_min_threshold_value_to_activate;
             opt_sensor_detection_threshold_high = eeprom_settings.opt_sensor_detection_threshold_high;
+            dlplink_sensor_detection_threshold_high = eeprom_settings.opt_sensor_detection_threshold_high;
             opt_sensor_enable_ignore_during_ir = eeprom_settings.opt_sensor_enable_ignore_during_ir;
+            dlplink_sensor_enable_ignore_during_ir = eeprom_settings.opt_sensor_enable_ignore_during_ir;
             opt_sensor_enable_duplicate_realtime_reporting = eeprom_settings.opt_sensor_enable_duplicate_realtime_reporting;
             opt_sensor_output_stats = eeprom_settings.opt_sensor_output_stats;
             opt_sensor_ignore_all_duplicates = eeprom_settings.opt_sensor_ignore_all_duplicates;
@@ -107,6 +110,7 @@ void setup()
             if (eeprom_settings.version >= 16)
             {
                 opt_sensor_detection_threshold_low = eeprom_settings.opt_sensor_detection_threshold_low;
+                dlplink_sensor_detection_threshold_low = eeprom_settings.opt_sensor_detection_threshold_low;
             }
             if (eeprom_settings.version >= 17)
             {
@@ -264,6 +268,7 @@ void loop()
                         else if (p == 5)
                         {
                             opt_sensor_block_signal_detection_delay = temp;
+                            dlplink_sensor_block_signal_detection_delay = temp;
                         }
                         else if (p == 6)
                         {
@@ -272,10 +277,12 @@ void loop()
                         else if (p == 7)
                         {
                             opt_sensor_detection_threshold_high = temp;
+                            dlplink_sensor_detection_threshold_high = temp;
                         }
                         else if (p == 8)
                         {
                             opt_sensor_enable_ignore_during_ir = temp;
+                            dlplink_sensor_enable_ignore_during_ir = temp;
                         }
                         else if (p == 9)
                         {
@@ -300,6 +307,7 @@ void loop()
                         else if (p == 14)
                         {
                             opt_sensor_detection_threshold_low = temp;
+                            dlplink_sensor_detection_threshold_low = temp;
                         }
                         else if (p == 15)
                         {
@@ -499,7 +507,9 @@ void loop()
     }
     else if (ir_drive_mode == IR_DRIVE_MODE_DLP_LINK)
     {
+        bitSet(PORT_DEBUG_PWM_READING_RIGHT_D10, DEBUG_PWM_READING_RIGHT_D10);
         dlplink_sensor_check_readings();
+        bitClear(PORT_DEBUG_PWM_READING_RIGHT_D10, DEBUG_PWM_READING_RIGHT_D10);
         if (opt_sensor_output_stats)
         {
             current_time = micros();

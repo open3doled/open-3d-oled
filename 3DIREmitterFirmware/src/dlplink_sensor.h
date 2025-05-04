@@ -6,6 +6,7 @@
 
 // ADC channel definition for the DLP-Link optical sensor (uses ADC6 input)
 #define DLP_SENSOR_CHANNEL ADC6D
+#define DLP_SENSOR_MIN_THRESHOLD_VALUE_TO_ACTIVATE 10 // IR LED was triggering shutters while testing
 
 extern uint32_t dlplink_sensor_block_signal_detection_delay;
 extern uint8_t dlplink_sensor_min_threshold_value_to_activate;
