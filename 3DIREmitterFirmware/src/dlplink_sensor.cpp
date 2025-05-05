@@ -315,7 +315,6 @@ void dlplink_sensor_adc_isr_handler(void)
             if (dlplink_pulse_count < 5)
             {
                 dlplink_pulse_count_detected = dlplink_pulse_count;
-                // bitToggle(PORT_DEBUG_PWM_READING_RIGHT_D10, DEBUG_PWM_READING_RIGHT_D10);
             }
             dlplink_pulse_count = 0;
         }

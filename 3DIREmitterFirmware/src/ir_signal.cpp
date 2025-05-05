@@ -166,30 +166,36 @@ void ir_signal_send(ir_signal_type signal)
     ir_signal_send_current_timings = ir_signal_send_current_definition->timings;
     ir_signal_send_current_token_position = 1;
     ir_signal_send_current_token_length = ir_signal_send_current_definition->size;
-#ifdef ENABLE_DEBUG_PIN_OUTPUTS
+
     if (signal == SIGNAL_OPEN_LEFT || signal == SIGNAL_OPEN_LEFT_CLOSE_RIGHT || signal == SIGNAL_OPEN_LEFT_FAST_SWAP)
     {
+#ifdef ENABLE_DEBUG_PIN_OUTPUTS
       bitSet(PORT_DEBUG_ACTIVATE_LEFT_D7, DEBUG_ACTIVATE_LEFT_D7);
+#endif
+      bitSet(DDR_MINIDIN3_3D_STEREO_SYNC_LEFT_OPEN_OUT_D6, MINIDIN3_3D_STEREO_SYNC_LEFT_OPEN_OUT_D6);
     }
     else if (signal == SIGNAL_OPEN_RIGHT_CLOSE_LEFT || signal == SIGNAL_CLOSE_LEFT)
     {
+#ifdef ENABLE_DEBUG_PIN_OUTPUTS
       bitClear(PORT_DEBUG_ACTIVATE_LEFT_D7, DEBUG_ACTIVATE_LEFT_D7);
-      // bitClear(PORT_DEBUG_PORT_D15, DEBUG_PORT_D15);
+#endif
+      bitSet(DDR_MINIDIN3_3D_STEREO_SYNC_LEFT_OPEN_OUT_D6, MINIDIN3_3D_STEREO_SYNC_LEFT_OPEN_OUT_D6);
     }
     if (signal == SIGNAL_OPEN_RIGHT || signal == SIGNAL_OPEN_RIGHT_CLOSE_LEFT || signal == SIGNAL_OPEN_RIGHT_FAST_SWAP)
     {
+#ifdef ENABLE_DEBUG_PIN_OUTPUTS
       bitSet(PORT_DEBUG_ACTIVATE_RIGHT_D8, DEBUG_ACTIVATE_RIGHT_D8);
+#endif
+      bitClear(DDR_MINIDIN3_3D_STEREO_SYNC_LEFT_OPEN_OUT_D6, MINIDIN3_3D_STEREO_SYNC_LEFT_OPEN_OUT_D6);
     }
     else if (signal == SIGNAL_OPEN_LEFT_CLOSE_RIGHT || signal == SIGNAL_CLOSE_RIGHT)
     {
+#ifdef ENABLE_DEBUG_PIN_OUTPUTS
       bitClear(PORT_DEBUG_ACTIVATE_RIGHT_D8, DEBUG_ACTIVATE_RIGHT_D8);
-      // bitClear(PORT_DEBUG_PORT_D15, DEBUG_PORT_D15);
-    }
-    if (signal == SIGNAL_OPEN_LEFT_FAST_SWAP || signal == SIGNAL_OPEN_RIGHT_FAST_SWAP)
-    {
-      // bitSet(PORT_DEBUG_PORT_D15, DEBUG_PORT_D15);
-    }
 #endif
+      bitClear(DDR_MINIDIN3_3D_STEREO_SYNC_LEFT_OPEN_OUT_D6, MINIDIN3_3D_STEREO_SYNC_LEFT_OPEN_OUT_D6);
+    }
+
 #ifdef OPT_SENSOR_ENABLE_IGNORE_DURING_IR
     ir_led_token_active = true;
 #ifdef ENABLE_DEBUG_PIN_OUTPUTS

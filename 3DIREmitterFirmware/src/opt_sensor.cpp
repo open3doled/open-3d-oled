@@ -339,12 +339,6 @@ void opt_sensor_check_readings(void)
                         {
                             opt_sensor_duplicate_frames_counter++;
                             opt_sensor_duplicate_frames_in_a_row_counter++;
-#ifdef ENABLE_DEBUG_PIN_OUTPUTS
-                            if (opt_sensor_duplicate_frame[c])
-                            {
-                                bitSet(PORT_DEBUG_DUPLICATE_FRAME_D16, DEBUG_DUPLICATE_FRAME_D16);
-                            }
-#endif
                             if (opt_sensor_enable_duplicate_realtime_reporting && ((opt_sensor_duplicate_frames_in_a_row_counter % 2) == 1) &&
                                 (!opt_sensor_ignore_all_duplicates || opt_sensor_duplicate_frames_in_a_row_counter == 1)) // if ignore all duplicates is on then we only report the first duplicate because it will keep detecting duplicates multiple times per frame
                             {
@@ -479,8 +473,6 @@ void opt_sensor_check_readings(void)
             opt_sensor_disable_debug_detection_flag_after = 0;
             bitClear(PORT_DEBUG_DETECTED_RIGHT_D5, DEBUG_DETECTED_RIGHT_D5);
             bitClear(PORT_DEBUG_DETECTED_LEFT_D4, DEBUG_DETECTED_LEFT_D4);
-            bitClear(PORT_DEBUG_AVERAGE_TIMING_MODE_RESYNC_D14, DEBUG_AVERAGE_TIMING_MODE_RESYNC_D14);
-            bitClear(PORT_DEBUG_DUPLICATE_FRAME_D16, DEBUG_DUPLICATE_FRAME_D16);
         }
     }
 #endif
