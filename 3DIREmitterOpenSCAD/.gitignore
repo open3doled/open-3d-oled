@@ -1,6 +1,6 @@
-*.x3g
-*.3mf
-*.gcode
+**/*.x3g
+**/*.3mf
+**/*.gcode
 0105a.stl
 0202a.stl
 *.json

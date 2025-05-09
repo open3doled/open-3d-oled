@@ -96,6 +96,15 @@ cover_tol = 0.5;
 cover_tab_wx = 5;
 cover_tab_wy = 1.5;
 cover_tab_wz = 2;
+cover_esb_wd = 5;
+cover_esbh_wd = cover_esb_wd+0.7;
+cover_esbh_px = 27;
+cover_esbh_py = base_wy-9;
+cover_esbhi_wd = 3.3;
+cover_esbo_wd = cover_esb_wd+2; // diameter of portion under case with lip to stop button falling out
+cover_esbhi_wz = 3; // height of walls that surround inside button
+cover_esbs_wz = 2; // height difference between top of inside and outside button
+cover_esbt_wz = cover_ww+2; // height of top of button
 
 module base() {
   difference() {
@@ -111,7 +120,8 @@ module base() {
       translate([base_mbm1_px,base_mbm1_py,base_wz-ovr])cube([base_mbm1_wx,base_mbm1_wy,base_mbm_wz]);  // main board mount
       translate([base_mbm2_px,base_mbm2_py,base_wz-ovr])cube([base_mbm2_wx,base_mbm2_wy,base_mbm_wz]);  // main board mount
       translate([base_obm_px,base_wy,0])cube([base_obm_wx,base_ww,base_bwh+base_wz-base_obm_pdz-base_obma_wz+ovr]); // opt board mount tower
-      translate([base_obm_px,base_wy+base_ww-base_obma_wy,base_bwh+base_wz-base_obm_pdz-base_obma_wz])cube([base_obm_wx,base_obma_wy+ovr,base_obma_wz]); // opt board mount arm
+      translate([base_obm_px,base_wy+base_ww-base_obma_wy,base_bwh+base_wz-base_obm_pdz-base_obma_wz])cube([base_obm_wx,base_obma_wy+ovr,base_obma_wz]);
+ // opt board mount arm
       // opt board mount ramp
       hull() {
         translate([base_obm_px,base_wy,base_bwh+base_wz-base_obm_pdz-base_obmr_pdz-base_obma_wz+ovr])cube([base_obm_wx,base_ww,ovr]);
@@ -150,7 +160,22 @@ module cover() {
       translate([base_wx/2-cover_tab_wx/2,base_wy+base_ww+cover_tol-cover_tab_wy,0])cube([cover_tab_wx,cover_tab_wy,cover_tab_wz]); // left lock tab
     }
     union() {
-      translate([base_obmh_px,base_obmh_py,base_wz+base_fwh-ovr])cube([base_obmh_wx,base_obmh_wy,cover_ww+2*ovr]); // hole for optical sensor in case top comment this line out if you don't need it
+      translate([base_obmh_px,base_obmh_py,base_wz+base_fwh-ovr])cube([base_obmh_wx,base_obmh_wy,cover_ww+2*ovr]); // hole for dlplink optical sensor in case top, comment this line out if you don't need it
+      translate([cover_esbh_px,cover_esbh_py,base_wz+base_fwh-ovr])cylinder(h=cover_ww+2*ovr,d=cover_esbh_wd); // hole for eye swap button on switch 4 in case top, comment this line out if you don't need it
+    }
+  }
+}
+
+// SMD Switch used is 6x6x19 4Pin Tactile Tact Push Button Micro Switch Self-reset Switch
+// https://www.aliexpress.com/item/1005005845072975.html
+module button() {
+  difference() {  
+    union() {
+      cylinder(h=cover_esbhi_wz+cover_esbs_wz,d=cover_esbo_wd); // button base
+      translate([0,0,cover_esbhi_wz+cover_esbs_wz-ovr])cylinder(h=cover_esbt_wz+ovr,d=cover_esb_wd); // button top
+    }
+    union() {
+      translate([0,0,-ovr])cylinder(h=cover_esbhi_wz+ovr,d=cover_esbhi_wd); // inside pocket for sitting on button
     }
   }
 }
@@ -160,3 +185,5 @@ base();
 translate([0,-10,base_wz+base_fwh+cover_ww])
 rotate([180,0,0])
 cover();
+translate([0,60,0])
+button();
