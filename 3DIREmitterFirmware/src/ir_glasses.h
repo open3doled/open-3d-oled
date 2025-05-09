@@ -316,7 +316,6 @@ const ir_glasses_signal_library_t ir_glasses_panasonic_custom = {
             .size = 7,
             .timings = {20, 200, 20, 20, 20, 200, 20}}}};
 
-
 // JX-30 DLP-Link glasses (measured from DLP projector 20 us pulses with delta T of 130 us, but the acceptable ranges with JX-30 glasses were 20 us <= pulses <= 300 us and 60 us <= delta T < 190 us)
 const ir_glasses_signal_library_t ir_glasses_dlp_link = {
     .signal_count = 2,
@@ -341,7 +340,7 @@ const ir_glasses_signal_library_t ir_glasses_dlp_link = {
             .mode = 0, // haven't measured to check
             .token_length = 205,
             .size = 3,
-            .timings = {0, 125, 20}}}}; // measred as 125 delay and 20 duration but for whatever reason it's making it too short due to processing interrupt timers so I'm just setting to 30.
+            .timings = {0, 125, 20}}}}; // measured as 125 delay and 20 duration but for whatever reason it's making it too short due to processing interrupt timers so I'm just setting to 30.
 
 const ir_glasses_signal_library_t *ir_glasses_available[] = {
     &ir_glasses_samsung07,
