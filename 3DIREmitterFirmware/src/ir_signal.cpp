@@ -210,6 +210,7 @@ void ir_signal_send(ir_signal_type signal)
     TC4H = 0x03; // set timer4 top value to 1023
     OCR4C = 0xFF;
     ir_signal_send_current_token_timing = ir_signal_send_current_timings[0];
+    // Regular mode start with ON pulse
     if (ir_signal_send_current_token_timing > 0)
     {
       TC4H = (ir_signal_send_current_token_timing >> 8) & 0xFF; // High byte of 10-bit value
@@ -217,6 +218,7 @@ void ir_signal_send(ir_signal_type signal)
       bitSet(TIMSK4, OCIE4A);                                   // Enable IR pulse falling edge interrupt
       bitSet(PORT_LED_IR_D3, LED_IR_D3);
     }
+    // Special mode that uses the first two elements of timing to specify a delay before starting the first pulse.
     else
     {
       if (ir_signal_send_current_token_position < ir_signal_send_current_token_length)
@@ -259,24 +261,56 @@ ISR(TIMER4_COMPA_vect) // IR pulse falling edge
   if (ir_signal_send_current_token_position < ir_signal_send_current_token_length)
   {
     ir_signal_send_current_token_timing += ir_signal_send_current_timings[ir_signal_send_current_token_position++];
-    TC4H = (ir_signal_send_current_token_timing >> 8) & 0xFF; // High byte of 10-bit value
-    bitSet(TIFR4, OCF4B);                                     // Clear pending interrupt flags if any
-    OCR4B = ir_signal_send_current_token_timing & 0xFF;       // Low byte of 10-bit value
-    bitSet(TIMSK4, OCIE4B);                                   // Enable rising edge interrupt
+    if (TCNT4 < ir_signal_send_current_token_timing - 5)
+    {
+      TC4H = (ir_signal_send_current_token_timing >> 8) & 0xFF; // High byte of 10-bit value
+      bitSet(TIFR4, OCF4B);                                     // Clear pending interrupt flags if any
+      OCR4B = ir_signal_send_current_token_timing & 0xFF;       // Low byte of 10-bit value
+      bitSet(TIMSK4, OCIE4B);                                   // Enable rising edge interrupt
+    }
+    else
+    {
+      // If its within 5 microseconds abort this ir signal as its probably already malformed and we don't want to miss the off signal...
+      ir_signal_send_current_token_timing += ir_signal_spacing;
+      if (TCNT4 < ir_signal_send_current_token_timing - 5)
+      {
+        TC4H = (ir_signal_send_current_token_timing >> 8) & 0xFF; // High byte of 10-bit value
+        bitSet(TIFR4, OCF4D);                                     // Clear pending interrupt flags if any
+        OCR4D = ir_signal_send_current_token_timing & 0xFF;       // Low byte of 10-bit value
+        bitSet(TIMSK4, OCIE4D);                                   // Enable signal spacing period interrupt
+      }
+      else
+      {
+        TCCR4B = 0;
+        ir_signal_send_finished();
+      }
+#ifdef OPT_SENSOR_ENABLE_IGNORE_DURING_IR
+      ir_led_token_active = false;
+#endif
+    }
   }
   else
   {
     ir_signal_send_current_token_timing += ir_signal_spacing;
-    TC4H = (ir_signal_send_current_token_timing >> 8) & 0xFF; // High byte of 10-bit value
-    bitSet(TIFR4, OCF4D);                                     // Clear pending interrupt flags if any
-    OCR4D = ir_signal_send_current_token_timing & 0xFF;       // Low byte of 10-bit value
-    bitSet(TIMSK4, OCIE4D);                                   // Enable signal spacing period interrupt
+    if (TCNT4 < ir_signal_send_current_token_timing - 5)
+    {
+      TC4H = (ir_signal_send_current_token_timing >> 8) & 0xFF; // High byte of 10-bit value
+      bitSet(TIFR4, OCF4D);                                     // Clear pending interrupt flags if any
+      OCR4D = ir_signal_send_current_token_timing & 0xFF;       // Low byte of 10-bit value
+      bitSet(TIMSK4, OCIE4D);                                   // Enable signal spacing period interrupt
 #ifdef OPT_SENSOR_ENABLE_IGNORE_DURING_IR
-    ir_led_token_active = false;
-// #ifdef OPT_SENSOR_ENABLE_IGNORE_DURING_IR_DEBUG_PIN_D2
-// bitClear(PORT_DEBUG_PORT_D2, DEBUG_PORT_D2); // IR LED token ended
-// #endif
+      ir_led_token_active = false;
 #endif
+    }
+    else
+    {
+      // If its within 5 microseconds abort this ir signal as its probably already malformed and we don't want to miss the off signal...
+#ifdef OPT_SENSOR_ENABLE_IGNORE_DURING_IR
+      ir_led_token_active = false;
+#endif
+      TCCR4B = 0;
+      ir_signal_send_finished();
+    }
   }
   bitClear(TIMSK4, OCIE4A); // Disable this interrupt
 }
@@ -297,15 +331,20 @@ ISR(TIMER4_COMPB_vect) // IR pulse rising edge
     // If its within 5 microseconds abort this ir signal as its probably already malformed and we don't want to miss the off signal...
     bitClear(PORT_LED_IR_D3, LED_IR_D3);
     ir_signal_send_current_token_timing += ir_signal_spacing;
-    TC4H = (ir_signal_send_current_token_timing >> 8) & 0xFF; // High byte of 10-bit value
-    bitSet(TIFR4, OCF4D);                                     // Clear pending interrupt flags if any
-    OCR4D = ir_signal_send_current_token_timing & 0xFF;       // Low byte of 10-bit value
-    bitSet(TIMSK4, OCIE4D);                                   // Enable signal spacing period interrupt
+    if (TCNT4 < ir_signal_send_current_token_timing - 5)
+    {
+      TC4H = (ir_signal_send_current_token_timing >> 8) & 0xFF; // High byte of 10-bit value
+      bitSet(TIFR4, OCF4D);                                     // Clear pending interrupt flags if any
+      OCR4D = ir_signal_send_current_token_timing & 0xFF;       // Low byte of 10-bit value
+      bitSet(TIMSK4, OCIE4D);                                   // Enable signal spacing period interrupt
+    }
+    else
+    {
+      TCCR4B = 0;
+      ir_signal_send_finished();
+    }
 #ifdef OPT_SENSOR_ENABLE_IGNORE_DURING_IR
     ir_led_token_active = false;
-// #ifdef OPT_SENSOR_ENABLE_IGNORE_DURING_IR_DEBUG_PIN_D2
-// bitClear(PORT_DEBUG_PORT_D2, DEBUG_PORT_D2); // IR LED token ended
-// #endif
 #endif
   }
   bitClear(TIMSK4, OCIE4B); // Disable this interrupt
