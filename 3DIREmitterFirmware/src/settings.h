@@ -15,9 +15,11 @@
 #define OPT_SENSOR_ENABLE_STATS               // prints opt_sensor statistics every OPT_SENSOR_UPDATE_STAT_PERIOD micros
 #define OPT_SENSOR_UPDATE_STAT_PERIOD 5000000 // in micros (frequency to update and optionally display stats for the opt_sensor sensor module)
 #define OPT_SENSOR_FILTER_ADC_SIGNAL          // This will adjust the code to function properly with the BPW34 photodiode which has no transimpedance amplifier and has an output voltage much closer to 150mV so it can be mistriggered by noise ir led triggering. (beta testers have reported this causes flickering on some pwm backlit displays (possibly because the flashing of the backlight is irratic, perhaps this needs to be a proper peramater disabling for now by default)) (only applies when setting variable is set as well)
+
 #ifndef ENABLE_DEBUG_PIN_OUTPUTS
 // #define ENABLE_DEBUG_STATUS_LEDS // we are using the pads for the unused button footprints on D2, D4 and D5 to drive some status LEDs.
 // #define ENABLE_DEBUG_STATUS_FLASH_D2_ON_STARTUP 10
+#define ENABLE_EYE_SWAP_ON_SWITCH_4_D5 // Use Switch 4 to swap the left and right eye signals it will toggle the ir_flip_eyes attribute but not store the change to eeprom
 #endif
 #define NUMBER_OF_IR_PROTOCOLS 8
 
@@ -99,6 +101,9 @@
 #define LED_IR_D3 0
 #define DDR_LED_IR_D3 DDRD
 #define PORT_LED_IR_D3 PORTD
+#define SWITCH_2_D3 0
+#define DDR_SWITCH_2_D3 DDRD
+#define PORT_SWITCH_2_D3 PORTD
 
 // D4
 #define DEBUG_DETECTED_LEFT_D4 4
@@ -107,6 +112,9 @@
 #define STATUS_LED_D4 4
 #define DDR_STATUS_LED_D4 DDRD
 #define PORT_STATUS_LED_D4 PORTD
+#define SWITCH_3_D4 4
+#define DDR_SWITCH_3_D4 DDRD
+#define PORT_SWITCH_3_D4 PORTD
 
 // D5
 #define DEBUG_DETECTED_RIGHT_D5 6
@@ -115,6 +123,10 @@
 #define STATUS_LED_D5 6
 #define DDR_STATUS_LED_D5 DDRC
 #define PORT_STATUS_LED_D5 PORTC
+#define SWITCH_4_D5 6
+#define DDR_SWITCH_4_D5 DDRC
+#define PORT_SWITCH_4_D5 PORTC
+#define PIN_SWITCH_4_D5 PINC
 
 // D6
 #define MINIDIN3_3D_STEREO_SYNC_LEFT_OPEN_OUT_D6 7

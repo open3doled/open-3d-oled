@@ -99,20 +99,28 @@ void rf_trigger_update(void)
   if (rf_left_shutter_active == 0 && rf_left_shutter_common == 0)
   {
     ir_signal_process_trigger(1);
+#ifdef ENABLE_DEBUG_PIN_OUTPUTS
     bitSet(PORT_DEBUG_DETECTED_LEFT_D4, DEBUG_DETECTED_LEFT_D4);
+#endif
   }
   else
   {
+#ifdef ENABLE_DEBUG_PIN_OUTPUTS
     bitClear(PORT_DEBUG_DETECTED_LEFT_D4, DEBUG_DETECTED_LEFT_D4);
+#endif
   }
   if (rf_right_shutter_active == 0 && rf_right_shutter_common == 0)
   {
     ir_signal_process_trigger(0);
+#ifdef ENABLE_DEBUG_PIN_OUTPUTS
     bitSet(PORT_DEBUG_DETECTED_RIGHT_D5, DEBUG_DETECTED_RIGHT_D5);
+#endif
   }
   else
   {
+#ifdef ENABLE_DEBUG_PIN_OUTPUTS
     bitClear(PORT_DEBUG_DETECTED_RIGHT_D5, DEBUG_DETECTED_RIGHT_D5);
+#endif
   }
   rf_trigger_current_time = millis();
   last_shutter_signal_time = rf_trigger_current_time;

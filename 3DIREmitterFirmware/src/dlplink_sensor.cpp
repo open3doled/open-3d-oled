@@ -157,7 +157,9 @@ void dlplink_sensor_check_readings(void)
         dlplink_sensor_reading_threshold_low = mult_by_threshold(dlplink_sensor_reading_high, dlplink_sensor_reading_low, dlplink_sensor_detection_threshold_low);
         sei();
         loop_counter_update_thresholds_at += 80000; // About every 1 seconds
+#ifdef ENABLE_DEBUG_PIN_OUTPUTS
         dlplink_disable_debug_detection_flag_at -= loop_counter;
+#endif
         loop_counter = 0;
         dlplink_sensor_reading_rolling_high = dlplink_sensor_reading_high;
         dlplink_sensor_reading_high = 0;

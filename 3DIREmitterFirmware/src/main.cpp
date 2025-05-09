@@ -26,9 +26,23 @@ uint32_t current_time;
 #ifdef ENABLE_LOOP_TOGGLE_DEBUG_PIN_D9
 bool loop_toggle = 0;
 #endif
+#ifdef ENABLE_EYE_SWAP_ON_SWITCH_4_D5
+uint16_t switch_4_pressed_count = 0;
+uint16_t switch_4_released_count = 0;
+bool switch_4_blocked = false;
+#endif
 
 void setup()
 {
+#ifdef ENABLE_LOOP_TOGGLE_DEBUG_PIN_D9
+    loop_toggle = 0;
+#endif
+#ifdef ENABLE_EYE_SWAP_ON_SWITCH_4_D5
+    switch_4_pressed_count = 0;
+    switch_4_released_count = 0;
+    switch_4_blocked = false;
+#endif
+
     Serial.begin(118200);
     // Serial.begin(460800);
     Serial.println("+startup");
@@ -46,6 +60,10 @@ void setup()
     bitSet(DDR_DEBUG_DETECTED_RIGHT_D5, DEBUG_DETECTED_RIGHT_D5);
     bitSet(DDR_DEBUG_ACTIVATE_LEFT_D7, DEBUG_ACTIVATE_LEFT_D7);
     bitSet(DDR_DEBUG_ACTIVATE_RIGHT_D8, DEBUG_ACTIVATE_RIGHT_D8);
+#endif
+#ifdef ENABLE_EYE_SWAP_ON_SWITCH_4_D5
+    bitClear(DDR_SWITCH_4_D5, SWITCH_4_D5);
+    bitSet(PORT_SWITCH_4_D5, SWITCH_4_D5);
 #endif
 #ifdef ENABLE_DEBUG_STATUS_LEDS
     bitSet(DDR_STATUS_LED_D2, STATUS_LED_D2);
@@ -164,6 +182,34 @@ void loop()
         bitClear(PORT_DEBUG_PORT_D9, DEBUG_PORT_D9);
     }
 #endif
+#endif
+#ifdef ENABLE_EYE_SWAP_ON_SWITCH_4_D5
+    if (bitRead(PIN_SWITCH_4_D5, SWITCH_4_D5) == 0)
+    {
+        switch_4_released_count = 0;
+        if (switch_4_pressed_count < 500)
+        {
+            switch_4_pressed_count++;
+        }
+        else if (!switch_4_blocked)
+        {
+            switch_4_blocked = true;
+            ir_flip_eyes = (ir_flip_eyes == 1 ? 0 : 1);
+        }
+    }
+    else
+    {
+        switch_4_pressed_count = 0;
+        if (switch_4_released_count < 5000)
+        {
+            switch_4_released_count++;
+        }
+        else if (switch_4_blocked)
+        {
+            switch_4_blocked = false;
+        }
+    }
+
 #endif
 
     while (Serial.available() > 0)
