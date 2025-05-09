@@ -34,6 +34,7 @@ extern volatile uint16_t ir_signal_spacing;
 extern volatile uint8_t ir_average_timing_mode;
 extern volatile uint8_t ir_flip_eyes;
 extern volatile bool ir_led_token_active;
+extern volatile bool ir_led_token_active_flag; // this is set by ir_signal.cpp but if used must be cleared by whoever is checking ir_led_token_active, this is used to ensure we don't miss a potential active interval and process a missdetected a transition caused by an ir signal interference.
 extern uint16_t target_frametime;
 
 void ir_signal_init(void);

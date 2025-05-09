@@ -293,7 +293,7 @@ void opt_sensor_check_readings(void)
 {
     uint8_t checked_readings[2];
 #ifdef OPT_SENSOR_ENABLE_IGNORE_DURING_IR
-    if (opt_sensor_enable_ignore_during_ir == 0 || (!ir_led_token_active && !ir_led_token_active_countdown))
+    if (opt_sensor_enable_ignore_during_ir == 0 || (!ir_led_token_active_flag && !ir_led_token_active_countdown))
     {
 #endif
         for (uint8_t c = 0; c < OPT_SENSOR_CHANNELS; c++)
@@ -477,21 +477,30 @@ void opt_sensor_check_readings(void)
     }
 #endif
 #ifdef OPT_SENSOR_ENABLE_IGNORE_DURING_IR
-    if (ir_led_token_active)
+    if (opt_sensor_enable_ignore_during_ir == 1)
     {
-        ir_led_token_active_countdown = 10; // 10 loops equites to 136 usec (the adc delay could be as much as 100 usec so lets use 10)
-    }
-    else if (ir_led_token_active_countdown > 0)
-    {
-        ir_led_token_active_countdown -= 1;
+        cli();
+        if (ir_led_token_active_flag)
+        {
+            ir_led_token_active_countdown = 10; // 10 loops equites to 136 usec (the adc delay could be as much as 100 usec so lets use 10)
+            if (!ir_led_token_active)
+            {
+                ir_led_token_active_flag = false;
+            }
+        }
+        sei();
+        if (ir_led_token_active_countdown > 0)
+        {
+            ir_led_token_active_countdown -= 1;
 #ifdef ENABLE_DEBUG_PIN_OUTPUTS
 #ifdef OPT_SENSOR_ENABLE_IGNORE_DURING_IR_DEBUG_PIN_D2
-        if (ir_led_token_active_countdown == 0)
-        {
-            bitClear(PORT_DEBUG_PORT_D2, DEBUG_PORT_D2); // IR LED token ended
+            if (ir_led_token_active_countdown == 0)
+            {
+                bitClear(PORT_DEBUG_PORT_D2, DEBUG_PORT_D2); // IR LED token ended
+            }
+#endif
+#endif
         }
-#endif
-#endif
     }
 #endif
 }

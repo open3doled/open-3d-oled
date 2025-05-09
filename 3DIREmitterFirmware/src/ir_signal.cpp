@@ -19,6 +19,7 @@ volatile uint8_t ir_average_timing_mode = 0;
 volatile uint8_t ir_flip_eyes = 0;
 #ifdef OPT_SENSOR_ENABLE_IGNORE_DURING_IR
 volatile bool ir_led_token_active = false;
+volatile bool ir_led_token_active_flag = false;
 #endif
 uint16_t target_frametime = 0;
 
@@ -85,6 +86,7 @@ void ir_signal_init()
   ir_flip_eyes = 0;
 #ifdef OPT_SENSOR_ENABLE_IGNORE_DURING_IR
   ir_led_token_active = false;
+  ir_led_token_active_flag = false;
 #endif
   target_frametime = 0;
 
@@ -172,32 +174,41 @@ void ir_signal_send(ir_signal_type signal)
 #ifdef ENABLE_DEBUG_PIN_OUTPUTS
       bitSet(PORT_DEBUG_ACTIVATE_LEFT_D7, DEBUG_ACTIVATE_LEFT_D7);
 #endif
-      bitSet(DDR_MINIDIN3_3D_STEREO_SYNC_LEFT_OPEN_OUT_D6, MINIDIN3_3D_STEREO_SYNC_LEFT_OPEN_OUT_D6);
+#if !defined(ENABLE_DEBUG_PIN_OUTPUTS) && !defined(DLPLINK_DEBUG_PIN_D6)
+      bitSet(PORT_MINIDIN3_3D_STEREO_SYNC_LEFT_OPEN_OUT_D6, MINIDIN3_3D_STEREO_SYNC_LEFT_OPEN_OUT_D6);
+#endif
     }
     else if (signal == SIGNAL_OPEN_RIGHT_CLOSE_LEFT || signal == SIGNAL_CLOSE_LEFT)
     {
 #ifdef ENABLE_DEBUG_PIN_OUTPUTS
       bitClear(PORT_DEBUG_ACTIVATE_LEFT_D7, DEBUG_ACTIVATE_LEFT_D7);
 #endif
-      bitSet(DDR_MINIDIN3_3D_STEREO_SYNC_LEFT_OPEN_OUT_D6, MINIDIN3_3D_STEREO_SYNC_LEFT_OPEN_OUT_D6);
+#if !defined(ENABLE_DEBUG_PIN_OUTPUTS) && !defined(DLPLINK_DEBUG_PIN_D6)
+      bitSet(PORT_MINIDIN3_3D_STEREO_SYNC_LEFT_OPEN_OUT_D6, MINIDIN3_3D_STEREO_SYNC_LEFT_OPEN_OUT_D6);
+#endif
     }
     if (signal == SIGNAL_OPEN_RIGHT || signal == SIGNAL_OPEN_RIGHT_CLOSE_LEFT || signal == SIGNAL_OPEN_RIGHT_FAST_SWAP)
     {
 #ifdef ENABLE_DEBUG_PIN_OUTPUTS
       bitSet(PORT_DEBUG_ACTIVATE_RIGHT_D8, DEBUG_ACTIVATE_RIGHT_D8);
 #endif
-      bitClear(DDR_MINIDIN3_3D_STEREO_SYNC_LEFT_OPEN_OUT_D6, MINIDIN3_3D_STEREO_SYNC_LEFT_OPEN_OUT_D6);
+#if !defined(ENABLE_DEBUG_PIN_OUTPUTS) && !defined(DLPLINK_DEBUG_PIN_D6)
+      bitClear(PORT_MINIDIN3_3D_STEREO_SYNC_LEFT_OPEN_OUT_D6, MINIDIN3_3D_STEREO_SYNC_LEFT_OPEN_OUT_D6);
+#endif
     }
     else if (signal == SIGNAL_OPEN_LEFT_CLOSE_RIGHT || signal == SIGNAL_CLOSE_RIGHT)
     {
 #ifdef ENABLE_DEBUG_PIN_OUTPUTS
       bitClear(PORT_DEBUG_ACTIVATE_RIGHT_D8, DEBUG_ACTIVATE_RIGHT_D8);
 #endif
-      bitClear(DDR_MINIDIN3_3D_STEREO_SYNC_LEFT_OPEN_OUT_D6, MINIDIN3_3D_STEREO_SYNC_LEFT_OPEN_OUT_D6);
+#if !defined(ENABLE_DEBUG_PIN_OUTPUTS) && !defined(DLPLINK_DEBUG_PIN_D6)
+      bitClear(PORT_MINIDIN3_3D_STEREO_SYNC_LEFT_OPEN_OUT_D6, MINIDIN3_3D_STEREO_SYNC_LEFT_OPEN_OUT_D6);
+#endif
     }
 
 #ifdef OPT_SENSOR_ENABLE_IGNORE_DURING_IR
     ir_led_token_active = true;
+    ir_led_token_active_flag = true;
 #ifdef ENABLE_DEBUG_PIN_OUTPUTS
 #ifdef OPT_SENSOR_ENABLE_IGNORE_DURING_IR_DEBUG_PIN_D2
     bitSet(PORT_DEBUG_PORT_D2, DEBUG_PORT_D2); // IR LED token started
@@ -236,9 +247,6 @@ void ir_signal_send(ir_signal_type signal)
         bitSet(TIMSK4, OCIE4D);                                   // Enable signal spacing period interrupt
 #ifdef OPT_SENSOR_ENABLE_IGNORE_DURING_IR
         ir_led_token_active = false;
-// #ifdef OPT_SENSOR_ENABLE_IGNORE_DURING_IR_DEBUG_PIN_D2
-// bitClear(PORT_DEBUG_PORT_D2, DEBUG_PORT_D2); // IR LED token ended
-// #endif
 #endif
       }
     }

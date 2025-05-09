@@ -14,8 +14,9 @@ uint8_t dlplink_sensor_detection_threshold_low = 64;                            
 uint8_t dlplink_sensor_enable_ignore_during_ir = 0;                                                  // Ignore sensor during IR transmission (1=enabled)
 
 // External flags (provided by other modules)
-extern volatile bool ir_led_token_active; // Flag indicating IR LED transmission is active
-extern uint8_t opt_sensor_output_stats;   // Flag indicating whether +stats mode is enabled
+extern volatile bool ir_led_token_active;      // Flag indicating IR LED transmission is active
+extern volatile bool ir_led_token_active_flag; // Flag indicating IR LED transmission was active cleared locally after checking ir_led_token_active
+extern uint8_t opt_sensor_output_stats;        // Flag indicating whether +stats mode is enabled
 
 // IR ignore countdown (loops) after IR LED active
 #define DLP_SENSOR_IR_IGNORE_COUNT 10
@@ -30,8 +31,9 @@ static uint16_t baseline_est = 0;      // Estimated frame interval (baseline per
 static int16_t last_jitter_us = 0;     // Last measured jitter (µs, positive=longer, negative=shorter)
 static uint8_t last_eye = EYE_LEFT;    // Last detected eye (0=Left,1=Right)
 static uint8_t trigger_eye = EYE_LEFT; // Eye value for the pending trigger event
-static uint8_t dlplink_sensor_reading_high = 255;
-static uint8_t dlplink_sensor_reading_low = 0;
+static uint8_t dlplink_sensor_reading_high = 0;
+static uint8_t dlplink_sensor_reading_low = 255;
+static uint8_t dlplink_sensor_reading_rolling_high = 0;
 static uint16_t loop_counter = 0;
 static uint16_t loop_counter_update_thresholds_at = 0;
 
@@ -60,8 +62,7 @@ void dlplink_sensor_init(void)
     last_jitter_us = 0;
     dlplink_sensor_reading_high = 0;
     dlplink_sensor_reading_low = 255;
-    dlplink_sensor_reading_threshold_high = 0;
-    dlplink_sensor_reading_threshold_low = 255;
+    dlplink_sensor_reading_rolling_high = 0;
     loop_counter = 0;
     loop_counter_update_thresholds_at = 0;
     adc_value = 0;
@@ -103,6 +104,12 @@ void dlplink_sensor_check_readings(void)
     uint8_t pulse_count_detected = dlplink_pulse_count_detected;
     dlplink_pulse_count_detected = 0;
     sei();
+#ifdef DLPLINK_DEBUG_PIN_D2
+    bitClear(PORT_DEBUG_PORT_D2, DEBUG_PORT_D2);
+#endif
+#ifdef DLPLINK_DEBUG_PIN_D6
+    bitClear(PORT_DEBUG_PORT_D6, DEBUG_PORT_D6);
+#endif
 
 #ifdef ENABLE_DEBUG_PIN_OUTPUTS
     if (loop_counter == dlplink_disable_debug_detection_flag_at)
@@ -116,15 +123,27 @@ void dlplink_sensor_check_readings(void)
 #ifdef DLP_SENSOR_IR_IGNORE_COUNT
     if (dlplink_sensor_enable_ignore_during_ir)
     {
-        if (ir_led_token_active)
+        cli();
+        if (ir_led_token_active_flag)
         {
             ir_led_token_active_countdown = DLP_SENSOR_IR_IGNORE_COUNT;
+            if (!ir_led_token_active)
+            {
+                ir_led_token_active_flag = false;
+            }
         }
+        sei();
         if (ir_led_token_active_countdown > 0)
         {
             ir_led_token_active_countdown--;
             return;
         }
+#ifdef OPT_SENSOR_ENABLE_IGNORE_DURING_IR_DEBUG_PIN_D2
+        else
+        {
+            bitClear(PORT_DEBUG_PORT_D2, DEBUG_PORT_D2);
+        }
+#endif
     }
 #endif
 
@@ -140,6 +159,7 @@ void dlplink_sensor_check_readings(void)
         loop_counter_update_thresholds_at += 80000; // About every 1 seconds
         dlplink_disable_debug_detection_flag_at -= loop_counter;
         loop_counter = 0;
+        dlplink_sensor_reading_rolling_high = dlplink_sensor_reading_high;
         dlplink_sensor_reading_high = 0;
         dlplink_sensor_reading_low = 255;
     }
@@ -148,7 +168,7 @@ void dlplink_sensor_check_readings(void)
     {
         uint32_t now = micros();
 
-        if (dlplink_sensor_reading_high < dlplink_sensor_min_threshold_value_to_activate)
+        if (dlplink_sensor_reading_rolling_high < dlplink_sensor_min_threshold_value_to_activate)
         {
             return;
         }
@@ -343,10 +363,16 @@ void dlplink_sensor_adc_isr_handler(void)
         // https://www.ti.com/lit/ds/symlink/dlpc3434.pdf
         if (dlplink_pulse_count > 0)
         {
+#ifdef DLPLINK_DEBUG_PIN_D6
+            bitSet(PORT_DEBUG_PORT_D6, DEBUG_PORT_D6);
+#endif
             // if (dlplink_pulse_count < 5) // Good for DLP Link Based on Specs 20 to 32 microseconds
-            if (dlplink_pulse_count > 5 && dlplink_pulse_count < 11) // Xgimi Aura has 80 microsecond pulse length...
+            if (dlplink_pulse_count > 4 && dlplink_pulse_count < 11) // Xgimi Aura has 80 microsecond pulse length...
             {
                 dlplink_pulse_count_detected = dlplink_pulse_count;
+#ifdef DLPLINK_DEBUG_PIN_D2
+                bitSet(PORT_DEBUG_PORT_D2, DEBUG_PORT_D2);
+#endif
             }
             dlplink_pulse_count = 0;
         }

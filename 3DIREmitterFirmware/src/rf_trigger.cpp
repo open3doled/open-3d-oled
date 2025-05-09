@@ -114,7 +114,6 @@ void rf_trigger_update(void)
   {
     bitClear(PORT_DEBUG_DETECTED_RIGHT_D5, DEBUG_DETECTED_RIGHT_D5);
   }
-  bitToggle(PORT_DEBUG_PORT_D2, DEBUG_PORT_D2);
   rf_trigger_current_time = millis();
   last_shutter_signal_time = rf_trigger_current_time;
 }
