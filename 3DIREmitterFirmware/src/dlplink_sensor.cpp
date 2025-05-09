@@ -42,6 +42,10 @@ static volatile uint8_t dlplink_pulse_count_detected = 0;
 static volatile uint8_t dlplink_sensor_reading_threshold_high = 255;
 static volatile uint8_t dlplink_sensor_reading_threshold_low = 0;
 
+#ifdef ENABLE_DEBUG_PIN_OUTPUTS
+static uint16_t dlplink_disable_debug_detection_flag_at = 0;
+#endif
+
 void dlplink_sensor_init(void)
 {
     // Reset internal state
@@ -63,6 +67,10 @@ void dlplink_sensor_init(void)
     adc_value = 0;
     dlplink_pulse_count = 0;
     dlplink_pulse_count_detected = 0;
+
+#ifdef ENABLE_DEBUG_PIN_OUTPUTS
+    dlplink_disable_debug_detection_flag_at = 0;
+#endif
 
     // Configure ADC for free-running mode on ADC6 (DLP-Link sensor channel)
     ADCSRA &= ~(1 << ADEN);                                // Disable ADC to configure
@@ -96,6 +104,14 @@ void dlplink_sensor_check_readings(void)
     dlplink_pulse_count_detected = 0;
     sei();
 
+#ifdef ENABLE_DEBUG_PIN_OUTPUTS
+    if (loop_counter == dlplink_disable_debug_detection_flag_at)
+    {
+        bitClear(PORT_DEBUG_DETECTED_LEFT_D4, DEBUG_DETECTED_LEFT_D4);
+        bitClear(PORT_DEBUG_DETECTED_RIGHT_D5, DEBUG_DETECTED_RIGHT_D5);
+    }
+#endif
+
     // 4) IR ignore countdown
 #ifdef DLP_SENSOR_IR_IGNORE_COUNT
     if (dlplink_sensor_enable_ignore_during_ir)
@@ -122,6 +138,7 @@ void dlplink_sensor_check_readings(void)
         dlplink_sensor_reading_threshold_low = mult_by_threshold(dlplink_sensor_reading_high, dlplink_sensor_reading_low, dlplink_sensor_detection_threshold_low);
         sei();
         loop_counter_update_thresholds_at += 80000; // About every 1 seconds
+        dlplink_disable_debug_detection_flag_at -= loop_counter;
         loop_counter = 0;
         dlplink_sensor_reading_high = 0;
         dlplink_sensor_reading_low = 255;
@@ -162,7 +179,9 @@ void dlplink_sensor_check_readings(void)
 
         // 2) Eye classification with jitter window
         uint8_t eye;
-        if (diff > 30)
+        if (diff > 2000) // this is caused by missing one frames pulse so just repeat eyes
+            eye = last_eye;
+        else if (diff > 30)
             eye = EYE_RIGHT;
         else if (diff < -30)
             eye = EYE_LEFT;
@@ -217,6 +236,18 @@ void dlplink_sensor_check_readings(void)
     // If an eye trigger event was set in the ISR, process it
     if (trigger_pending)
     {
+#ifdef ENABLE_DEBUG_PIN_OUTPUTS
+        ;
+        dlplink_disable_debug_detection_flag_at = loop_counter + 300; // around 3-4 ms at 12.5 microsecond loop time average
+        if (last_eye)
+        {
+            bitSet(PORT_DEBUG_DETECTED_LEFT_D4, DEBUG_DETECTED_LEFT_D4);
+        }
+        else
+        {
+            bitSet(PORT_DEBUG_DETECTED_RIGHT_D5, DEBUG_DETECTED_RIGHT_D5);
+        }
+#endif
         if (last_eye == EYE_LEFT)
         {
             int16_t delay;
@@ -312,7 +343,8 @@ void dlplink_sensor_adc_isr_handler(void)
         // https://www.ti.com/lit/ds/symlink/dlpc3434.pdf
         if (dlplink_pulse_count > 0)
         {
-            if (dlplink_pulse_count < 5)
+            // if (dlplink_pulse_count < 5) // Good for DLP Link Based on Specs 20 to 32 microseconds
+            if (dlplink_pulse_count > 5 && dlplink_pulse_count < 11) // Xgimi Aura has 80 microsecond pulse length...
             {
                 dlplink_pulse_count_detected = dlplink_pulse_count;
             }
