@@ -10,6 +10,8 @@
 #define OPT_SENSOR_ENABLE_STREAM_READINGS_TO_SERIAL // adds code for command "10" to stream the opt_sensor readings for the left and right eye over serial to the computer (this is a debug mode, don't use at the same time as show stats or you will get garbled output)
 #define OPT_SENSOR_ENABLE_IGNORE_DURING_IR          // ignore opt_sensor sensor readings when LED is triggering due to power/light distortions that may cause opt_sensor sensor reading inconsistencies. (only applies when setting variable is set as well)
 // #define OPT_SENSOR_ENABLE_IGNORE_DURING_IR_DEBUG_PIN_D2 // use the D2 pin to show when we disable opt_sensor reading because we are sending an active led token.
+// #define DLPLINK_DEBUG_PIN_D2                  // use the D2 pin to show debug status for the dlplink module
+// #define DLPLINK_DEBUG_PIN_D6                  // use the D6 pin to show debug status for the dlplink module
 #define OPT_SENSOR_ENABLE_STATS               // prints opt_sensor statistics every OPT_SENSOR_UPDATE_STAT_PERIOD micros
 #define OPT_SENSOR_UPDATE_STAT_PERIOD 5000000 // in micros (frequency to update and optionally display stats for the opt_sensor sensor module)
 #define OPT_SENSOR_FILTER_ADC_SIGNAL          // This will adjust the code to function properly with the BPW34 photodiode which has no transimpedance amplifier and has an output voltage much closer to 150mV so it can be mistriggered by noise ir led triggering. (beta testers have reported this causes flickering on some pwm backlit displays (possibly because the flashing of the backlight is irratic, perhaps this needs to be a proper peramater disabling for now by default)) (only applies when setting variable is set as well)
@@ -118,6 +120,9 @@
 #define MINIDIN3_3D_STEREO_SYNC_LEFT_OPEN_OUT_D6 7
 #define DDR_MINIDIN3_3D_STEREO_SYNC_LEFT_OPEN_OUT_D6 DDRD
 #define PORT_MINIDIN3_3D_STEREO_SYNC_LEFT_OPEN_OUT_D6 PORTD
+#define DEBUG_PORT_D6 7
+#define DDR_DEBUG_PORT_D6 DDRD
+#define PORT_DEBUG_PORT_D6 PORTD
 
 // D7 (was D8)
 #define DEBUG_ACTIVATE_LEFT_D7 6

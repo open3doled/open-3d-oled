@@ -49,8 +49,8 @@ ir_signal_type ir_signal_next_timer1_compc_scheduled_signal = SIGNAL_NONE;
 ir_signal_type ir_signal_next_timer1_compc_start_signal = SIGNAL_NONE;
 uint16_t ir_signal_next_timer1_compc_start_time = 0;
 uint16_t ir_average_timing_mode_no_trigger_counter = 0;
-volatile bool ir_average_timing_mode_running[2] = {false}; // 0 - left, 1 - right
-volatile bool ir_average_timing_mode_stop[2] = {false};    // 0 - left, 1 - right
+volatile bool ir_average_timing_mode_running[2] = {false}; // 1 - left, 0 - right
+volatile bool ir_average_timing_mode_stop[2] = {false};    // 1 - left, 0 - right
 volatile uint16_t ir_average_timing_mode_last_open_timer1_tcnt[2] = {0};
 volatile bool ir_average_timing_mode_last_open_timer1_tcnt_set[2] = {false};
 
@@ -568,7 +568,7 @@ void ir_signal_process_trigger(uint8_t left_eye)
   desired_signal_index = ir_glasses_selected_library->signal_index[ir_desired_signal];
   if (desired_signal_index > ir_glasses_selected_library->signal_count || desired_signal_index == 255)
   {
-    ir_desired_signal = (left_eye ^ ir_flip_eyes ? SIGNAL_OPEN_LEFT_CLOSE_RIGHT : SIGNAL_OPEN_RIGHT_CLOSE_LEFT);
+    ir_desired_signal = ((left_eye ^ ir_flip_eyes) ? SIGNAL_OPEN_LEFT_CLOSE_RIGHT : SIGNAL_OPEN_RIGHT_CLOSE_LEFT);
     desired_signal_index = ir_glasses_selected_library->signal_index[ir_desired_signal];
     if (desired_signal_index > ir_glasses_selected_library->signal_count || desired_signal_index == 255)
     {
@@ -672,17 +672,23 @@ void ir_signal_process_trigger(uint8_t left_eye)
             diff_time_left_right = (int16_t)((temp_ir_average_timing_mode_last_open_timer1_tcnt[1]) - (temp_ir_average_timing_mode_last_open_timer1_tcnt[0]) - (temp_ir_signal_trigger_frametime_average_effective << 1)) >> 1;
             diff_time_right_left = (int16_t)((temp_ir_average_timing_mode_last_open_timer1_tcnt[0]) - (temp_ir_average_timing_mode_last_open_timer1_tcnt[1]) - (temp_ir_signal_trigger_frametime_average_effective << 1)) >> 1;
             sei();
-            if (diff_time_left_right > -5000 && diff_time_left_right < 5000)
+            if (abs(diff_time_left_right) < abs(diff_time_right_left))
             {
-              // because we adjust both we only need half for each, and we also only apply half the adjustment factor incase there is something wrong.
-              temp_ir_signal_trigger_frame_delay_adjustment[0] += diff_time_left_right >> 2;
-              temp_ir_signal_trigger_frame_delay_adjustment[1] -= diff_time_left_right >> 2;
+              if (abs(diff_time_left_right) < temp_ir_signal_trigger_frametime_average_effective)
+              {
+                // because we adjust both we only need half for each, and we also only apply half the adjustment factor incase there is something wrong.
+                temp_ir_signal_trigger_frame_delay_adjustment[0] += diff_time_left_right >> 2;
+                temp_ir_signal_trigger_frame_delay_adjustment[1] -= diff_time_left_right >> 2;
+              }
             }
-            else if (diff_time_right_left > -5000 && diff_time_right_left < 5000)
+            else
             {
-              // because we adjust both we only need half for each, and we also only apply half the adjustment factor incase there is something wrong.
-              temp_ir_signal_trigger_frame_delay_adjustment[0] -= diff_time_right_left >> 2;
-              temp_ir_signal_trigger_frame_delay_adjustment[1] += diff_time_right_left >> 2;
+              if (abs(diff_time_right_left) < temp_ir_signal_trigger_frametime_average_effective)
+              {
+                // because we adjust both we only need half for each, and we also only apply half the adjustment factor incase there is something wrong.
+                temp_ir_signal_trigger_frame_delay_adjustment[0] -= diff_time_right_left >> 2;
+                temp_ir_signal_trigger_frame_delay_adjustment[1] += diff_time_right_left >> 2;
+              }
             }
           }
           //*/
