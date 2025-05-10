@@ -181,11 +181,12 @@
 
 #define EEPROM_SETTING_ADDRESS 0
 #define EEPROM_SETTING_CHECKVALUE 0x3D3D3D3D
-#define EMITTER_VERSION 21
+#define EMITTER_VERSION 22
 
 /*
 Version History
-21 - removed pwm_backlight_frequency
+22 - Added support for dlplink inpur
+21 - Removed pwm_backlight_frequency
 20 - Added drive_mode and serial based triggering for use with WibbleWobble
 19 - Added DLP-link protocol
 18 - Removed opt_sensor_block_n_subsequent_duplicates and added target_frametime and pwm_backlight_frequency
