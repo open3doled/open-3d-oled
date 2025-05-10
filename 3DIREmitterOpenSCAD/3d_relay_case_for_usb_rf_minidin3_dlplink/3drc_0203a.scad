@@ -17,6 +17,10 @@
 *
 */
 
+include_dlplink_sensor = true;
+include_eye_swap_button = true;
+include_minidin3_cable_hole = true;
+
 /* [Hidden:] */
 
 $fn = 32;
@@ -119,13 +123,15 @@ module base() {
       translate([-ovr,base_irm13_py,base_irm3_pz+base_wz+base_mbm_wz])cube([base_irm_wx+ovr,base_irm3_wy,base_irm3_wz]); // ir mount 3
       translate([base_mbm1_px,base_mbm1_py,base_wz-ovr])cube([base_mbm1_wx,base_mbm1_wy,base_mbm_wz]);  // main board mount
       translate([base_mbm2_px,base_mbm2_py,base_wz-ovr])cube([base_mbm2_wx,base_mbm2_wy,base_mbm_wz]);  // main board mount
+    if (include_dlplink_sensor) {
       translate([base_obm_px,base_wy,0])cube([base_obm_wx,base_ww,base_bwh+base_wz-base_obm_pdz-base_obma_wz+ovr]); // opt board mount tower
-      translate([base_obm_px,base_wy+base_ww-base_obma_wy,base_bwh+base_wz-base_obm_pdz-base_obma_wz])cube([base_obm_wx,base_obma_wy+ovr,base_obma_wz]);
- // opt board mount arm
-      // opt board mount ramp
-      hull() {
-        translate([base_obm_px,base_wy,base_bwh+base_wz-base_obm_pdz-base_obmr_pdz-base_obma_wz+ovr])cube([base_obm_wx,base_ww,ovr]);
-        translate([base_obm_px,base_wy+base_ww-base_obma_wy,base_bwh+base_wz-base_obm_pdz-base_obma_wz])cube([base_obm_wx,base_obma_wy+ovr,ovr]); 
+        translate([base_obm_px,base_wy+base_ww-base_obma_wy,base_bwh+base_wz-base_obm_pdz-base_obma_wz])cube([base_obm_wx,base_obma_wy+ovr,base_obma_wz]);
+   // opt board mount arm
+        // opt board mount ramp
+        hull() {
+          translate([base_obm_px,base_wy,base_bwh+base_wz-base_obm_pdz-base_obmr_pdz-base_obma_wz+ovr])cube([base_obm_wx,base_ww,ovr]);
+          translate([base_obm_px,base_wy+base_ww-base_obma_wy,base_bwh+base_wz-base_obm_pdz-base_obma_wz])cube([base_obm_wx,base_obma_wy+ovr,ovr]); 
+        }
       }
        
     }
@@ -141,8 +147,12 @@ module base() {
         translate([ss[1],ss[0],base_wz])cylinder(h=10+base_mbm_wz+ovr,d=m1_4_wd_h_st);
       }
       
-      translate([base_obmmh_px,base_obmmh_py,base_bwh+base_wz-base_obm_pdz-base_obmr_pdz-base_obma_wz-ovr])cylinder(h=base_obm_pdz+base_obmr_pdz+2*ovr,d=m1_4_wd_h_st); // opt board mount screw hole
-      translate([base_wx-ovr,base_md3d_py,base_wz+base_md3d_wd_h/2])rotate([0,90,0])cylinder(h=base_bww+2*ovr,d=base_md3d_wd_h);// minidin 3d sync out cable hole
+      if (include_dlplink_sensor) {
+        translate([base_obmmh_px,base_obmmh_py,base_bwh+base_wz-base_obm_pdz-base_obmr_pdz-base_obma_wz-ovr])cylinder(h=base_obm_pdz+base_obmr_pdz+2*ovr,d=m1_4_wd_h_st); // opt board mount screw hole
+      }
+      if (include_minidin3_cable_hole) {
+        translate([base_wx-ovr,base_md3d_py,base_wz+base_md3d_wd_h/2])rotate([0,90,0])cylinder(h=base_bww+2*ovr,d=base_md3d_wd_h);// minidin 3d sync out cable hole
+      }
       
       translate([base_wx/2-cover_tab_wx/2-cover_tol,-base_ww-ovr,-ovr])cube([cover_tab_wx+2*cover_tol,cover_tab_wy+cover_tol+ovr,cover_tab_wz+cover_tol+ovr]); // right lock tab
       translate([base_wx/2-cover_tab_wx/2-cover_tol,base_wy+base_ww-cover_tab_wy-cover_tol,-ovr])cube([cover_tab_wx+2*cover_tol,cover_tab_wy+cover_tol+ovr,cover_tab_wz+cover_tol+ovr]); // left lock tab
@@ -160,8 +170,12 @@ module cover() {
       translate([base_wx/2-cover_tab_wx/2,base_wy+base_ww+cover_tol-cover_tab_wy,0])cube([cover_tab_wx,cover_tab_wy,cover_tab_wz]); // left lock tab
     }
     union() {
-      translate([base_obmh_px,base_obmh_py,base_wz+base_fwh-ovr])cube([base_obmh_wx,base_obmh_wy,cover_ww+2*ovr]); // hole for dlplink optical sensor in case top, comment this line out if you don't need it
-      translate([cover_esbh_px,cover_esbh_py,base_wz+base_fwh-ovr])cylinder(h=cover_ww+2*ovr,d=cover_esbh_wd); // hole for eye swap button on switch 4 in case top, comment this line out if you don't need it
+      if (include_dlplink_sensor) {
+        translate([base_obmh_px,base_obmh_py,base_wz+base_fwh-ovr])cube([base_obmh_wx,base_obmh_wy,cover_ww+2*ovr]); // hole for dlplink optical sensor in case top, comment this line out if you don't need it
+      }
+      if (include_eye_swap_button) {
+        translate([cover_esbh_px,cover_esbh_py,base_wz+base_fwh-ovr])cylinder(h=cover_ww+2*ovr,d=cover_esbh_wd); // hole for eye swap button on switch 4 in case top, comment this line out if you don't need it
+      }
     }
   }
 }
@@ -185,5 +199,7 @@ base();
 translate([0,-10,base_wz+base_fwh+cover_ww])
 rotate([180,0,0])
 cover();
-translate([0,60,0])
-button();
+if (include_eye_swap_button) {
+  translate([0,60,0])
+  button();
+}
