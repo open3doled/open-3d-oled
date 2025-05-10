@@ -4,7 +4,7 @@
 
 /*
 *
-* 3D DLPLink Relay Case
+* 3D MiniDIN3, RF, DLPLink Relay Case
 *
 * Version 0203a: support for dlplink opt101 board
 * Version 0201a: support for din3 to ir relay
