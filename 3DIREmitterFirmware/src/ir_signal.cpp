@@ -559,9 +559,10 @@ ISR(TIMER1_COMPC_vect)
  Responsible for converting external state change parameters into the those parameters used internally.
  Schedule the open signal for the current frames eye.
 */
-void ir_signal_process_trigger(uint8_t left_eye)
+void ir_signal_process_trigger(uint8_t left_eye_in)
 {
-  ir_signal_type ir_desired_signal = (left_eye ^ ir_flip_eyes ? SIGNAL_OPEN_LEFT : SIGNAL_OPEN_RIGHT);
+  uint8_t left_eye = left_eye_in ^ ir_flip_eyes;
+  ir_signal_type ir_desired_signal = (left_eye ? SIGNAL_OPEN_LEFT : SIGNAL_OPEN_RIGHT);
 
   uint8_t desired_signal_index;
   ir_glasses_selected_library = ir_glasses_available[ir_glasses_selected];

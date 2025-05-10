@@ -34,6 +34,7 @@ static uint8_t trigger_eye = EYE_LEFT; // Eye value for the pending trigger even
 static uint8_t dlplink_sensor_reading_high = 0;
 static uint8_t dlplink_sensor_reading_low = 255;
 static uint8_t dlplink_sensor_reading_rolling_high = 0;
+static uint8_t dlplink_sensor_reading_rolling_low = 255;
 static uint16_t loop_counter = 0;
 static uint16_t loop_counter_update_thresholds_at = 0;
 
@@ -63,6 +64,7 @@ void dlplink_sensor_init(void)
     dlplink_sensor_reading_high = 0;
     dlplink_sensor_reading_low = 255;
     dlplink_sensor_reading_rolling_high = 0;
+    dlplink_sensor_reading_rolling_low = 255;
     loop_counter = 0;
     loop_counter_update_thresholds_at = 0;
     adc_value = 0;
@@ -162,6 +164,7 @@ void dlplink_sensor_check_readings(void)
 #endif
         loop_counter = 0;
         dlplink_sensor_reading_rolling_high = dlplink_sensor_reading_high;
+        dlplink_sensor_reading_rolling_low = dlplink_sensor_reading_low;
         dlplink_sensor_reading_high = 0;
         dlplink_sensor_reading_low = 255;
     }
@@ -170,7 +173,9 @@ void dlplink_sensor_check_readings(void)
     {
         uint32_t now = micros();
 
-        if (dlplink_sensor_reading_rolling_high < dlplink_sensor_min_threshold_value_to_activate)
+        if (
+            dlplink_sensor_reading_rolling_high < dlplink_sensor_min_threshold_value_to_activate ||
+            (dlplink_sensor_reading_rolling_high - dlplink_sensor_reading_rolling_low) < 30) // if we don't have more than 30 of oscilliation the projector is probably 1) not running 2) too far from the sensor 3) drowned out with background light
         {
             return;
         }
