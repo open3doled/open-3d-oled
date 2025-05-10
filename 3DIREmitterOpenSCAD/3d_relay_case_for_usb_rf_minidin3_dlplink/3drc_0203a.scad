@@ -70,7 +70,7 @@ base_mbm2_px = base_mbm1_px;
 base_mbm2_py = base_mbm1_py+base_mbm1_wy-base_mbm2_wy;
 base_obm_px = 35;
 base_obm_wx = 10;
-base_obm_pdz = 3;
+base_obm_pdz = 6;
 base_obma_wz = 3;
 base_obma_wy = 8;
 base_obmr_pdz = 3;
@@ -97,13 +97,13 @@ cover_tab_wx = 5;
 cover_tab_wy = 1.5;
 cover_tab_wz = 2;
 cover_esb_wd = 5;
-cover_esbh_wd = cover_esb_wd+0.7;
+cover_esbh_wd = cover_esb_wd+1.5;
 cover_esbh_px = 27;
 cover_esbh_py = base_wy-9;
-cover_esbhi_wd = 3.3;
+cover_esbhi_wd = 3.5;
 cover_esbo_wd = cover_esb_wd+2; // diameter of portion under case with lip to stop button falling out
-cover_esbhi_wz = 3; // height of walls that surround inside button
-cover_esbs_wz = 2; // height difference between top of inside and outside button
+cover_esbhi_wz = 5; // height of walls that surround inside button
+cover_esbs_wz = 0.1; // height difference between top of inside and outside button
 cover_esbt_wz = cover_ww+2; // height of top of button
 
 module base() {
