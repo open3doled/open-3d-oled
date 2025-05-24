@@ -9,13 +9,13 @@
 #include "rf_trigger.h"
 
 uint32_t rf_trigger_current_time = 0;
-uint32_t last_shutter_signal_time = 0;
+uint32_t last_rf_trigger_shutter_signal_time = 0;
 uint32_t last_rf_trigger_power_cycle_time = 0;
 
 void rf_trigger_init(void)
 {
   rf_trigger_current_time = millis();
-  last_shutter_signal_time = rf_trigger_current_time;
+  last_rf_trigger_shutter_signal_time = rf_trigger_current_time;
   last_rf_trigger_power_cycle_time = rf_trigger_current_time;
 
   // Module Power On
@@ -78,7 +78,7 @@ void rf_trigger_stop(void)
 void rf_trigger_check_cycle_power(void)
 {
   rf_trigger_current_time = millis();
-  if (rf_trigger_current_time > last_shutter_signal_time + RF_TRIGGER_POWER_CYCLE_AFTER_DELAY &&
+  if (rf_trigger_current_time > last_rf_trigger_shutter_signal_time + RF_TRIGGER_POWER_CYCLE_AFTER_DELAY &&
       rf_trigger_current_time > last_rf_trigger_power_cycle_time + RF_TRIGGER_POWER_CYCLE_AFTER_DELAY)
   {
     bitClear(PORT_RF_MODULE_POWER_ON_D21, RF_MODULE_POWER_ON_D21); // power off rf relay
@@ -123,5 +123,5 @@ void rf_trigger_update(void)
 #endif
   }
   rf_trigger_current_time = millis();
-  last_shutter_signal_time = rf_trigger_current_time;
+  last_rf_trigger_shutter_signal_time = rf_trigger_current_time;
 }

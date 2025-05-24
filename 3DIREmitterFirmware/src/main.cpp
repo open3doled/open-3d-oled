@@ -18,6 +18,7 @@
 #include "rf_trigger.h"
 #include "usb_trigger.h"
 #include "dlplink_sensor.h"
+#include "dlplink_trigger.h"
 
 static uint32_t next_print;
 
@@ -164,6 +165,10 @@ void setup()
     else if (ir_drive_mode == IR_DRIVE_MODE_DLP_LINK)
     {
         dlplink_sensor_init();
+    }
+    else if (ir_drive_mode == IR_DRIVE_MODE_DLP_LINK_TRIGGER)
+    {
+        dlplink_trigger_init();
     }
     Serial.println("init complete");
 }
@@ -386,6 +391,10 @@ void loop()
                                 {
                                     dlplink_sensor_stop();
                                 }
+                                else if (ir_drive_mode == IR_DRIVE_MODE_DLP_LINK_TRIGGER)
+                                {
+                                    dlplink_trigger_stop();
+                                }
                                 if (temp == IR_DRIVE_MODE_OPTICAL)
                                 {
                                     opt_sensor_init();
@@ -405,6 +414,10 @@ void loop()
                                 else if (temp == IR_DRIVE_MODE_DLP_LINK)
                                 {
                                     dlplink_sensor_init();
+                                }
+                                else if (temp == IR_DRIVE_MODE_DLP_LINK_TRIGGER)
+                                {
+                                    dlplink_trigger_init();
                                 }
                                 ir_drive_mode = temp;
                             }
@@ -563,6 +576,10 @@ void loop()
             }
         }
     }
+    else if (ir_drive_mode == IR_DRIVE_MODE_DLP_LINK_TRIGGER)
+    {
+        dlplink_trigger_check_cycle_power();
+    }
 }
 
 // Pin change interrupt service routine
@@ -575,6 +592,10 @@ ISR(PCINT0_vect)
     else if (ir_drive_mode == IR_DRIVE_MODE_RF_TRIGGER)
     {
         rf_trigger_update();
+    }
+    else if (ir_drive_mode == IR_DRIVE_MODE_DLP_LINK_TRIGGER)
+    {
+        dlplink_trigger_update();
     }
 }
 
