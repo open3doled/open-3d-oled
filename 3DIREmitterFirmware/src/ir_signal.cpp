@@ -227,7 +227,9 @@ void ir_signal_send(ir_signal_type signal)
       TC4H = (ir_signal_send_current_token_timing >> 8) & 0xFF; // High byte of 10-bit value
       OCR4A = ir_signal_send_current_token_timing & 0xFF;       // Low byte of 10-bit value
       bitSet(TIMSK4, OCIE4A);                                   // Enable IR pulse falling edge interrupt
+#ifndef BLOCK_IR_SIGNAL_OUTPUT
       bitSet(PORT_LED_IR_D3, LED_IR_D3);
+#endif
     }
     // Special mode that uses the first two elements of timing to specify a delay before starting the first pulse.
     else
@@ -265,7 +267,9 @@ void ir_signal_send(ir_signal_type signal)
 
 ISR(TIMER4_COMPA_vect) // IR pulse falling edge
 {
+#ifndef BLOCK_IR_SIGNAL_OUTPUT
   bitClear(PORT_LED_IR_D3, LED_IR_D3);
+#endif
   if (ir_signal_send_current_token_position < ir_signal_send_current_token_length)
   {
     ir_signal_send_current_token_timing += ir_signal_send_current_timings[ir_signal_send_current_token_position++];
@@ -325,7 +329,9 @@ ISR(TIMER4_COMPA_vect) // IR pulse falling edge
 
 ISR(TIMER4_COMPB_vect) // IR pulse rising edge
 {
+#ifndef BLOCK_IR_SIGNAL_OUTPUT
   bitSet(PORT_LED_IR_D3, LED_IR_D3);
+#endif
   ir_signal_send_current_token_timing += ir_signal_send_current_timings[ir_signal_send_current_token_position++];
   if (TCNT4 < ir_signal_send_current_token_timing - 5)
   {
@@ -337,7 +343,9 @@ ISR(TIMER4_COMPB_vect) // IR pulse rising edge
   else
   {
     // If its within 5 microseconds abort this ir signal as its probably already malformed and we don't want to miss the off signal...
+#ifndef BLOCK_IR_SIGNAL_OUTPUT
     bitClear(PORT_LED_IR_D3, LED_IR_D3);
+#endif
     ir_signal_send_current_token_timing += ir_signal_spacing;
     if (TCNT4 < ir_signal_send_current_token_timing - 5)
     {

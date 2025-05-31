@@ -5,7 +5,7 @@
 #ifndef _DLPLINK_TRIGGER_H_
 #define _DLPLINK_TRIGGER_H_
 
-#define DLPLINK_TRIGGER_POWER_CYCLE_AFTER_DELAY (uint32_t)(120000) // Power cycle the RF relay after n milliseconds of inactivity to ensure it is always running.
+#define DLPLINK_TRIGGER_POWER_CYCLE_AFTER_DELAY (uint32_t)(30000) // Power cycle the RF relay after n milliseconds of inactivity to ensure it is always running.
 #define DLPLINK_TRIGGER_POWER_CYCLE_OFF_DURATION (uint32_t)(15000) // When power cycling the RF relay turn it off for n milliseconds
 
 // D14

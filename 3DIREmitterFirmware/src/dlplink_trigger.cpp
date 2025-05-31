@@ -16,8 +16,8 @@
 
 uint8_t last_dlplink_right_shutter_active = 0;
 uint8_t last_dlplink_right_shutter_common = 0;
-uint32_t dlplink_trigger_current_time = 0;
-uint32_t last_dlplink_trigger_shutter_signal_time = 0;
+volatile uint32_t dlplink_trigger_current_time = 0;
+volatile uint32_t last_dlplink_trigger_shutter_signal_time = 0;
 uint32_t last_dlplink_trigger_power_cycle_time = 0;
 uint8_t last_dlplink_trigger_power_cycle_action = 0;
 
@@ -25,13 +25,16 @@ void dlplink_trigger_init(void)
 {
   last_dlplink_right_shutter_active = 0;
   last_dlplink_right_shutter_common = 0;
+  cli();
   dlplink_trigger_current_time = millis();
   last_dlplink_trigger_shutter_signal_time = dlplink_trigger_current_time;
+  sei();
   last_dlplink_trigger_power_cycle_time = dlplink_trigger_current_time;
   last_dlplink_trigger_power_cycle_action = 0;
 
   bitSet(DDR_DLPLINK_MODULE_POWER_ON_D21, DLPLINK_MODULE_POWER_ON_D21);
   bitSet(PORT_DLPLINK_MODULE_POWER_ON_D21, DLPLINK_MODULE_POWER_ON_D21);
+  delay(1000); // delay 1 second so that the button registering logic can register the off state so our press to turn the unit on works
   // Module Power On
   dlplink_trigger_push_power_button(200); // power on dlplink module
 
@@ -80,16 +83,20 @@ void dlplink_trigger_stop(void)
 
 void dlplink_trigger_check_cycle_power(void)
 {
-  dlplink_trigger_current_time = millis();
+  uint32_t dlplink_trigger_current_time_temp = millis();
+  cli();
+  dlplink_trigger_current_time = dlplink_trigger_current_time_temp;
+  uint32_t last_dlplink_trigger_shutter_signal_time_temp = last_dlplink_trigger_shutter_signal_time;
+  sei();
   if (last_dlplink_trigger_power_cycle_action == 0 &&
-      dlplink_trigger_current_time > last_dlplink_trigger_shutter_signal_time + DLPLINK_TRIGGER_POWER_CYCLE_AFTER_DELAY &&
-      dlplink_trigger_current_time > last_dlplink_trigger_power_cycle_time + DLPLINK_TRIGGER_POWER_CYCLE_AFTER_DELAY)
+      dlplink_trigger_current_time_temp > last_dlplink_trigger_shutter_signal_time_temp + DLPLINK_TRIGGER_POWER_CYCLE_AFTER_DELAY &&
+      dlplink_trigger_current_time_temp > last_dlplink_trigger_power_cycle_time + DLPLINK_TRIGGER_POWER_CYCLE_AFTER_DELAY)
   {
     dlplink_trigger_push_power_button(4000); // power off dlplink module
-    last_dlplink_trigger_power_cycle_time = dlplink_trigger_current_time;
+    last_dlplink_trigger_power_cycle_time = dlplink_trigger_current_time_temp;
     last_dlplink_trigger_power_cycle_action = 1;
   }
-  if (last_dlplink_trigger_power_cycle_action == 1 && dlplink_trigger_current_time > last_dlplink_trigger_power_cycle_time + DLPLINK_TRIGGER_POWER_CYCLE_OFF_DURATION)
+  if (last_dlplink_trigger_power_cycle_action == 1 && dlplink_trigger_current_time_temp > last_dlplink_trigger_power_cycle_time + DLPLINK_TRIGGER_POWER_CYCLE_OFF_DURATION)
   {
     dlplink_trigger_push_power_button(200); // power on dlplink module
     last_dlplink_trigger_power_cycle_action = 0;
@@ -100,13 +107,11 @@ void dlplink_trigger_update(void)
 {
   uint8_t dlplink_right_shutter_active = bitRead(PIN_DLPLINK_RIGHT_SHUTTER_ACTIVE_D14, DLPLINK_RIGHT_SHUTTER_ACTIVE_D14);
   uint8_t dlplink_right_shutter_common = bitRead(PIN_DLPLINK_RIGHT_SHUTTER_COMMON_D15, DLPLINK_RIGHT_SHUTTER_COMMON_D15);
-  /*
-  dlplink_trigger_current_time = millis();
-  if (dlplink_trigger_current_time - last_dlplink_trigger_shutter_signal_time < 1)
+  if ((dlplink_trigger_current_time - last_dlplink_trigger_shutter_signal_time) < 2)
   {
     return;
   }
-  //*/
+  last_dlplink_trigger_shutter_signal_time = dlplink_trigger_current_time;
   if (dlplink_right_shutter_active != last_dlplink_right_shutter_active)
   {
     ir_signal_process_trigger(1);
@@ -125,8 +130,6 @@ void dlplink_trigger_update(void)
     bitSet(PORT_DEBUG_DETECTED_RIGHT_D5, DEBUG_DETECTED_RIGHT_D5);
 #endif
   }
-  dlplink_trigger_current_time = millis();
-  last_dlplink_trigger_shutter_signal_time = dlplink_trigger_current_time;
 }
 
 void dlplink_trigger_push_power_button(uint32_t duration)
