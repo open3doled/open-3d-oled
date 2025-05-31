@@ -15,11 +15,9 @@ uint8_t dlplink_sensor_enable_ignore_during_ir = 0;                             
 
 // External flags (provided by other modules)
 extern volatile bool ir_led_token_active;      // Flag indicating IR LED transmission is active
-extern volatile bool ir_led_token_active_flag; // Flag indicating IR LED transmission was active cleared locally after checking ir_led_token_active
+extern volatile bool ir_led_token_active_flag; // Flag indicating IR LED transmission was active, cleared locally after checking ir_led_token_active
+extern volatile bool ir_led_pulse_active_flag; // Flag indicating IR LED pulse occured, cleared locally after checking
 extern uint8_t opt_sensor_output_stats;        // Flag indicating whether +stats mode is enabled
-
-// IR ignore countdown (loops) after IR LED active
-#define DLP_SENSOR_IR_IGNORE_COUNT 10
 
 // Internal state for pulse detection (static, persistent across interrupts)
 static uint32_t last_pulse_start_time = 0; // Timestamp of the previous pulse's start (for interval measurement)
@@ -40,8 +38,10 @@ static uint16_t loop_counter_update_thresholds_at = 0;
 
 // Variables for communication with main loop (volatile because they are set in ISR and read in main)
 static volatile uint8_t adc_value = 0;
+static volatile uint8_t dlplink_pulse_contains_ir_pulse_count = 0;
 static volatile uint8_t dlplink_pulse_count = 0;
 static volatile uint8_t dlplink_pulse_count_detected = 0;
+static volatile uint8_t ignore_adc_countdown = 0;
 static volatile uint8_t dlplink_sensor_reading_threshold_high = 255;
 static volatile uint8_t dlplink_sensor_reading_threshold_low = 0;
 
@@ -68,8 +68,10 @@ void dlplink_sensor_init(void)
     loop_counter = 0;
     loop_counter_update_thresholds_at = 0;
     adc_value = 0;
+    dlplink_pulse_contains_ir_pulse_count = 0;
     dlplink_pulse_count = 0;
     dlplink_pulse_count_detected = 0;
+    ignore_adc_countdown = 0;
 
 #ifdef ENABLE_DEBUG_PIN_OUTPUTS
     dlplink_disable_debug_detection_flag_at = 0;
@@ -106,12 +108,14 @@ void dlplink_sensor_check_readings(void)
     uint8_t pulse_count_detected = dlplink_pulse_count_detected;
     dlplink_pulse_count_detected = 0;
     sei();
+    /*
 #ifdef DLPLINK_DEBUG_PIN_D2
     bitClear(PORT_DEBUG_PORT_D2, DEBUG_PORT_D2);
 #endif
 #ifdef DLPLINK_DEBUG_PIN_D6
     bitClear(PORT_DEBUG_PORT_D6, DEBUG_PORT_D6);
 #endif
+    */
 
 #ifdef ENABLE_DEBUG_PIN_OUTPUTS
     if (loop_counter == dlplink_disable_debug_detection_flag_at)
@@ -122,13 +126,13 @@ void dlplink_sensor_check_readings(void)
 #endif
 
     // 4) IR ignore countdown
-#ifdef DLP_SENSOR_IR_IGNORE_COUNT
+#ifdef DLPLINK_SENSOR_IR_IGNORE_COUNT
     if (dlplink_sensor_enable_ignore_during_ir)
     {
         cli();
         if (ir_led_token_active_flag)
         {
-            ir_led_token_active_countdown = DLP_SENSOR_IR_IGNORE_COUNT;
+            ir_led_token_active_countdown = DLPLINK_SENSOR_IR_IGNORE_COUNT;
             if (!ir_led_token_active)
             {
                 ir_led_token_active_flag = false;
@@ -140,11 +144,13 @@ void dlplink_sensor_check_readings(void)
             ir_led_token_active_countdown--;
             return;
         }
+#ifdef ENABLE_DEBUG_PIN_OUTPUTS
 #ifdef OPT_SENSOR_ENABLE_IGNORE_DURING_IR_DEBUG_PIN_D2
         else
         {
             bitClear(PORT_DEBUG_PORT_D2, DEBUG_PORT_D2);
         }
+#endif
 #endif
     }
 #endif
@@ -169,26 +175,34 @@ void dlplink_sensor_check_readings(void)
         dlplink_sensor_reading_low = 255;
     }
 
-    if (pulse_count_detected > 0)
-    {
-        uint32_t now = micros();
+    uint32_t now = micros();
 
-        if (
-            dlplink_sensor_reading_rolling_high < dlplink_sensor_min_threshold_value_to_activate ||
-            (dlplink_sensor_reading_rolling_high - dlplink_sensor_reading_rolling_low) < 30) // if we don't have more than 30 of oscilliation the projector is probably 1) not running 2) too far from the sensor 3) drowned out with background light
+    if (
+        dlplink_sensor_reading_rolling_high < dlplink_sensor_min_threshold_value_to_activate ||
+        (dlplink_sensor_reading_rolling_high - dlplink_sensor_reading_rolling_low) < 30) // if we don't have more than 30 of oscilliation the projector is probably 1) not running 2) too far from the sensor 3) drowned out with background light
+    {
+        return;
+    }
+
+    // 1) Post-pulse blocking
+    if (block_until_time)
+    {
+        if (now < block_until_time)
         {
             return;
         }
+        //*
+#ifdef ENABLE_DEBUG_PIN_OUTPUTS
+#ifdef DLPLINK_DEBUG_PIN_D6
+        bitClear(PORT_DEBUG_PORT_D6, DEBUG_PORT_D6);
+#endif
+#endif
+        //*/
+        block_until_time = 0;
+    }
 
-        // 1) Post-pulse blocking
-        if (block_until_time)
-        {
-            if (now < block_until_time)
-            {
-                return;
-            }
-            block_until_time = 0;
-        }
+    if (pulse_count_detected > 0)
+    {
 
         // Update stats
         pulse_count++;
@@ -257,6 +271,13 @@ void dlplink_sensor_check_readings(void)
 
         // 1) Post-pulse block
         block_until_time = now + dlplink_sensor_block_signal_detection_delay;
+        //*
+#ifdef ENABLE_DEBUG_PIN_OUTPUTS
+#ifdef DLPLINK_DEBUG_PIN_D6
+        bitSet(PORT_DEBUG_PORT_D6, DEBUG_PORT_D6);
+#endif
+#endif
+        //*/
         last_pulse_start_time = now;
     }
 
@@ -350,11 +371,33 @@ void dlplink_sensor_print_stats(void)
 void dlplink_sensor_adc_isr_handler(void)
 {
     adc_value = ADCH;
-    if (adc_value > dlplink_sensor_reading_threshold_high)
+    if (ignore_adc_countdown > 0)
     {
+        ignore_adc_countdown--;
+#ifdef ENABLE_DEBUG_PIN_OUTPUTS
+#ifdef DLPLINK_DEBUG_PIN_D10
+        if (ignore_adc_countdown == 0)
+        {
+            bitClear(PORT_DEBUG_PORT_D10, DEBUG_PORT_D10);
+        }
+#endif
+#endif
+    }
+    else if (adc_value > dlplink_sensor_reading_threshold_high)
+    {
+#ifdef ENABLE_DEBUG_PIN_OUTPUTS
+#ifdef DLPLINK_DEBUG_PIN_D2
+        bitSet(PORT_DEBUG_PORT_D2, DEBUG_PORT_D2);
+#endif
+#endif
         if (dlplink_pulse_count < 255)
         {
             dlplink_pulse_count++;
+            if (ir_led_pulse_active_flag)
+            {
+                ir_led_pulse_active_flag = false;
+                dlplink_pulse_contains_ir_pulse_count++;
+            }
         }
     }
     else if (adc_value > dlplink_sensor_reading_threshold_low)
@@ -362,6 +405,11 @@ void dlplink_sensor_adc_isr_handler(void)
         if (dlplink_pulse_count > 0 && dlplink_pulse_count < 255)
         {
             dlplink_pulse_count++;
+            if (ir_led_pulse_active_flag)
+            {
+                ir_led_pulse_active_flag = false;
+                dlplink_pulse_contains_ir_pulse_count++;
+            }
         }
     }
     else
@@ -370,19 +418,44 @@ void dlplink_sensor_adc_isr_handler(void)
         // https://www.ti.com/lit/ds/symlink/dlpc3434.pdf
         if (dlplink_pulse_count > 0)
         {
+#ifdef ENABLE_DEBUG_PIN_OUTPUTS
+#ifdef DLPLINK_DEBUG_PIN_D2
+            bitClear(PORT_DEBUG_PORT_D2, DEBUG_PORT_D2);
+#endif
+            /*
 #ifdef DLPLINK_DEBUG_PIN_D6
             bitSet(PORT_DEBUG_PORT_D6, DEBUG_PORT_D6);
 #endif
-            // if (dlplink_pulse_count < 5) // Good for DLP Link Based on Specs 20 to 32 microseconds
-            if (dlplink_pulse_count > 4 && dlplink_pulse_count < 11) // Xgimi Aura has 80 microsecond pulse length...
+            */
+#endif
+            if (dlplink_pulse_count >= DLPLINK_PULSE_COUNT_MIN && (dlplink_pulse_count - (dlplink_pulse_contains_ir_pulse_count << 1)) <= DLPLINK_PULSE_COUNT_MAX) // here we bitshift by 1 cause the ADC cycle time is about 13 us and the panasonic pulse length is around 20 us (you may need to tweak this if you are using different glasses)
             {
                 dlplink_pulse_count_detected = dlplink_pulse_count;
+                /*
+#ifdef ENABLE_DEBUG_PIN_OUTPUTS
 #ifdef DLPLINK_DEBUG_PIN_D2
                 bitSet(PORT_DEBUG_PORT_D2, DEBUG_PORT_D2);
 #endif
+#endif
+                */
             }
             dlplink_pulse_count = 0;
+            if (dlplink_pulse_contains_ir_pulse_count == 0)
+            {
+                ignore_adc_countdown = DLPLINK_IGNORE_ADC_COUNTDOWN_VALUE;
+#ifdef ENABLE_DEBUG_PIN_OUTPUTS
+#ifdef DLPLINK_DEBUG_PIN_D10
+                bitSet(PORT_DEBUG_PORT_D10, DEBUG_PORT_D10);
+#endif
+#endif
+            }
+            dlplink_pulse_contains_ir_pulse_count = 0;
         }
     }
+#ifdef ENABLE_DEBUG_PIN_OUTPUTS
+#ifdef DLPLINK_DEBUG_PIN_D16
+    bitToggle(PORT_DEBUG_PORT_D16, DEBUG_PORT_D16);
+#endif
+#endif
     // ADCSRA |= (1 << ADIF) | (1 << ADSC); // Clear interrupt flag and start ADC conversions
 }

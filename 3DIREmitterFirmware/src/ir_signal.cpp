@@ -20,6 +20,7 @@ volatile uint8_t ir_flip_eyes = 0;
 #ifdef OPT_SENSOR_ENABLE_IGNORE_DURING_IR
 volatile bool ir_led_token_active = false;
 volatile bool ir_led_token_active_flag = false;
+volatile bool ir_led_pulse_active_flag = false;
 #endif
 uint16_t target_frametime = 0;
 
@@ -87,6 +88,7 @@ void ir_signal_init()
 #ifdef OPT_SENSOR_ENABLE_IGNORE_DURING_IR
   ir_led_token_active = false;
   ir_led_token_active_flag = false;
+  ir_led_pulse_active_flag = false;
 #endif
   target_frametime = 0;
 
@@ -209,6 +211,7 @@ void ir_signal_send(ir_signal_type signal)
 #ifdef OPT_SENSOR_ENABLE_IGNORE_DURING_IR
     ir_led_token_active = true;
     ir_led_token_active_flag = true;
+    ir_led_pulse_active_flag = true;
 #ifdef ENABLE_DEBUG_PIN_OUTPUTS
 #ifdef OPT_SENSOR_ENABLE_IGNORE_DURING_IR_DEBUG_PIN_D2
     bitSet(PORT_DEBUG_PORT_D2, DEBUG_PORT_D2); // IR LED token started
@@ -269,6 +272,12 @@ ISR(TIMER4_COMPA_vect) // IR pulse falling edge
 {
 #ifndef BLOCK_IR_SIGNAL_OUTPUT
   bitClear(PORT_LED_IR_D3, LED_IR_D3);
+#endif
+#ifdef OPT_SENSOR_ENABLE_IGNORE_DURING_IR_ONLY
+  ir_led_token_active = false;
+#ifdef OPT_SENSOR_ENABLE_IGNORE_DURING_IR_DEBUG_PIN_D2
+  bitClear(PORT_DEBUG_PORT_D2, DEBUG_PORT_D2); // IR LED token break
+#endif
 #endif
   if (ir_signal_send_current_token_position < ir_signal_send_current_token_length)
   {
@@ -331,6 +340,13 @@ ISR(TIMER4_COMPB_vect) // IR pulse rising edge
 {
 #ifndef BLOCK_IR_SIGNAL_OUTPUT
   bitSet(PORT_LED_IR_D3, LED_IR_D3);
+#endif
+#ifdef OPT_SENSOR_ENABLE_IGNORE_DURING_IR_ONLY
+  ir_led_token_active = true;
+  ir_led_pulse_active_flag = true;
+#ifdef OPT_SENSOR_ENABLE_IGNORE_DURING_IR_DEBUG_PIN_D2
+  bitSet(PORT_DEBUG_PORT_D2, DEBUG_PORT_D2); // IR LED token re-started
+#endif
 #endif
   ir_signal_send_current_token_timing += ir_signal_send_current_timings[ir_signal_send_current_token_position++];
   if (TCNT4 < ir_signal_send_current_token_timing - 5)

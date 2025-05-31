@@ -5,17 +5,20 @@
 #ifndef _SETTINGS_H_
 #define _SETTINGS_H_
 
-// #define ENABLE_DEBUG_PIN_OUTPUTS
+#define ENABLE_DEBUG_PIN_OUTPUTS
 #define ENABLE_LOOP_TOGGLE_DEBUG_PIN_D9             // will toggle on/off every time the loop goes round
 #define OPT_SENSOR_ENABLE_STREAM_READINGS_TO_SERIAL // adds code for command "10" to stream the opt_sensor readings for the left and right eye over serial to the computer (this is a debug mode, don't use at the same time as show stats or you will get garbled output)
 #define OPT_SENSOR_ENABLE_IGNORE_DURING_IR          // ignore opt_sensor sensor readings when LED is triggering due to power/light distortions that may cause opt_sensor sensor reading inconsistencies. (only applies when setting variable is set as well)
+#define OPT_SENSOR_ENABLE_IGNORE_DURING_IR_ONLY     // only block when the ir led is actually on not during the whole ir sequence
 // #define OPT_SENSOR_ENABLE_IGNORE_DURING_IR_DEBUG_PIN_D2 // use the D2 pin to show when we disable opt_sensor reading because we are sending an active led token.
-// #define DLPLINK_DEBUG_PIN_D2                  // use the D2 pin to show debug status for the dlplink module
-// #define DLPLINK_DEBUG_PIN_D6                  // use the D6 pin to show debug status for the dlplink module
+#define DLPLINK_DEBUG_PIN_D2                  // use the D2 pin to show debug status for the dlplink module (currently shows active pulse start to pulse end)
+#define DLPLINK_DEBUG_PIN_D6                  // use the D6 pin to show debug status for the dlplink module (currently shows the blocking interval timeout)
+#define DLPLINK_DEBUG_PIN_D10                 // use the D10 pin to show debug status for the dlplink module (this will break rf_trigger mode as it uses that input pin as output) (currently shows the adc pulse block timeout)
+#define DLPLINK_DEBUG_PIN_D16                 // use the D16 pin to show debug status for the dlplink module (this will break rf_trigger mode as it uses that input pin as output) (currently shows the adc sample rate)
 #define OPT_SENSOR_ENABLE_STATS               // prints opt_sensor statistics every OPT_SENSOR_UPDATE_STAT_PERIOD micros
 #define OPT_SENSOR_UPDATE_STAT_PERIOD 5000000 // in micros (frequency to update and optionally display stats for the opt_sensor sensor module)
 #define OPT_SENSOR_FILTER_ADC_SIGNAL          // This will adjust the code to function properly with the BPW34 photodiode which has no transimpedance amplifier and has an output voltage much closer to 150mV so it can be mistriggered by noise ir led triggering. (beta testers have reported this causes flickering on some pwm backlit displays (possibly because the flashing of the backlight is irratic, perhaps this needs to be a proper peramater disabling for now by default)) (only applies when setting variable is set as well)
-//#define BLOCK_IR_SIGNAL_OUTPUT                // Turn this on just blocks the IR signal output on the pin but leaves all logic in tact
+// #define BLOCK_IR_SIGNAL_OUTPUT                // Turn this on just blocks the IR signal output on the pin but leaves all logic in tact
 
 #ifndef ENABLE_DEBUG_PIN_OUTPUTS
 // #define ENABLE_DEBUG_STATUS_LEDS // we are using the pads for the unused button footprints on D2, D4 and D5 to drive some status LEDs.
@@ -154,8 +157,14 @@
 #define PORT_DEBUG_PORT_D9 PORTB
 
 // D10 (MINIDIN3_3D_STEREO_SYNC_LEFT_OPEN, RF_LEFT_SHUTTER_ACTIVE)
+#define DEBUG_PORT_D10 6
+#define DDR_DEBUG_PORT_D10 DDRB
+#define PORT_DEBUG_PORT_D10 PORTB
 
 // D16 (RF_LEFT_SHUTTER_COMMON)
+#define DEBUG_PORT_D16 2
+#define DDR_DEBUG_PORT_D16 DDRB
+#define PORT_DEBUG_PORT_D16 PORTB
 
 // D14 (RF_RIGHT_SHUTTER_ACTIVE, DLPLINK_RIGHT_SHUTTER_ACTIVE)
 
