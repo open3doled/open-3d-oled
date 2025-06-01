@@ -108,14 +108,6 @@ void dlplink_sensor_check_readings(void)
     uint8_t pulse_count_detected = dlplink_pulse_count_detected;
     dlplink_pulse_count_detected = 0;
     sei();
-    /*
-#ifdef DLPLINK_DEBUG_PIN_D2
-    bitClear(PORT_DEBUG_PORT_D2, DEBUG_PORT_D2);
-#endif
-#ifdef DLPLINK_DEBUG_PIN_D6
-    bitClear(PORT_DEBUG_PORT_D6, DEBUG_PORT_D6);
-#endif
-    */
 
 #ifdef ENABLE_DEBUG_PIN_OUTPUTS
     if (loop_counter == dlplink_disable_debug_detection_flag_at)
@@ -191,13 +183,11 @@ void dlplink_sensor_check_readings(void)
         {
             return;
         }
-        //*
 #ifdef ENABLE_DEBUG_PIN_OUTPUTS
 #ifdef DLPLINK_DEBUG_PIN_D6
         bitClear(PORT_DEBUG_PORT_D6, DEBUG_PORT_D6);
 #endif
 #endif
-        //*/
         block_until_time = 0;
     }
 
@@ -271,13 +261,11 @@ void dlplink_sensor_check_readings(void)
 
         // 1) Post-pulse block
         block_until_time = now + dlplink_sensor_block_signal_detection_delay;
-        //*
 #ifdef ENABLE_DEBUG_PIN_OUTPUTS
 #ifdef DLPLINK_DEBUG_PIN_D6
         bitSet(PORT_DEBUG_PORT_D6, DEBUG_PORT_D6);
 #endif
 #endif
-        //*/
         last_pulse_start_time = now;
     }
 
@@ -422,22 +410,10 @@ void dlplink_sensor_adc_isr_handler(void)
 #ifdef DLPLINK_DEBUG_PIN_D2
             bitClear(PORT_DEBUG_PORT_D2, DEBUG_PORT_D2);
 #endif
-            /*
-#ifdef DLPLINK_DEBUG_PIN_D6
-            bitSet(PORT_DEBUG_PORT_D6, DEBUG_PORT_D6);
-#endif
-            */
 #endif
             if (dlplink_pulse_count >= DLPLINK_PULSE_COUNT_MIN && (dlplink_pulse_count - (dlplink_pulse_contains_ir_pulse_count << 1)) <= DLPLINK_PULSE_COUNT_MAX) // here we bitshift by 1 cause the ADC cycle time is about 13 us and the panasonic pulse length is around 20 us (you may need to tweak this if you are using different glasses)
             {
                 dlplink_pulse_count_detected = dlplink_pulse_count;
-                /*
-#ifdef ENABLE_DEBUG_PIN_OUTPUTS
-#ifdef DLPLINK_DEBUG_PIN_D2
-                bitSet(PORT_DEBUG_PORT_D2, DEBUG_PORT_D2);
-#endif
-#endif
-                */
             }
             dlplink_pulse_count = 0;
             if (dlplink_pulse_contains_ir_pulse_count == 0)
