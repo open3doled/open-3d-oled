@@ -287,41 +287,20 @@ void dlplink_sensor_check_readings(void)
         if (last_eye == EYE_LEFT)
         {
             int16_t delay;
-            uint16_t abs_jitter = abs(last_jitter_us);
             // 15836 / Hz
             // 144 = 109.9, 120 = 132, 100 = 158.4, 96 = 164.9, 90 = 175.9, 80 = 197.95, 75 = 211.15, 60 = 263.9
-            if (abs_jitter < 120)
-            {
-                delay = 110;
-            }
-            else if (abs_jitter < 145)
-            {
-                delay = 132;
-            }
-            else if (abs_jitter < 162)
-            {
-                delay = 158;
-            }
-            else if (abs_jitter < 170)
-            {
-                delay = 165;
-            }
-            else if (abs_jitter < 185)
-            {
-                delay = 176;
-            }
-            else if (abs_jitter < 205)
-            {
-                delay = 198;
-            }
-            else if (abs_jitter < 240)
-            {
-                delay = 211;
-            }
-            else
-            {
-                delay = 264;
-            }
+            if (baseline_est > 14500) // ~60Hz
+                delay = 264 >> 1;
+            else if (baseline_est > 13500) // ~80Hz
+                delay = 198 >> 1;
+            else if (baseline_est > 11000) // ~96Hz
+                delay = 165 >> 1;
+            else if (baseline_est > 10000) // ~100Hz
+                delay = 158 >> 1;
+            else if (baseline_est > 8000) // ~120Hz
+                delay = 132 >> 1;
+            else // ~144Hz
+                delay = 110 >> 1;
             delayMicroseconds(delay);
         }
         ir_signal_process_trigger(trigger_eye);

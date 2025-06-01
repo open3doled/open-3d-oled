@@ -13,7 +13,7 @@
 // #define OPT_SENSOR_ENABLE_IGNORE_DURING_IR_DEBUG_PIN_D2 // use the D2 pin to show when we disable opt_sensor reading because we are sending an active led token.
 #define DLPLINK_DEBUG_PIN_D2                  // use the D2 pin to show debug status for the dlplink module (currently shows active pulse start to pulse end)
 #define DLPLINK_DEBUG_PIN_D6                  // use the D6 pin to show debug status for the dlplink module (currently shows the blocking interval timeout)
-#define DLPLINK_DEBUG_PIN_D10                 // use the D10 pin to show debug status for the dlplink module (this will break rf_trigger mode as it uses that input pin as output) (currently shows the adc pulse block timeout)
+#define DLPLINK_DEBUG_PIN_D10                 // use the D10 pin to show debug status for the dlplink module (this will break rf_trigger and minidin3_trigger mode as it uses that input pin as output) (currently shows the adc pulse block timeout)
 #define DLPLINK_DEBUG_PIN_D16                 // use the D16 pin to show debug status for the dlplink module (this will break rf_trigger mode as it uses that input pin as output) (currently shows the adc sample rate)
 #define OPT_SENSOR_ENABLE_STATS               // prints opt_sensor statistics every OPT_SENSOR_UPDATE_STAT_PERIOD micros
 #define OPT_SENSOR_UPDATE_STAT_PERIOD 5000000 // in micros (frequency to update and optionally display stats for the opt_sensor sensor module)
