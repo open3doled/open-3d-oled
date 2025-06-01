@@ -147,8 +147,7 @@ void ir_signal_init()
   TCCR4B = 0;
   TCCR4C = 0;
   TCCR4D = 0;
-  TIMSK4 = 0; // All interrupts disabled
-  // bitSet(TIMSK4, TOIE4); // Enable TCNT4 overflow interrupt
+  TIMSK4 = 0;   // All interrupts disabled
   TIFR4 = 0xFF; // Clear pending interrupt flags if any
 }
 
@@ -223,6 +222,7 @@ void ir_signal_send(ir_signal_type signal)
     TCNT4 = 0;
     TC4H = 0x03; // set timer4 top value to 1023
     OCR4C = 0xFF;
+    bitSet(TIMSK4, TOIE4); // ≡ TIMSK4 |= _BV(TOIE4);
     ir_signal_send_current_token_timing = ir_signal_send_current_timings[0];
     // Regular mode start with ON pulse
     if (ir_signal_send_current_token_timing > 0)
@@ -387,6 +387,16 @@ ISR(TIMER4_COMPD_vect) // IR signal spacing period finished
   TCCR4B = 0;
   ir_signal_send_finished();
   bitClear(TIMSK4, OCIE4D); // Disable this interrupt
+}
+
+ISR(TIMER4_OVF_vect)
+{
+#ifndef BLOCK_IR_SIGNAL_OUTPUT
+  bitClear(PORT_LED_IR_D3, LED_IR_D3);
+#endif
+  TCCR4B = 0;
+  ir_signal_send_finished();
+  bitClear(TIMSK4, TOIE4);
 }
 
 void ir_signal_send_request(ir_signal_type signal)
