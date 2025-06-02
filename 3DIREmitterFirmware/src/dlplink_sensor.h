@@ -23,14 +23,14 @@
 // Pulse count minumum hits
 // The number of pulse counts hit on the ADC before a pulse is considered eligible as a DLPLink pulse.
 // Our ADC sample rate is 13 microseconds with prescaler 16 "100"
-#define DLPLINK_PULSE_COUNT_MIN 2 // DLP Link Based on Specs 20 to 32 microseconds
-// #define DLPLINK_PULSE_COUNT_MIN 5 // Xgimi Aura 80 us pulse length
+// #define DLPLINK_PULSE_COUNT_MIN 2 // DLP Link Based on Specs 20 to 32 microseconds
+#define DLPLINK_PULSE_COUNT_MIN 5 // Xgimi Aura 80 us pulse length
 
 // Pulse count maximum hits
 // The number of pulse counts hit on the ADC below which a pulse is considered eligible as a DLPLink pulse.
 // Our ADC sample rate is 13 microseconds with prescaler 16 "100"
-#define DLPLINK_PULSE_COUNT_MAX 5 // DLP Link Based on Specs 20 to 32 microseconds (the actual pulse width on my test bench seems to take up to 55 us for a pulse of 35 us)
-// #define DLPLINK_PULSE_COUNT_MIN 10 // Xgimi Aura 80 us pulse length
+// #define DLPLINK_PULSE_COUNT_MAX 5 // DLP Link Based on Specs 20 to 32 microseconds (the actual pulse width on my test bench seems to take up to 55 us for a pulse of 35 us)
+#define DLPLINK_PULSE_COUNT_MAX 10 // Xgimi Aura 80 us pulse length
 
 extern uint32_t dlplink_sensor_block_signal_detection_delay;
 extern uint8_t dlplink_sensor_min_threshold_value_to_activate;
