@@ -1,7 +1,7 @@
 {
   "ir_drive_mode": "4",
   "ir_protocol": "6",
-  "ir_frame_delay": "7050",
+  "ir_frame_delay": "7250",
   "ir_frame_duration": "7770",
   "ir_signal_spacing": "30",
   "ir_flip_eyes": "0",
