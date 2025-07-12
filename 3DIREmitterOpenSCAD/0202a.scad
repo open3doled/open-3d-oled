@@ -18,7 +18,7 @@
 /* [TV Settings:] */
 
 // Screen bezel to pixel height dimension (lgc155=11)
-tv_bezel_to_pixels_vertical_distance = 20;
+tv_bezel_to_pixels_vertical_distance = 24;
 /*
   13.5 mm - LG G1 OLED 77
   15 mm - LG CX OLED Bezel Only
@@ -29,6 +29,7 @@ tv_bezel_to_pixels_vertical_distance = 20;
   7 mm - LG G3 OLED Bezel Only
   9 mm - Sony X95K MiniLED
   10 mm - Sony X90CL MiniLED
+  14 mm - Sony XR-77A80J
   6.5 mm - Viewsonic XG2431
   16 mm - Hisense 100U7K (used 20mm)
   13 mm - TCL 98QM751G (used 15mm)
@@ -452,6 +453,7 @@ module cover_sensor() {
 }
 
 
+build_split_base = 0; // For users who need a simple mount they can use on different TV's for testing
 build_base = 0;
 build_cover_main = 0;
 build_cover_sensor = 0;
@@ -460,6 +462,13 @@ if (orientate_print_ready == "yes") {
   translate([0,0,mb_base_wy_o+bevel_w+mt_base_d_eff])rotate([-90,0,0])base();
   translate([+mb_base_wx_o+2*bevel_w+5,0,main_pcb_wh+mb_base_d+bevel_w])rotate([180,0,0])cover_main();
   translate([-mb_base_wx_o-2*bevel_w-5,-mb_base_wy_o-bevel_w-mt_base_d_eff,sensor_pcb_wh+sb_base_d+tv_bezel_thickness+bevel_w])cover_sensor();
+}
+else if (build_split_base == 1)
+{
+  difference() {
+    base();
+    translate([-mb_base_wx_o/2-bevel_w-ovr,0,-0.49*tv_bezel_thickness])cube([mb_base_wx_o+2*bevel_w+2*ovr,1000,0.02*tv_bezel_thickness]);
+  }
 }
 else if (build_base == 1)
 {
