@@ -196,7 +196,7 @@
 
 /*
 Version History
-22 - Added support for dlplink inpur
+22 - Added support for dlplink input
 21 - Removed pwm_backlight_frequency
 20 - Added drive_mode and serial based triggering for use with WibbleWobble
 19 - Added DLP-link protocol
