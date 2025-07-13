@@ -2526,6 +2526,7 @@ class GstPageflipGLSink(GstBase.BaseSink):
             "frame-packing": FRAME_PACKING_SIDE_BY_SIDE_FULL,
             "right-eye": "right",
             "target-framerate": "0",
+            "add-n-bfi-frames-every-frame": "0",
             "display-resolution": "1920x1080",
             "display-zoom-factor": "100",
             "display-size": "55",
