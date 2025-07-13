@@ -1,0 +1,18 @@
+{
+  "target_framerate": "120",
+  "add_n_bfi_frames_every_frame": "0",
+  "display_resolution": "1920x1080",
+  "display_zoom_factor": "100",
+  "display_size": "55",
+  "decoder_preference": "default (GStreamers first choice)",
+  "whitebox_brightness": "255",
+  "whitebox_corner_position": "top_left",
+  "whitebox_vertical_position": "-5",
+  "whitebox_horizontal_position": "0",
+  "whitebox_size": "15",
+  "whitebox_horizontal_spacing": "18",
+  "blackbox_border": "10",
+  "calibration_mode": false,
+  "display_osd_timestamp": false,
+  "disable_3d_on_mouse_move_under_windows": false
+}
