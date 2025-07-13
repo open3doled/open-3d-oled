@@ -632,6 +632,9 @@ class TopWindow:
         audio_format_filter = playback_parameters["audio_format_filter"]
 
         target_framerate = self.display_settings_dialog.target_framerate_variable.get()
+        add_n_bfi_frames_every_frame = (
+            self.display_settings_dialog.add_n_bfi_frames_every_frame_variable.get()
+        )
         display_resolution = playback_parameters.get(
             "display_resolution",
             (self.display_settings_dialog.display_resolution_variable.get()),
@@ -947,6 +950,9 @@ class TopWindow:
         self.pageflipglsink.set_property("frame-packing", frame_packing)
         self.pageflipglsink.set_property("right-eye", right_eye)
         self.pageflipglsink.set_property("target-framerate", target_framerate)
+        self.pageflipglsink.set_property(
+            "add-n-bfi-frames-every-frame", add_n_bfi_frames_every_frame
+        )
         self.pageflipglsink.set_property("display-resolution", display_resolution)
         self.pageflipglsink.set_property("display-zoom-factor", display_zoom_factor)
         self.pageflipglsink.set_property("display-size", display_size)

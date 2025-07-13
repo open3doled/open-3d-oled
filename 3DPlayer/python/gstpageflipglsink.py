@@ -156,6 +156,7 @@ class PageflipGLWindow(threading.Thread):
         self.__do_start = False
         self.__started = False
         self.__do_stop = False
+        self.__time_started = None
         self.__left_or_bottom_page = True
         self.__finish_buffer_copy_event = threading.Event()
         self.__in_image_updated = False
@@ -173,6 +174,7 @@ class PageflipGLWindow(threading.Thread):
         self.__right_eye = "right"
         self.__target_framerate = "0"
         self.__target_frametime = None
+        self.__add_n_bfi_frames_every_frame = 0
         self.__last_frame_at_millis = None
         self.__display_resolution = "1920x1080"
         self.__display_resolution_height = 1080
@@ -326,6 +328,7 @@ class PageflipGLWindow(threading.Thread):
         self.__prepare_video_texture()
         self.__reshape_window()
         self.__started = True
+        self.__time_started = time.perf_counter()
 
         self.__update_overlay_boxes()
 
@@ -1450,318 +1453,336 @@ class PageflipGLWindow(threading.Thread):
             video_single_width = in_single_width * video_scale_factor
             video_single_height = in_single_height * video_scale_factor
 
-            # https://community.khronos.org/t/gltexcoord2f-simple-questions/63784
-            if self.__frame_packing == FRAME_PACKING_SIDE_BY_SIDE_HALF:
-                crop_pos_x = (self.__display_resolution_width - video_single_width) / 2
-                crop_pos_y = (
-                    self.__display_resolution_height - video_single_height
-                ) / 2
-                texture_pos_x = 0
-                texture_pos_y = 0
-                if self.__left_or_bottom_page:
-                    texture_coord_x_low = 0
-                    texture_coord_x_high = 0.5
+            is_bfi_frame = False
+            if self.__target_frametime is not None:
+                time_delta = time.perf_counter() - self.__time_started
+                frame_type_modulus = (time_delta / self.__target_frametime) % 2
+                if frame_type_modulus <= 1.0:
+                    self.__left_or_bottom_page = True
                 else:
-                    texture_coord_x_low = 0.5
-                    texture_coord_x_high = 1.0
-                texture_coord_y_low = 0.0
-                texture_coord_y_high = 1.0
-            elif self.__frame_packing == FRAME_PACKING_SIDE_BY_SIDE_FULL:
-                crop_pos_x = (self.__display_resolution_width - video_single_width) / 2
-                crop_pos_y = (
-                    self.__display_resolution_height - video_single_height
-                ) / 2
-                if self.__left_or_bottom_page:
-                    texture_pos_x = 0
-                else:
-                    texture_pos_x = video_width / 2
-                texture_pos_y = 0
-                texture_coord_x_low = 0.0
-                texture_coord_x_high = 1.0
-                texture_coord_y_low = 0.0
-                texture_coord_y_high = 1.0
-            elif self.__frame_packing == FRAME_PACKING_OVER_AND_UNDER_HALF:
-                crop_pos_x = (self.__display_resolution_width - video_single_width) / 2
-                crop_pos_y = (
-                    self.__display_resolution_height - video_single_height
-                ) / 2
-                texture_pos_x = 0
-                texture_pos_y = 0
-                texture_coord_x_low = 0.0
-                texture_coord_x_high = 1.0
-                if self.__left_or_bottom_page:
-                    texture_coord_y_low = 0.0
-                    texture_coord_y_high = 0.5
-                else:
-                    texture_coord_y_low = 0.5
-                    texture_coord_y_high = 1.0
-            else:
-                assert self.__frame_packing == FRAME_PACKING_OVER_AND_UNDER_FULL
-                crop_pos_x = (self.__display_resolution_width - video_single_width) / 2
-                crop_pos_y = (
-                    self.__display_resolution_height - video_single_height
-                ) / 2
-                texture_pos_x = 0
-                if self.__left_or_bottom_page:
-                    texture_pos_y = 0
-                else:
-                    texture_pos_y = video_height / 2
-                texture_coord_x_low = 0.0
-                texture_coord_x_high = 1.0
-                texture_coord_y_low = 0.0
-                texture_coord_y_high = 1.0
+                    self.__left_or_bottom_page = False
 
-            # gl.glColor(0, 0, 0, 1)
-            gl.glPushMatrix()
-            gl.glTranslate(
-                crop_pos_x - texture_pos_x,
-                video_height + crop_pos_y - texture_pos_y,
-                0,
-            )
-            gl.glPushMatrix()
-            gl.glBegin(gl.GL_QUADS)
-            gl.glTexCoord2f(texture_coord_x_low, texture_coord_y_high)
-            gl.glVertex(0, -video_height)
-            gl.glTexCoord2f(texture_coord_x_low, texture_coord_y_low)
-            gl.glVertex(0, 0)
-            gl.glTexCoord2f(texture_coord_x_high, texture_coord_y_low)
-            gl.glVertex(video_width, 0)
-            gl.glTexCoord2f(texture_coord_x_high, texture_coord_y_high)
-            gl.glVertex(video_width, -video_height)
-            gl.glEnd()
-
-            gl.glPopMatrix()
-            gl.glPopMatrix()
-
-            gl.glDisable(gl.GL_TEXTURE_2D)
-
-            # black bars around video resolution to pad to display resolution
-            gl.glColor3fv((0, 0, 0))
-            gl.glRectf(0, 0, crop_pos_x, self.__display_resolution_height)
-            gl.glColor3fv((0, 0, 0))
-            gl.glRectf(
-                self.__display_resolution_width - crop_pos_x,
-                0,
-                self.__display_resolution_width,
-                self.__display_resolution_height,
-            )
-            gl.glColor3fv((0, 0, 0))
-            gl.glRectf(0, 0, self.__display_resolution_width, crop_pos_y)
-            gl.glColor3fv((0, 0, 0))
-            gl.glRectf(
-                0,
-                self.__display_resolution_height - crop_pos_y,
-                self.__display_resolution_width,
-                self.__display_resolution_height,
-            )
-
-            # add black and white boxes then subtitles
-            if (
-                self.__fullscreen_psuedo
-                and self.__disable_3d_on_mouse_move_under_windows
-            ):
-                overlay_box_white_vertex_buffer = None
-                if self.__left_or_bottom_page:
-                    subtitle_depth_shift = (
-                        0 if self.__calibration_mode else self.__subtitle_depth
-                    )
-                else:
-                    subtitle_depth_shift = (
-                        0 if self.__calibration_mode else -self.__subtitle_depth
-                    )
-            else:
-                if self.__right_eye in ("right", "top"):
-                    if self.__left_or_bottom_page:
-                        # whitebox_offset = whitebox_horizontal_offset_1
-                        overlay_box_white_vertex_buffer = (
-                            self.__overlay_box_white_left_vertex_buffer
-                        )
-                        subtitle_depth_shift = (
-                            0 if self.__calibration_mode else self.__subtitle_depth
-                        )
-                    else:
-                        # whitebox_offset = whitebox_horizontal_offset_2
-                        overlay_box_white_vertex_buffer = (
-                            self.__overlay_box_white_right_vertex_buffer
-                        )
-                        subtitle_depth_shift = (
-                            0 if self.__calibration_mode else -self.__subtitle_depth
-                        )
-                else:
-                    assert self.__right_eye in ("left", "bottom")
-                    if self.__left_or_bottom_page:
-                        # whitebox_offset = whitebox_horizontal_offset_2
-                        overlay_box_white_vertex_buffer = (
-                            self.__overlay_box_white_right_vertex_buffer
-                        )
-                        subtitle_depth_shift = (
-                            0 if self.__calibration_mode else -self.__subtitle_depth
-                        )
-                    else:
-                        # whitebox_offset = whitebox_horizontal_offset_1
-                        overlay_box_white_vertex_buffer = (
-                            self.__overlay_box_white_left_vertex_buffer
-                        )
-                        subtitle_depth_shift = (
-                            0 if self.__calibration_mode else self.__subtitle_depth
-                        )
-
-            if self.__calibration_mode and self.__show_calibration_instruction_image:
-                (
-                    calibration_instruction_image_height,
-                    calibration_instruction_image_width,
-                    _,
-                ) = self.__calibration_instruction_image.shape
-                gl.glWindowPos2d(
-                    (self.__actual_window_width - calibration_instruction_image_width)
-                    // 2,
-                    (self.__actual_window_height - calibration_instruction_image_height)
-                    // 2,
-                )
-                gl.glDrawPixels(
-                    calibration_instruction_image_width,
-                    calibration_instruction_image_height,
-                    gl.GL_RGBA,
-                    gl.GL_UNSIGNED_BYTE,
-                    self.__calibration_instruction_image,
-                )
-
-            if self.__show_help_instruction_image:
-                (
-                    help_instruction_image_height,
-                    help_instruction_image_width,
-                    _,
-                ) = self.__help_instruction_image.shape
-                gl.glWindowPos2d(
-                    (self.__actual_window_width - help_instruction_image_width) // 2,
-                    (self.__actual_window_height - help_instruction_image_height) // 2,
-                )
-                gl.glDrawPixels(
-                    help_instruction_image_width,
-                    help_instruction_image_height,
-                    gl.GL_RGBA,
-                    gl.GL_UNSIGNED_BYTE,
-                    self.__help_instruction_image,
-                )
-
-            if self.__target_frametime is None:
-                self.__pg_clock.tick()  # just update the frame time for fps calculations and such
-            else:
-                # self.__pg_clock.tick(float(self.__target_framerate)) # uses not much cpu but is not accurate at delaying for framerate (this causes chop due to bad timing)
-                self.__pg_clock.tick_busy_loop(
-                    float(self.__target_framerate)
-                )  # uses lots of cpu but is accurate at delaying for framerate
-
-            if self.__subtitle_font_set:
-                if self.__show_help_text:
-                    self.__draw_centered_osd_text(
-                        (
-                            self.__display_resolution_height
-                            * self.__window_size_scale_factor
-                        )
-                        - overlay_timestamp_vertical_offset
-                        - 2 * self.__help_text["rendered_surface"].get_height(),
-                        self.__help_text,
-                        0,
-                    )
-                if self.__latest_overlay_timestamp:
-                    self.__draw_centered_osd_text(
-                        (
-                            self.__display_resolution_height
-                            * self.__window_size_scale_factor
-                        )
-                        - overlay_timestamp_vertical_offset
-                        - self.__latest_overlay_timestamp[
-                            "rendered_surface"
-                        ].get_height(),
-                        self.__latest_overlay_timestamp,
-                        0,
-                    )
-
-            if self.__latest_subtitle_data:
-                self.__latest_subtitles_event.clear()
-                for latest_subtitle in self.__latest_subtitles:
-                    if (
-                        latest_subtitle["start"] <= self.__in_image_play_timestamp
-                        and self.__in_image_play_timestamp <= latest_subtitle["end"]
+                is_bfi_frame = False
+                if self.__add_n_bfi_frames_every_frame > 0:
+                    if frame_type_modulus % 1 >= (
+                        1.0 / (self.__add_n_bfi_frames_every_frame + 1)
                     ):
-                        current_vertical_position = (
-                            self.__subtitle_vertical_offset
-                            * self.__window_size_scale_factor
-                        )
-                        for latest_subtitle_line in latest_subtitle["lines"]:
-                            self.__draw_centered_osd_text(
-                                current_vertical_position,
-                                latest_subtitle_line,
-                                subtitle_depth_shift,
-                            )
-                            current_vertical_position += latest_subtitle_line[
-                                "rendered_surface"
-                            ].get_height()
-                self.__latest_subtitles_event.set()
+                        is_bfi_frame = True
 
-            # trigger boxes
-            gl.glEnableClientState(gl.GL_VERTEX_ARRAY)
-            gl.glEnableClientState(gl.GL_COLOR_ARRAY)
-            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.__overlay_box_black_vertex_buffer)
-            gl.glVertexPointer(2, gl.GL_FLOAT, 0, None)
-            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.__overlay_box_black_color_buffer)
-            gl.glColorPointer(4, gl.GL_FLOAT, 0, None)
-            gl.glDrawArrays(gl.GL_QUADS, 0, 36)
-            if overlay_box_white_vertex_buffer is not None:
-                gl.glBindBuffer(gl.GL_ARRAY_BUFFER, overlay_box_white_vertex_buffer)
+            if is_bfi_frame:
+                pg.display.flip()
+            else:
+                # https://community.khronos.org/t/gltexcoord2f-simple-questions/63784
+                if self.__frame_packing == FRAME_PACKING_SIDE_BY_SIDE_HALF:
+                    crop_pos_x = (
+                        self.__display_resolution_width - video_single_width
+                    ) / 2
+                    crop_pos_y = (
+                        self.__display_resolution_height - video_single_height
+                    ) / 2
+                    texture_pos_x = 0
+                    texture_pos_y = 0
+                    if self.__left_or_bottom_page:
+                        texture_coord_x_low = 0
+                        texture_coord_x_high = 0.5
+                    else:
+                        texture_coord_x_low = 0.5
+                        texture_coord_x_high = 1.0
+                    texture_coord_y_low = 0.0
+                    texture_coord_y_high = 1.0
+                elif self.__frame_packing == FRAME_PACKING_SIDE_BY_SIDE_FULL:
+                    crop_pos_x = (
+                        self.__display_resolution_width - video_single_width
+                    ) / 2
+                    crop_pos_y = (
+                        self.__display_resolution_height - video_single_height
+                    ) / 2
+                    if self.__left_or_bottom_page:
+                        texture_pos_x = 0
+                    else:
+                        texture_pos_x = video_width / 2
+                    texture_pos_y = 0
+                    texture_coord_x_low = 0.0
+                    texture_coord_x_high = 1.0
+                    texture_coord_y_low = 0.0
+                    texture_coord_y_high = 1.0
+                elif self.__frame_packing == FRAME_PACKING_OVER_AND_UNDER_HALF:
+                    crop_pos_x = (
+                        self.__display_resolution_width - video_single_width
+                    ) / 2
+                    crop_pos_y = (
+                        self.__display_resolution_height - video_single_height
+                    ) / 2
+                    texture_pos_x = 0
+                    texture_pos_y = 0
+                    texture_coord_x_low = 0.0
+                    texture_coord_x_high = 1.0
+                    if self.__left_or_bottom_page:
+                        texture_coord_y_low = 0.0
+                        texture_coord_y_high = 0.5
+                    else:
+                        texture_coord_y_low = 0.5
+                        texture_coord_y_high = 1.0
+                else:
+                    assert self.__frame_packing == FRAME_PACKING_OVER_AND_UNDER_FULL
+                    crop_pos_x = (
+                        self.__display_resolution_width - video_single_width
+                    ) / 2
+                    crop_pos_y = (
+                        self.__display_resolution_height - video_single_height
+                    ) / 2
+                    texture_pos_x = 0
+                    if self.__left_or_bottom_page:
+                        texture_pos_y = 0
+                    else:
+                        texture_pos_y = video_height / 2
+                    texture_coord_x_low = 0.0
+                    texture_coord_x_high = 1.0
+                    texture_coord_y_low = 0.0
+                    texture_coord_y_high = 1.0
+
+                # gl.glColor(0, 0, 0, 1)
+                gl.glPushMatrix()
+                gl.glTranslate(
+                    crop_pos_x - texture_pos_x,
+                    video_height + crop_pos_y - texture_pos_y,
+                    0,
+                )
+                gl.glPushMatrix()
+                gl.glBegin(gl.GL_QUADS)
+                gl.glTexCoord2f(texture_coord_x_low, texture_coord_y_high)
+                gl.glVertex(0, -video_height)
+                gl.glTexCoord2f(texture_coord_x_low, texture_coord_y_low)
+                gl.glVertex(0, 0)
+                gl.glTexCoord2f(texture_coord_x_high, texture_coord_y_low)
+                gl.glVertex(video_width, 0)
+                gl.glTexCoord2f(texture_coord_x_high, texture_coord_y_high)
+                gl.glVertex(video_width, -video_height)
+                gl.glEnd()
+
+                gl.glPopMatrix()
+                gl.glPopMatrix()
+
+                gl.glDisable(gl.GL_TEXTURE_2D)
+
+                # black bars around video resolution to pad to display resolution
+                gl.glColor3fv((0, 0, 0))
+                gl.glRectf(0, 0, crop_pos_x, self.__display_resolution_height)
+                gl.glColor3fv((0, 0, 0))
+                gl.glRectf(
+                    self.__display_resolution_width - crop_pos_x,
+                    0,
+                    self.__display_resolution_width,
+                    self.__display_resolution_height,
+                )
+                gl.glColor3fv((0, 0, 0))
+                gl.glRectf(0, 0, self.__display_resolution_width, crop_pos_y)
+                gl.glColor3fv((0, 0, 0))
+                gl.glRectf(
+                    0,
+                    self.__display_resolution_height - crop_pos_y,
+                    self.__display_resolution_width,
+                    self.__display_resolution_height,
+                )
+
+                # add black and white boxes then subtitles
+                if (
+                    self.__fullscreen_psuedo
+                    and self.__disable_3d_on_mouse_move_under_windows
+                ):
+                    overlay_box_white_vertex_buffer = None
+                    if self.__left_or_bottom_page:
+                        subtitle_depth_shift = (
+                            0 if self.__calibration_mode else self.__subtitle_depth
+                        )
+                    else:
+                        subtitle_depth_shift = (
+                            0 if self.__calibration_mode else -self.__subtitle_depth
+                        )
+                else:
+                    if self.__right_eye in ("right", "top"):
+                        if self.__left_or_bottom_page:
+                            # whitebox_offset = whitebox_horizontal_offset_1
+                            overlay_box_white_vertex_buffer = (
+                                self.__overlay_box_white_left_vertex_buffer
+                            )
+                            subtitle_depth_shift = (
+                                0 if self.__calibration_mode else self.__subtitle_depth
+                            )
+                        else:
+                            # whitebox_offset = whitebox_horizontal_offset_2
+                            overlay_box_white_vertex_buffer = (
+                                self.__overlay_box_white_right_vertex_buffer
+                            )
+                            subtitle_depth_shift = (
+                                0 if self.__calibration_mode else -self.__subtitle_depth
+                            )
+                    else:
+                        assert self.__right_eye in ("left", "bottom")
+                        if self.__left_or_bottom_page:
+                            # whitebox_offset = whitebox_horizontal_offset_2
+                            overlay_box_white_vertex_buffer = (
+                                self.__overlay_box_white_right_vertex_buffer
+                            )
+                            subtitle_depth_shift = (
+                                0 if self.__calibration_mode else -self.__subtitle_depth
+                            )
+                        else:
+                            # whitebox_offset = whitebox_horizontal_offset_1
+                            overlay_box_white_vertex_buffer = (
+                                self.__overlay_box_white_left_vertex_buffer
+                            )
+                            subtitle_depth_shift = (
+                                0 if self.__calibration_mode else self.__subtitle_depth
+                            )
+
+                if (
+                    self.__calibration_mode
+                    and self.__show_calibration_instruction_image
+                ):
+                    (
+                        calibration_instruction_image_height,
+                        calibration_instruction_image_width,
+                        _,
+                    ) = self.__calibration_instruction_image.shape
+                    gl.glWindowPos2d(
+                        (
+                            self.__actual_window_width
+                            - calibration_instruction_image_width
+                        )
+                        // 2,
+                        (
+                            self.__actual_window_height
+                            - calibration_instruction_image_height
+                        )
+                        // 2,
+                    )
+                    gl.glDrawPixels(
+                        calibration_instruction_image_width,
+                        calibration_instruction_image_height,
+                        gl.GL_RGBA,
+                        gl.GL_UNSIGNED_BYTE,
+                        self.__calibration_instruction_image,
+                    )
+
+                if self.__show_help_instruction_image:
+                    (
+                        help_instruction_image_height,
+                        help_instruction_image_width,
+                        _,
+                    ) = self.__help_instruction_image.shape
+                    gl.glWindowPos2d(
+                        (self.__actual_window_width - help_instruction_image_width)
+                        // 2,
+                        (self.__actual_window_height - help_instruction_image_height)
+                        // 2,
+                    )
+                    gl.glDrawPixels(
+                        help_instruction_image_width,
+                        help_instruction_image_height,
+                        gl.GL_RGBA,
+                        gl.GL_UNSIGNED_BYTE,
+                        self.__help_instruction_image,
+                    )
+
+                self.__pg_clock.tick()  # just update the frame time for fps calculations and such
+
+                if self.__subtitle_font_set:
+                    if self.__show_help_text:
+                        self.__draw_centered_osd_text(
+                            (
+                                self.__display_resolution_height
+                                * self.__window_size_scale_factor
+                            )
+                            - overlay_timestamp_vertical_offset
+                            - 2 * self.__help_text["rendered_surface"].get_height(),
+                            self.__help_text,
+                            0,
+                        )
+                    if self.__latest_overlay_timestamp:
+                        self.__draw_centered_osd_text(
+                            (
+                                self.__display_resolution_height
+                                * self.__window_size_scale_factor
+                            )
+                            - overlay_timestamp_vertical_offset
+                            - self.__latest_overlay_timestamp[
+                                "rendered_surface"
+                            ].get_height(),
+                            self.__latest_overlay_timestamp,
+                            0,
+                        )
+
+                if self.__latest_subtitle_data:
+                    self.__latest_subtitles_event.clear()
+                    for latest_subtitle in self.__latest_subtitles:
+                        if (
+                            latest_subtitle["start"] <= self.__in_image_play_timestamp
+                            and self.__in_image_play_timestamp <= latest_subtitle["end"]
+                        ):
+                            current_vertical_position = (
+                                self.__subtitle_vertical_offset
+                                * self.__window_size_scale_factor
+                            )
+                            for latest_subtitle_line in latest_subtitle["lines"]:
+                                self.__draw_centered_osd_text(
+                                    current_vertical_position,
+                                    latest_subtitle_line,
+                                    subtitle_depth_shift,
+                                )
+                                current_vertical_position += latest_subtitle_line[
+                                    "rendered_surface"
+                                ].get_height()
+                    self.__latest_subtitles_event.set()
+
+                # trigger boxes
+                gl.glEnableClientState(gl.GL_VERTEX_ARRAY)
+                gl.glEnableClientState(gl.GL_COLOR_ARRAY)
+                gl.glBindBuffer(
+                    gl.GL_ARRAY_BUFFER, self.__overlay_box_black_vertex_buffer
+                )
                 gl.glVertexPointer(2, gl.GL_FLOAT, 0, None)
                 gl.glBindBuffer(
-                    gl.GL_ARRAY_BUFFER, self.__overlay_box_white_color_buffer
+                    gl.GL_ARRAY_BUFFER, self.__overlay_box_black_color_buffer
                 )
                 gl.glColorPointer(4, gl.GL_FLOAT, 0, None)
                 gl.glDrawArrays(gl.GL_QUADS, 0, 36)
-            if self.__calibration_mode:
-                gl.glBindBuffer(
-                    gl.GL_ARRAY_BUFFER,
-                    self.__overlay_box_calibration_reticule_vertex_buffer,
-                )
-                gl.glVertexPointer(2, gl.GL_FLOAT, 0, None)
-                gl.glBindBuffer(
-                    gl.GL_ARRAY_BUFFER,
-                    self.__overlay_box_calibration_reticule_color_buffer,
-                )
-                gl.glColorPointer(4, gl.GL_FLOAT, 0, None)
-                gl.glDrawArrays(gl.GL_QUADS, 0, 8)
-            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
+                if overlay_box_white_vertex_buffer is not None:
+                    gl.glBindBuffer(gl.GL_ARRAY_BUFFER, overlay_box_white_vertex_buffer)
+                    gl.glVertexPointer(2, gl.GL_FLOAT, 0, None)
+                    gl.glBindBuffer(
+                        gl.GL_ARRAY_BUFFER, self.__overlay_box_white_color_buffer
+                    )
+                    gl.glColorPointer(4, gl.GL_FLOAT, 0, None)
+                    gl.glDrawArrays(gl.GL_QUADS, 0, 36)
+                if self.__calibration_mode:
+                    gl.glBindBuffer(
+                        gl.GL_ARRAY_BUFFER,
+                        self.__overlay_box_calibration_reticule_vertex_buffer,
+                    )
+                    gl.glVertexPointer(2, gl.GL_FLOAT, 0, None)
+                    gl.glBindBuffer(
+                        gl.GL_ARRAY_BUFFER,
+                        self.__overlay_box_calibration_reticule_color_buffer,
+                    )
+                    gl.glColorPointer(4, gl.GL_FLOAT, 0, None)
+                    gl.glDrawArrays(gl.GL_QUADS, 0, 8)
+                gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
 
-            loop_time_millis = self.__pg_clock.get_time()
-            loop_time = loop_time_millis / 1000
-            if loop_time_millis not in self.__debug_loop_times:
-                self.__debug_loop_times[loop_time_millis] = 0
-            self.__debug_loop_times[loop_time_millis] += 1
-            if (
-                self.__target_frametime is not None
-                and loop_time > self.__target_frametime
-                and loop_time % (2 * self.__target_frametime) > self.__target_frametime
-            ):
-                # if we missed a frame deadline and don't require a page flip then just skip a frame to avoid glasses getting desynced for 4+ frames due to the fact it takes 4-8 frames to resync sony TDG-XXX glasses.
-                # pg.time.wait(int(self.__target_frametime - (loop_time % self.__target_frametime))) # not cpu intensie
-                # pg.time.delay(int(self.__target_frametime - (loop_time % self.__target_frametime))) # cpu intensive
-                # time.sleep(self.__target_frametime - (loop_time % self.__target_frametime)) # best because it allows for more precision on supported operating systems
-                # this is easiest done by simulating a frame tick even though we didn't produce an actual frame
-                # self.__pg_clock.tick() # just update the frame time for fps calculations and such
-                # self.__pg_clock.tick(float(self.__target_framerate)) # uses not much cpu but is not accurate at delaying for framerate (this causes chop due to bad timing)
-                self.__pg_clock.tick_busy_loop(
-                    float(self.__target_framerate)
-                )  # uses lots of cpu but is accurate at delaying for framerate
                 # loop_time_millis = self.__pg_clock.get_time()
+                # loop_time = loop_time_millis / 1000
                 # if loop_time_millis not in self.__debug_loop_times:
-                #  self.__debug_loop_times[loop_time_millis] = 0
+                #     self.__debug_loop_times[loop_time_millis] = 0
                 # self.__debug_loop_times[loop_time_millis] += 1
 
-            pg.display.flip()
+                pg.display.flip()
 
-            if self.__skip_n_page_flips > 0:
-                self.__skip_n_page_flips -= 1
-                # print(f'skipped frame {"left" if not self.__left_or_bottom_page else "right"}')
-            else:
-                self.__left_or_bottom_page = not self.__left_or_bottom_page
+                if self.__skip_n_page_flips > 0:
+                    self.__skip_n_page_flips -= 1
+                    # print(f'skipped frame {"left" if not self.__left_or_bottom_page else "right"}')
+                else:
+                    if self.__target_frametime is None:
+                        self.__left_or_bottom_page = not self.__left_or_bottom_page
 
         except Exception as e:
             traceback.print_exc()
@@ -1962,6 +1983,16 @@ class PageflipGLWindow(threading.Thread):
         if value != self.__target_framerate:
             self.__target_framerate = value
             self.__target_frametime = 1.0 / float(value) if float(value) > 0 else None
+
+    @property
+    def add_n_bfi_frames_every_frame(self):
+        return str(self.__add_n_bfi_frames_every_frame)
+
+    @add_n_bfi_frames_every_frame.setter
+    def add_n_bfi_frames_every_frame(self, value):
+        int_value = int(value)
+        if int_value != self.__add_n_bfi_frames_every_frame:
+            self.__add_n_bfi_frames_every_frame = int_value
 
     @property
     def display_resolution(self):
@@ -2309,6 +2340,13 @@ class GstPageflipGLSink(GstBase.BaseSink):
             "0",  # default
             GObject.ParamFlags.READWRITE,
         ),
+        "add_n_bfi_frames_every_frame": (
+            GObject.TYPE_STRING,
+            "Add N BFI Frames Every Frame",
+            "How many BFI Frames to add every frame (only applies if target_framerate is set) (valid values are 0, 1, 2, etc)",
+            "0",
+            GObject.ParamFlags.READWRITE,
+        ),
         "display_resolution": (
             GObject.TYPE_STRING,
             "Display Resolution",
@@ -2547,6 +2585,7 @@ class GstPageflipGLSink(GstBase.BaseSink):
                         )
                 self.__pageflip_gl_window.start()
                 self.__started = True
+                self.__time_started = time.perf_counter()
             else:
                 raise AttributeError("unknown property %s" % prop.name)
         else:
@@ -2618,6 +2657,9 @@ if __name__ == "__main__":
     pageflip_gl_window.display_size = "34"
     pageflip_gl_window.right_eye = "left"
     pageflip_gl_window.frame_packing = FRAME_PACKING_SIDE_BY_SIDE_HALF
+    pageflip_gl_window.target_framerate = 29.965
+    # pageflip_gl_window.target_framerate = 59.93
+    pageflip_gl_window.add_n_bfi_frames_every_frame = 1
     # pageflip_gl_window.frame_packing = FRAME_PACKING_SIDE_BY_SIDE_FULL
     # pageflip_gl_window.frame_packing = FRAME_PACKING_OVER_AND_UNDER_HALF
     # pageflip_gl_window.frame_packing = FRAME_PACKING_OVER_AND_UNDER_FULL

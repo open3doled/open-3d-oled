@@ -14,6 +14,7 @@ DECODER_PREFERENCE_SOFTWARE = "software (No HW Acceleration)"
 
 # Display Setting Defaults
 DEFAULT_TARGET_FRAMERATE = "0"
+DEFAULT_ADD_N_BFI_FRAMES_EVERY_FRAME = "0"
 DEFAULT_DISPLAY_RESOLUTION = "1920x1080"
 DEFAULT_DISPLAY_ZOOM_FACTOR = "100"
 DEFAULT_DISPLAY_SIZE = "55"
@@ -38,6 +39,10 @@ class DisplaySettingsDialog:
 
         self.target_framerate_variable = tkinter.StringVar(parent)
         self.target_framerate_variable.set(DEFAULT_TARGET_FRAMERATE)
+        self.add_n_bfi_frames_every_frame_variable = tkinter.StringVar(parent)
+        self.add_n_bfi_frames_every_frame_variable.set(
+            DEFAULT_ADD_N_BFI_FRAMES_EVERY_FRAME
+        )
         self.display_resolution_variable = tkinter.StringVar(parent)
         self.display_resolution_variable.set(DEFAULT_DISPLAY_RESOLUTION)
         self.display_zoom_factor_variable = tkinter.StringVar(parent)
@@ -382,26 +387,40 @@ class DisplaySettingsDialog:
             self.target_framerate_frame, text="Target Framerate (Experimental): "
         )
         self.target_framerate_label.pack(padx=5, side=tkinter.LEFT)
-        self.target_framerate_option_menu = tkinter.OptionMenu(
+        self.target_framerate_entry = tkinter.Entry(
             self.target_framerate_frame,
-            self.target_framerate_variable,
-            "0",
-            "50",
-            "59.98",
-            "60",
-            "74.99",
-            "75",
-            "90",
-            "120",
+            textvariable=self.target_framerate_variable,
         )
-        self.target_framerate_option_menu.pack(padx=5, side=tkinter.LEFT)
+        self.target_framerate_entry.pack(padx=5, side=tkinter.LEFT)
         # self.target_framerate_frame.pack()
-        self.target_framerate_option_menu_tooltip = idlelib.tooltip.Hovertip(
-            self.target_framerate_option_menu,
-            f"If set to a value other than 0 this will force pygame to use a frame delay with tick_busy_loop instead of relying on vsync, this should not normally need to be set and is for experimental purposes only. \n(this value will not be updated on an already playing video) \n(default {DEFAULT_TARGET_FRAMERATE})",
+        self.target_framerate_entry_tooltip = idlelib.tooltip.Hovertip(
+            self.target_framerate_entry,
+            f"If set to a value other than 0 this will choose which eye to show based on a timer. This means if a single frame is dropped by default it will drop a second frame to re-sync. This mode is required for simulated BFI mode. It is for experimental purposes only. \n(this value will not be updated on an already playing video) \n(default {DEFAULT_TARGET_FRAMERATE})",
             hover_delay=100,
         )
         self.target_framerate_frame.grid(row=row_count, column=0, sticky="w")
+        row_count += 1
+
+        self.add_n_bfi_frames_every_frame_frame = tkinter.Frame(top)
+        self.add_n_bfi_frames_every_frame_label = tkinter.Label(
+            self.add_n_bfi_frames_every_frame_frame,
+            text="Add N BFI Frames Every Frame (Experimental): ",
+        )
+        self.add_n_bfi_frames_every_frame_label.pack(padx=5, side=tkinter.LEFT)
+        self.add_n_bfi_frames_every_frame_entry = tkinter.Entry(
+            self.add_n_bfi_frames_every_frame_frame,
+            textvariable=self.add_n_bfi_frames_every_frame_variable,
+        )
+        self.add_n_bfi_frames_every_frame_entry.pack(padx=5, side=tkinter.LEFT)
+        # self.add_n_bfi_frames_every_frame_frame.pack()
+        self.add_n_bfi_frames_every_frame_entry_tooltip = idlelib.tooltip.Hovertip(
+            self.add_n_bfi_frames_every_frame_entry,
+            f"If set to a value other than 0 this will force pygame to insert N blank frames between every frame. In order to use this you must set the framerate variable, this is currently for experimental purposes only. \n(this value will not be updated on an already playing video) \n(default {DEFAULT_ADD_N_BFI_FRAMES_EVERY_FRAME})",
+            hover_delay=100,
+        )
+        self.add_n_bfi_frames_every_frame_frame.grid(
+            row=row_count, column=0, sticky="w"
+        )
         row_count += 1
 
         self.action_button_frame_1 = tkinter.Frame(top)
@@ -474,6 +493,7 @@ class DisplaySettingsDialog:
         json.dump(
             {
                 "target_framerate": self.target_framerate_variable.get(),
+                "add_n_bfi_frames_every_frame": self.add_n_bfi_frames_every_frame_variable.get(),
                 "display_resolution": self.display_resolution_variable.get(),
                 "display_zoom_factor": self.display_zoom_factor_variable.get(),
                 "display_size": self.display_size_variable.get(),
@@ -510,6 +530,11 @@ class DisplaySettingsDialog:
         f.close()
         self.target_framerate_variable.set(
             settings.get("target_framerate", DEFAULT_TARGET_FRAMERATE)
+        )
+        self.add_n_bfi_frames_every_frame_variable.set(
+            settings.get(
+                "add_n_bfi_frames_every_frame", DEFAULT_ADD_N_BFI_FRAMES_EVERY_FRAME
+            )
         )
         self.display_resolution_variable.set(
             settings.get("display_resolution", DEFAULT_DISPLAY_RESOLUTION)
