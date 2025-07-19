@@ -1126,9 +1126,58 @@ def main():
 
     top_window = TopWindow(parsed_arguments)
     try:
+        """
+        checks_per_second = 0
+        checks_per_second_time = int(time.time())
+        """
+        pc_serial_sync_active = False
+        skip_remainder_of_pageflipglsink_checks_n_more_times = 0
         # window.mainloop()
         while not top_window.close:
             if top_window.player is not None and top_window.video_open:
+                """
+                time_now = int(time.time())
+                if time_now > checks_per_second_time:
+                    checks_per_second_time = time_now
+                    print(f"checks per second {checks_per_second}")
+                    checks_per_second = 0
+                checks_per_second += 1
+                """
+
+                if (
+                    top_window.emitter_serial is not None
+                    and top_window.emitter_serial.ir_drive_mode
+                    == emitter_settings.IR_DRIVE_MODE_SERIAL
+                ):
+                    pc_serial_sync_active = True
+                    synced_signal_left_or_right = (
+                        top_window.pageflipglsink.get_property(
+                            "synced_signal_left_or_right"
+                        )
+                    )
+                    top_window.pageflipglsink.set_property(
+                        "synced_signal_left_or_right", "0"
+                    )
+                    if synced_signal_left_or_right == emitter_settings.SYNC_SIGNAL_LEFT:
+                        top_window.emitter_serial.line_reader.async_command(
+                            emitter_settings.SERIAL_DRIVE_MODE_LEFT_COMMAND
+                        )
+                    elif (
+                        synced_signal_left_or_right
+                        == emitter_settings.SYNC_SIGNAL_RIGHT
+                    ):
+                        top_window.emitter_serial.line_reader.async_command(
+                            emitter_settings.SERIAL_DRIVE_MODE_RIGHT_COMMAND
+                        )
+                    if skip_remainder_of_pageflipglsink_checks_n_more_times > 0:
+                        skip_remainder_of_pageflipglsink_checks_n_more_times -= 1
+                        time.sleep(0.000005)
+                        continue
+                    else:
+                        skip_remainder_of_pageflipglsink_checks_n_more_times = 1000
+                else:
+                    pc_serial_sync_active = False
+
                 top_window.update_video_progress()
                 pageflipglsink_requests = top_window.pageflipglsink.get_property(
                     "requests"
@@ -1277,13 +1326,18 @@ def main():
                         )
 
                 top_window.notify_player_if_mouse_moved()
-            try:
-                top_window.window.update_idletasks()
-                top_window.window.update()
-                time.sleep(0.01)
-            except:
-                # traceback.print_exc()
-                top_window.close_player()
+
+            if (
+                not pc_serial_sync_active
+                or skip_remainder_of_pageflipglsink_checks_n_more_times == 1000
+            ):
+                try:
+                    top_window.window.update_idletasks()
+                    top_window.window.update()
+                    time.sleep(0.01)
+                except:
+                    # traceback.print_exc()
+                    top_window.close_player()
 
     finally:
         pass

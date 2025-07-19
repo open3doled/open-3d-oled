@@ -146,6 +146,9 @@ DISPLAY_DUPLICATE_FRAME_MODE_OFF = 0
 DISPLAY_DUPLICATE_FRAME_MODE_ON = 1
 DISPLAY_DUPLICATE_FRAME_MODE_ON_WITH_COUNTER = 2
 
+SYNC_SIGNAL_LEFT = "1"
+SYNC_SIGNAL_RIGHT = "2"
+
 WINDOW_NAME = "Open3DOLED3DPlayer"
 FINISH_BUFFER_COPY_EVENT_TIMEOUT = 1 / 30
 
@@ -238,6 +241,7 @@ class PageflipGLWindow(threading.Thread):
         self.__latest_overlay_timestamp_time_str = None
         self.__video_duration = 0
         self.__video_duration_str = ""
+        self.__synced_signal_left_or_right = "0"
         self.__subtitle_font = "arial"
         self.__subtitle_size = 30
         self.__subtitle_depth = 0
@@ -1776,6 +1780,11 @@ class PageflipGLWindow(threading.Thread):
                 # self.__debug_loop_times[loop_time_millis] += 1
 
                 pg.display.flip()
+                self.__synced_signal_left_or_right = (
+                    SYNC_SIGNAL_LEFT
+                    if self.__left_or_bottom_page
+                    else SYNC_SIGNAL_RIGHT
+                )
 
                 if self.__skip_n_page_flips > 0:
                     self.__skip_n_page_flips -= 1
@@ -2266,11 +2275,21 @@ class PageflipGLWindow(threading.Thread):
 
     @video_duration.setter
     def video_duration(self, value):
-        if value != self.__video_duration:
-            self.__video_duration = value
+        int_value = int(value)
+        if int_value != self.__video_duration:
+            self.__video_duration = int_value
             self.__video_duration_str = str(
-                datetime.timedelta(seconds=int(value) // 1000000000)
+                datetime.timedelta(seconds=int_value // 1000000000)
             )
+
+    @property
+    def synced_signal_left_or_right(self):
+        return self.__synced_signal_left_or_right
+
+    @synced_signal_left_or_right.setter
+    def synced_signal_left_or_right(self, value):
+        if value != self.__synced_signal_left_or_right:
+            self.__synced_signal_left_or_right = value
 
     def update_image(self, play_timestamp, in_image, in_image_width, in_image_height):
         self.__in_image = in_image
@@ -2515,6 +2534,13 @@ class GstPageflipGLSink(GstBase.BaseSink):
             "0",  # default
             GObject.ParamFlags.READWRITE,
         ),
+        "synced_signal_left_or_right": (
+            GObject.TYPE_STRING,
+            "Sync Signal Left Or Right",
+            f"This is a signal that is set after pg.display.flip() returns to {SYNC_SIGNAL_LEFT} for a left eye or {SYNC_SIGNAL_RIGHT} for a right eye, the user should clear this after checking it",
+            "0",  # default
+            GObject.ParamFlags.READWRITE,
+        ),
     }
 
     def __init__(self):
@@ -2550,6 +2576,7 @@ class GstPageflipGLSink(GstBase.BaseSink):
             "skip-n-page-flips": "0",
             "calibration-mode": False,
             "video-duration": "0",
+            "synced-signal-left-or-right": "0",
         }
         self.__readonly_parameters = set(("started",))
 

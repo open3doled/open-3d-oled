@@ -39,6 +39,12 @@ DEFAULT_OPT_OUTPUT_STATS = "0"
 DEFAULT_OPT_SENSOR_FILTER_MODE = "0"
 DEFAULT_IR_AVERAGE_TIMING_MODE = "0"
 
+IR_DRIVE_MODE_SERIAL = "1"
+SYNC_SIGNAL_LEFT = "1"
+SYNC_SIGNAL_RIGHT = "2"
+SERIAL_DRIVE_MODE_LEFT_COMMAND = "9,0"
+SERIAL_DRIVE_MODE_RIGHT_COMMAND = "9,1"
+
 
 class EmitterSerialLineReader(serial.threaded.LineReader):
 
@@ -190,6 +196,10 @@ class EmitterSerialLineReader(serial.threaded.LineReader):
                 except queue.Empty:
                     raise Exception("command timeout ({!r})".format(command))
 
+    def async_command(self, command, response="OK", timeout=5):
+        with self.lock:  # ensure that just one thread is sending commands at once
+            self.write_line(command)
+
     @property
     def pageflipglsink(self):
         return self.__pageflipglsink
@@ -210,6 +220,7 @@ class EmitterSerial(EmitterSerialLineReader):
         self.line_reader_manager_enter = type(self.line_reader_manager).__enter__
         self.line_reader_manager_exit = type(self.line_reader_manager).__exit__
         self.line_reader = self.line_reader_manager_enter(self.line_reader_manager)
+        self.ir_drive_mode = None
 
     def close(self):
         self.line_reader_manager_exit(self.line_reader_manager, None, None, None)
@@ -539,7 +550,7 @@ class EmitterSettingsDialog:
         self.setting_ir_drive_mode_entry.pack(padx=5, side=tkinter.LEFT)
         self.setting_ir_drive_mode_tooltip = idlelib.tooltip.Hovertip(
             self.setting_ir_drive_mode_entry,
-            "0=Optical, 1=PCSerial 2=Minidin3(D10), 3=RFTrigger(D10,D16,D14,D15,D21), 4=DLPLink (A1-left eye trigger optical sensor), 5=DLPLinkTrigger (D14,D15,D21) \n(Only available from firmware version 20 onwards)\n(PCSerial only works with WibbleWobble currently, 3d player and PotPlayer both require Optical, \nMinidin3 requires soldering a connector with datapin to D10, \nRFTrigger lets you wire up a broken pair of RF glasses control board to the input pins to relay them as IR signals) \nDLPLink lets you trigger based on the DLP-Link projector light pulses using A1 the left eye trigger optical sensor (only available from firmware version 22 onwards) \n(default 0 Optical)",
+            f"0=Optical, {IR_DRIVE_MODE_SERIAL}=PCSerial 2=Minidin3(D10), 3=RFTrigger(D10,D16,D14,D15,D21), 4=DLPLink (A1-left eye trigger optical sensor), 5=DLPLinkTrigger (D14,D15,D21) \n(Only available from firmware version 20 onwards)\n(PCSerial only works with WibbleWobble currently, 3d player and PotPlayer both require Optical, \nMinidin3 requires soldering a connector with datapin to D10, \nRFTrigger lets you wire up a broken pair of RF glasses control board to the input pins to relay them as IR signals) \nDLPLink lets you trigger based on the DLP-Link projector light pulses using A1 the left eye trigger optical sensor (only available from firmware version 22 onwards) \n(default 0 Optical)",
             hover_delay=100,
         )
         self.setting_ir_drive_mode_frame.grid(row=row_count, column=0, sticky="w")
@@ -1304,6 +1315,10 @@ class EmitterSettingsDialog:
                         self.setting_ir_drive_mode_variable.set(DEFAULT_IR_DRIVE_MODE)
                         self.setting_ir_drive_mode_entry.config(state="disabled")
 
+            self.main_app.emitter_serial.ir_drive_mode = (
+                self.setting_ir_drive_mode_variable.get()
+            )
+
     def serial_port_click_connect(self):
         if self.main_app.emitter_serial:
             self.main_app.emitter_serial.close()
@@ -1397,6 +1412,10 @@ class EmitterSettingsDialog:
 
             print(command)
             self.main_app.emitter_serial.line_reader.command(command)
+
+            self.main_app.emitter_serial.ir_drive_mode = (
+                self.setting_ir_drive_mode_variable.get()
+            )
 
     def click_save_settings_to_eeprom(self):
         if self.main_app.emitter_serial:
