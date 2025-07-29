@@ -68,7 +68,7 @@ ir_led_window_plastic_thickness = 0;
 
 /* [STL Print Settings:] */
 // Orientate modules for ease of printing
-orientate_print_ready = "no"; // [yes,no]
+orientate_print_ready = "yes"; // [yes,no]
 
 /* [PCB Diode Settings:] */
 
