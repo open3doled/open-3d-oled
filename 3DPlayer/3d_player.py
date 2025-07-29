@@ -1126,24 +1126,11 @@ def main():
 
     top_window = TopWindow(parsed_arguments)
     try:
-        """
-        checks_per_second = 0
-        checks_per_second_time = int(time.time())
-        """
         pc_serial_sync_active = False
         skip_remainder_of_pageflipglsink_checks_n_more_times = 0
         # window.mainloop()
         while not top_window.close:
             if top_window.player is not None and top_window.video_open:
-                """
-                time_now = int(time.time())
-                if time_now > checks_per_second_time:
-                    checks_per_second_time = time_now
-                    print(f"checks per second {checks_per_second}")
-                    checks_per_second = 0
-                checks_per_second += 1
-                """
-
                 if (
                     top_window.emitter_serial is not None
                     and top_window.emitter_serial.ir_drive_mode
@@ -1171,7 +1158,9 @@ def main():
                         )
                     if skip_remainder_of_pageflipglsink_checks_n_more_times > 0:
                         skip_remainder_of_pageflipglsink_checks_n_more_times -= 1
-                        time.sleep(0.000005)
+                        time.sleep(
+                            0.000005
+                        )  # this results in about 10000 checks per second or 1 check every 10 microseconds.
                         continue
                     else:
                         skip_remainder_of_pageflipglsink_checks_n_more_times = 1000
@@ -1334,7 +1323,8 @@ def main():
                 try:
                     top_window.window.update_idletasks()
                     top_window.window.update()
-                    time.sleep(0.01)
+                    if not pc_serial_sync_active:
+                        time.sleep(0.01)
                 except:
                     # traceback.print_exc()
                     top_window.close_player()
