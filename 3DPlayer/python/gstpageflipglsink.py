@@ -146,16 +146,17 @@ DISPLAY_DUPLICATE_FRAME_MODE_OFF = 0
 DISPLAY_DUPLICATE_FRAME_MODE_ON = 1
 DISPLAY_DUPLICATE_FRAME_MODE_ON_WITH_COUNTER = 2
 
-SYNC_SIGNAL_LEFT = "1"
-SYNC_SIGNAL_RIGHT = "2"
+SYNC_SIGNAL_LEFT = 1
+SYNC_SIGNAL_RIGHT = 2
 
 WINDOW_NAME = "Open3DOLED3DPlayer"
 FINISH_BUFFER_COPY_EVENT_TIMEOUT = 1 / 30
 
 
 class PageflipGLWindow(threading.Thread):
-    def __init__(self):
+    def __init__(self, gst_pageflip_gl_sink):
         super(PageflipGLWindow, self).__init__()
+        self.__gst_pageflip_gl_sink = gst_pageflip_gl_sink
         self.__do_start = False
         self.__started = False
         self.__do_stop = False
@@ -241,7 +242,8 @@ class PageflipGLWindow(threading.Thread):
         self.__latest_overlay_timestamp_time_str = None
         self.__video_duration = 0
         self.__video_duration_str = ""
-        self.__synced_signal_left_or_right = "0"
+        self.__synced_signal_left_or_right = 0
+        self.__synced_signal_left_or_right_str = "0"
         self.__subtitle_font = "arial"
         self.__subtitle_size = 30
         self.__subtitle_depth = 0
@@ -1780,11 +1782,14 @@ class PageflipGLWindow(threading.Thread):
                 # self.__debug_loop_times[loop_time_millis] += 1
 
                 pg.display.flip()
-                self.__synced_signal_left_or_right = (
+                new_sync_value = (
                     SYNC_SIGNAL_LEFT
                     if self.__left_or_bottom_page
                     else SYNC_SIGNAL_RIGHT
                 )
+                self.__gst_pageflip_gl_sink.emit("synced-flip", new_sync_value)
+                self.__synced_signal_left_or_right = new_sync_value
+                self.__synced_signal_left_or_right_str = str(new_sync_value)
 
                 if self.__skip_n_page_flips > 0:
                     self.__skip_n_page_flips -= 1
@@ -2288,8 +2293,10 @@ class PageflipGLWindow(threading.Thread):
 
     @synced_signal_left_or_right.setter
     def synced_signal_left_or_right(self, value):
-        if value != self.__synced_signal_left_or_right:
-            self.__synced_signal_left_or_right = value
+        int_value = int(value)
+        if int_value != self.__synced_signal_left_or_right:
+            self.__synced_signal_left_or_right = int_value
+            self.__synced_signal_left_or_right_str = str(int_value)
 
     def update_image(self, play_timestamp, in_image, in_image_width, in_image_height):
         self.__in_image = in_image
@@ -2322,6 +2329,8 @@ class GstPageflipGLSink(GstBase.BaseSink):
     __gsttemplates__ = Gst.PadTemplate.new(
         "sink", Gst.PadDirection.SINK, Gst.PadPresence.ALWAYS, IN_CAPS
     )
+
+    __gsignals__ = {"synced-flip": (GObject.SIGNAL_RUN_FIRST, None, (int,))}
 
     __gproperties__ = {
         "fullscreen": (
@@ -2598,7 +2607,7 @@ class GstPageflipGLSink(GstBase.BaseSink):
             if prop.name in self.__parameters:
                 self.__parameters[prop.name] = value
             elif prop.name == "start" and value:
-                self.__pageflip_gl_window = PageflipGLWindow()
+                self.__pageflip_gl_window = PageflipGLWindow(self)
                 for prop_name in self.__parameters:
                     if prop_name == "fullscreen":
                         self.__pageflip_gl_window.do_fullscreen = self.__parameters[

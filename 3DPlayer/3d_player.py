@@ -617,6 +617,22 @@ class TopWindow:
 
         self.start_video(playback_parameters)
 
+    def on_synced_flip(self, plugin, synced_signal_left_or_right):
+        if self.player is not None and self.video_open:
+            if (
+                self.emitter_serial is not None
+                and self.emitter_serial.ir_drive_mode
+                == emitter_settings.IR_DRIVE_MODE_SERIAL
+            ):
+                if synced_signal_left_or_right == emitter_settings.SYNC_SIGNAL_LEFT:
+                    self.emitter_serial.line_reader.async_command(
+                        emitter_settings.SERIAL_DRIVE_MODE_LEFT_COMMAND
+                    )
+                elif synced_signal_left_or_right == emitter_settings.SYNC_SIGNAL_RIGHT:
+                    self.emitter_serial.line_reader.async_command(
+                        emitter_settings.SERIAL_DRIVE_MODE_RIGHT_COMMAND
+                    )
+
     def start_video(self, playback_parameters):
 
         video_file_name = playback_parameters["video_file_name"]
@@ -802,6 +818,7 @@ class TopWindow:
         if self.pageflipglsink is None:
             print("Unable to find/initialize GStreamer plugin GSTPageflipGLSink.")
             return
+        self.pageflipglsink.connect("synced-flip", self.on_synced_flip)
         if self.emitter_serial is not None:
             self.emitter_serial.pageflipglsink = self.pageflipglsink
 
@@ -1126,46 +1143,9 @@ def main():
 
     top_window = TopWindow(parsed_arguments)
     try:
-        pc_serial_sync_active = False
-        skip_remainder_of_pageflipglsink_checks_n_more_times = 0
         # window.mainloop()
         while not top_window.close:
             if top_window.player is not None and top_window.video_open:
-                if (
-                    top_window.emitter_serial is not None
-                    and top_window.emitter_serial.ir_drive_mode
-                    == emitter_settings.IR_DRIVE_MODE_SERIAL
-                ):
-                    pc_serial_sync_active = True
-                    synced_signal_left_or_right = (
-                        top_window.pageflipglsink.get_property(
-                            "synced_signal_left_or_right"
-                        )
-                    )
-                    top_window.pageflipglsink.set_property(
-                        "synced_signal_left_or_right", "0"
-                    )
-                    if synced_signal_left_or_right == emitter_settings.SYNC_SIGNAL_LEFT:
-                        top_window.emitter_serial.line_reader.async_command(
-                            emitter_settings.SERIAL_DRIVE_MODE_LEFT_COMMAND
-                        )
-                    elif (
-                        synced_signal_left_or_right
-                        == emitter_settings.SYNC_SIGNAL_RIGHT
-                    ):
-                        top_window.emitter_serial.line_reader.async_command(
-                            emitter_settings.SERIAL_DRIVE_MODE_RIGHT_COMMAND
-                        )
-                    if skip_remainder_of_pageflipglsink_checks_n_more_times > 0:
-                        skip_remainder_of_pageflipglsink_checks_n_more_times -= 1
-                        time.sleep(
-                            0.000005
-                        )  # this results in about 10000 checks per second or 1 check every 10 microseconds.
-                        continue
-                    else:
-                        skip_remainder_of_pageflipglsink_checks_n_more_times = 1000
-                else:
-                    pc_serial_sync_active = False
 
                 top_window.update_video_progress()
                 pageflipglsink_requests = top_window.pageflipglsink.get_property(
@@ -1316,18 +1296,13 @@ def main():
 
                 top_window.notify_player_if_mouse_moved()
 
-            if (
-                not pc_serial_sync_active
-                or skip_remainder_of_pageflipglsink_checks_n_more_times == 1000
-            ):
-                try:
-                    top_window.window.update_idletasks()
-                    top_window.window.update()
-                    if not pc_serial_sync_active:
-                        time.sleep(0.01)
-                except:
-                    # traceback.print_exc()
-                    top_window.close_player()
+            try:
+                top_window.window.update_idletasks()
+                top_window.window.update()
+                time.sleep(0.01)
+            except:
+                # traceback.print_exc()
+                top_window.close_player()
 
     finally:
         pass
