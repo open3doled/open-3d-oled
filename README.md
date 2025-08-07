@@ -329,6 +329,7 @@ XIAOMI
 ```
    Sometimes when changing the glasses IR Protocol the emitter will enter an unresponsive state. If this happens save your settings to EEPROM and disconnect and reconnect it's power.
 ```
+* In addition to the ALM issue with AMD, pygame when run on my system with an AMD driver has a tendency with some driver versions to switch to 60hz 10bpp on my LG C1 when going to fullscreen mode. You will be able to see this is happening because instead of showing purple it will show either solid red or solid blue as soon as it switches to fullscreen. And after exciting fullscreen your monitor will now be running at 60hz. PotPlayer does not have this same issue. If this issue effects you and you need to use 3d_player to perform calibration the only solution I could find was to remove all 60hz 1920x1080 resolutions for my TV using ToastyX CRU. After doing this when 3d_player enters fullcreen mode it will no longer switch to 1920x1080 60hz 10bpp but stay in 1920x1080 120hz 8bpp.
 
 * If during development you get the error "Unable to find/initialize GStreamer plugin GSTPageflipGLSink." it can sometimes be solved by removing the gstreamer registry cache (and/or rebooting).
 ```
