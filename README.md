@@ -86,9 +86,9 @@ OR
 ```
 
 ### Windows Release Install:
-Download the latest release version from the [Releases page](https://github.com/open3doled/open-3d-oled/releases) under Assets.
-Unzip and run 3d_player.exe
-The first time you run the program it can take a while to load all required libraries, please be patient.
+* Download the latest release version from the [Releases page](https://github.com/open3doled/open-3d-oled/releases) under Assets.
+* Unzip and run 3d_player.exe
+* The first time you run the program it can take a while to load all required libraries, please be patient.
 
 If running windows 11 or 10 with DPI scaling be sure to disable it as follows.
 1) Right click properties on 3d_player.exe in the 3DPlayer folder
