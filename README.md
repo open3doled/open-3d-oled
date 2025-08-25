@@ -86,9 +86,9 @@ OR
 ```
 
 ### Windows Release Install:
-Download the latest release version from the Releases page.
-Unzip and run 3d_player.exe
-The first time you run the program it can take a while to load all required libraries, please be patient.
+* Download the latest release version from the [Releases page](https://github.com/open3doled/open-3d-oled/releases) under Assets.
+* Unzip and run 3d_player.exe
+* The first time you run the program it can take a while to load all required libraries, please be patient.
 
 If running windows 11 or 10 with DPI scaling be sure to disable it as follows.
 1) Right click properties on 3d_player.exe in the 3DPlayer folder
@@ -325,6 +325,8 @@ XIAOMI
    Add or Update the DalHdmiEnableALLM Entry as follows (Dword: DalHdmiEnableALLM, Value:0 for Disabled, 1 for Enabled)
 ```
 * To disable ALLM for Intel [CRU tool](https://www.reddit.com/r/OLED_Gaming/comments/r3poj4/fullscreen_windows_10_games_enable_allm_which/) can also be used, [see this video](https://youtu.be/ntp00tMUKzE) showing how it can be done.
+* If you are not able to find any "CTA-861" entry under "Extension Blocks" under CRU tool, and you were not able to disable ALLM using any other technique. Then you may be able to disable ALLM by disabling Fullscreen Exclusive mode directly in PotPlayer. This is accessible from Settings -> Video. Setting it to "Disabled" may prevent ALLM from starting and thus mean BFI can be used and also you won't get the tiering and other issues that causes the glasses to lose sync.
+  
 * Emitter not working
 ```
    Sometimes when changing the glasses IR Protocol the emitter will enter an unresponsive state. If this happens save your settings to EEPROM and disconnect and reconnect it's power.

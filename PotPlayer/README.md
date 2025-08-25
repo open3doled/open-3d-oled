@@ -15,6 +15,7 @@ The setup of such a system is provided in the steps below.
 * DVDFab Passkey lite also works until the trial runs out, at which point you will only be able to play older 3d blu-ray until you buy a license.
 
 ## Install PotPlayer via ThreeDeeJay Installer Script (Includes all AVISynth and MVC Plugins)
+* Users have recently told me this installer is no longer working for them so I now recommend the manual installation instructions below.
 * The following github repository has a prebuilt installer that will allow you to install PotPlayer with AVISynth and basic MVC/Bluray support.
 * https://github.com/ThreeDeeJay/PotPlayer3D
 * Installing using this script is simplest and allows you to skip directly to "First usage" below.
@@ -48,6 +49,8 @@ The setup of such a system is provided in the steps below.
   * Check "Full resolution"
   * Change "Output (Screen)" to "Shutter Glasses (Page Flipping)"
   * Check "Auto detect 3D input format (based on filename suffixes ...)"
+* Navigate to "Video"
+  * If you are using "Fullscreen Exclusive" and there is some chance your TV may still trigger ALLM mode it is wise to change this option to "Disable". This will ensure you still hae access to BFI and also that the glasses don't lose sync due to ALLM kicking in.
 * Navigate to "Video -> AVI Synth"
   * Check "Enable AviSynth processing"
   * Click on "Load script -> Load script from a file"
