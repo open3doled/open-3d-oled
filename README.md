@@ -155,7 +155,7 @@ Working (Tested)
  - Viewsonic XG2431 (Works perfectly zero-ghosting without any BFI enabled at up to 144 hz shutter glasses refresh speed, you online need to setup a custom quick frame transport HDMI profile to get a blanking interval that matches more than 40% of the screen duty cycle, see https://forums.blurbusters.com/viewtopic.php?t=8946 or read the document in the corresponding settings folder)
  - Asus VG248QE LightBoost Capable (Works perfectly with [LightBoost enabled](https://blurbusters.com/zero-motion-blur/lightboost/), Works usably with lightboost turned off using "OPT101 Ignore All Duplicates")
 Partially Working (Tested)
- - Sony X95K MiniLED (Used with "OPT101 Ignore All Duplicates", "Block Signal Detection Delay" 7500, on tv disable "Local Dimming" to reduce ghosting at top of screen, BFI 1, and run at native 4K from pc)
+ - Sony X95K MiniLED (Used with "OPT101 Ignore All Duplicates", "Block Signal Detection Delay" 7500, on tv disable "Local Dimming" to reduce ghosting at top of screen, BFI 1, and run at native 1080p from pc)
 Untested (But should work well)
  - LG CX/GX/G1 OLED (These should work identical to LG C1 OLED but are as of yet untested)
  - Other OLEDs with 120hz BFI technology.

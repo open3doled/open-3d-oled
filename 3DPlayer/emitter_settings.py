@@ -753,7 +753,7 @@ class EmitterSettingsDialog:
         )
         self.setting_opt_block_signal_detection_delay_tooltip = idlelib.tooltip.Hovertip(
             self.setting_opt_block_signal_detection_delay_entry,
-            "(in microseconds) how long to wait after a high tv signal on left or right before allowing another high tv signal \non either channel this is useful to eliminating false triggers when the tv signal is decreasing in a noisy fashion. \nthis is best set to slighly lower than the target refresh rate (about 80-90%). \n(when used in conjunction with a PWM backlit display this should be set to a value 80-90% of the PWM backlight cycle time.)",
+            "(in microseconds) how long to wait after a high tv signal on left or right before allowing another high tv signal \non either channel this is useful to eliminating false triggers when the tv signal is decreasing in a noisy fashion. \nthis is best set to slighly lower than the target refresh rate (about 80-90%).",
             hover_delay=100,
         )
         self.setting_opt_block_signal_detection_delay_frame.grid(
