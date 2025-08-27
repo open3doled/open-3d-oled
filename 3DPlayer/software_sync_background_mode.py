@@ -1,4 +1,3 @@
-
 import ctypes
 import logging
 import os
@@ -29,7 +28,9 @@ class SoftwareSyncBackgroundModeGLWindow(threading.Thread):
         self.__time_started = None
         self.__left_or_bottom_page = True
         self.__target_framerate = target_framerate
-        self.__target_frametime = 1.0 / float(target_framerate) if float(target_framerate) > 0 else None
+        self.__target_frametime = (
+            1.0 / float(target_framerate) if float(target_framerate) > 0 else None
+        )
         self.__display_resolution_width = 200
         self.__display_resolution_height = 100
         self.__keyboard_listener = None
@@ -37,15 +38,15 @@ class SoftwareSyncBackgroundModeGLWindow(threading.Thread):
         self.__ctrl_pressed = False
         self.__shift_pressed = False
         # self.__cycle_count = 0
-        pg.init()                
+        pg.init()
 
-    def __start(self): 
+    def __start(self):
         p = psutil.Process(os.getpid())
         if os.name == "nt":
             p.nice(psutil.HIGH_PRIORITY_CLASS)
         else:
             p.nice(10)
-        
+
         flags = pg_locals.DOUBLEBUF | pg_locals.OPENGL | pg_locals.RESIZABLE
         self.__pg_clock = pg.time.Clock()
         self.__pg_window = pg.display.set_mode(
@@ -53,19 +54,21 @@ class SoftwareSyncBackgroundModeGLWindow(threading.Thread):
             flags,
             vsync=1,
         )
-       
+
         pg.display.set_caption(WINDOW_NAME)
         pg.display.set_icon(
-            pg.image.load(os.path.join(os.path.dirname(__file__), "python", "blank.ico"))
+            pg.image.load(
+                os.path.join(os.path.dirname(__file__), "python", "blank.ico")
+            )
         )
-    
+
         self.__sdl2_window = pygame_sdl2.Window.from_display_module()
         self.__sdl2_window.size = (
             self.__display_resolution_width,
             self.__display_resolution_height,
         )
         self.__sdl2_window.position = pygame_sdl2.WINDOWPOS_CENTERED
-        
+
         def minimize_window():
             if os.name == "nt":
                 hwnd = ctypes.windll.user32.FindWindowW(None, WINDOW_NAME)
@@ -75,7 +78,7 @@ class SoftwareSyncBackgroundModeGLWindow(threading.Thread):
                 self.__sdl2_window.minimize()
             # timer = threading.Timer(2, minimize_window)
             # timer.start()
-            
+
         timer = threading.Timer(1, minimize_window)
         timer.start()
 
@@ -101,26 +104,28 @@ class SoftwareSyncBackgroundModeGLWindow(threading.Thread):
         )
         gl.glMatrixMode(gl.GL_MODELVIEW)
         gl.glLoadIdentity()
-        
+
         if self.__keyboard_listener is None:
-            self.__keyboard_listener = keyboard.Listener(on_press=self.on_key_press, on_release=self.on_key_release)
+            self.__keyboard_listener = keyboard.Listener(
+                on_press=self.on_key_press, on_release=self.on_key_release
+            )
             self.__keyboard_listener.start()
-        
+
         self.__started = True
         self.__time_started = time.perf_counter()
-        
+
     def __stop(self):
-        
+
         if self.__keyboard_listener is not None:
             self.__keyboard_listener.stop()
             self.__keyboard_listener = None
-            
+
         self.__pg_window = None
         self.__sdl2_window = None
         pg.quit()
-        
+
     def __update(self):
-        try: 
+        try:
             if self.__target_frametime is not None:
                 time_delta = time.perf_counter() - self.__time_started
                 frame_type_modulus = (time_delta / self.__target_frametime) % 2
@@ -143,18 +148,18 @@ class SoftwareSyncBackgroundModeGLWindow(threading.Thread):
                     else SYNC_SIGNAL_RIGHT
                 )
             self.__synced_flip_event_callback(new_sync_value)
-            
+
             if self.__target_frametime is None:
                 self.__left_or_bottom_page = not self.__left_or_bottom_page
-                
-            # self.__cycle_count += 1 
+
+            # self.__cycle_count += 1
             # if self.__cycle_count % 100 == 0:
             #     print(self.__cycle_count)
-                
+
         except Exception as e:
             traceback.print_exc()
             logging.error(e)
-                
+
     def run(self):
         if not self.__do_stop:
             self.__start()
@@ -165,14 +170,19 @@ class SoftwareSyncBackgroundModeGLWindow(threading.Thread):
 
     def stop(self):
         self.__do_stop = True
-        
+
     def on_key_press(self, key):
         try:
+            # print(key)
             if key in (keyboard.Key.ctrl, keyboard.Key.ctrl_l, keyboard.Key.ctrl_r):
                 self.__ctrl_pressed = True
             elif key == keyboard.Key.shift:
                 self.__shift_pressed = True
-            elif (key.char == "f" or key.char == "f" or key.char == "\x06") and self.__ctrl_pressed and self.__shift_pressed:
+            elif (
+                (key.char == "F" or key.char == "f" or key.char == "\x06")
+                and self.__ctrl_pressed
+                and self.__shift_pressed
+            ):
                 self.__flip_eyes = not self.__flip_eyes
                 print("Flipped Eyes for Software Sync Background Mode")
         except AttributeError:
@@ -183,7 +193,7 @@ class SoftwareSyncBackgroundModeGLWindow(threading.Thread):
             self.__ctrl_pressed = False
         elif key == keyboard.Key.shift:
             self.__shift_pressed = False
-        
+
     @property
     def target_framerate(self):
         return self.__target_framerate
@@ -194,7 +204,7 @@ class SoftwareSyncBackgroundModeGLWindow(threading.Thread):
             self.__target_framerate = value
             self.__target_frametime = 1.0 / float(value) if float(value) > 0 else None
 
-    
+
 if __name__ == "__main__":
 
     def synced_flip_event_callback_temp(left_or_right_synced_flip):
@@ -205,7 +215,9 @@ if __name__ == "__main__":
             pass
             # print("R", end="")
 
-    software_sync_background_mode_gl_window = SoftwareSyncBackgroundModeGLWindow(synced_flip_event_callback_temp)
+    software_sync_background_mode_gl_window = SoftwareSyncBackgroundModeGLWindow(
+        synced_flip_event_callback_temp
+    )
     software_sync_background_mode_gl_window.start()
     time.sleep(15)
     software_sync_background_mode_gl_window.stop()
