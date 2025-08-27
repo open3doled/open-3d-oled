@@ -445,6 +445,20 @@ XIAOMI
 
 ```
 
+# Contact
+
+## Mail
+
+support at open3doled dot com
+
+## Discord
+
+At the request of some people who wanted to share their experience getting the unit to work.
+I've made a discord server you are free to join https://discord.gg/T32aM2ru I'll be adding the invite link to the github page as well.
+There's no need to join as the most timely and reliable way to get in touch with me will be email still, but I am including it here for your reference.
+There may be some tips and tricks on there if you are trying to get the most out of the unit.
+ 
+
 # Licenses
 Please refer to LICENSE files and license folders for references to open source licenses. If you find any missing licenses please open a support ticket.
 <p xmlns:cc="http://creativecommons.org/ns#" xmlns:dct="http://purl.org/dc/terms/"><a property="dct:title" rel="cc:attributionURL" href="https://github.com/open3doled/Open3DOLED">Open3DOLED</a> is licensed under <a href="http://creativecommons.org/licenses/by-nc-sa/4.0/?ref=chooser-v1" target="_blank" rel="license noopener noreferrer" style="display:inline-block;">CC BY-NC-SA 4.0<img style="height:22px!important;margin-left:3px;vertical-align:text-bottom;" src="https://mirrors.creativecommons.org/presskit/icons/cc.svg?ref=chooser-v1"><img style="height:22px!important;margin-left:3px;vertical-align:text-bottom;" src="https://mirrors.creativecommons.org/presskit/icons/by.svg?ref=chooser-v1"><img style="height:22px!important;margin-left:3px;vertical-align:text-bottom;" src="https://mirrors.creativecommons.org/presskit/icons/nc.svg?ref=chooser-v1"><img style="height:22px!important;margin-left:3px;vertical-align:text-bottom;" src="https://mirrors.creativecommons.org/presskit/icons/sa.svg?ref=chooser-v1"></a></p> 
