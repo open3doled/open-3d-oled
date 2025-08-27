@@ -51,6 +51,7 @@ The setup of such a system is provided in the steps below.
   * Check "Auto detect 3D input format (based on filename suffixes ...)"
 * Navigate to "Video"
   * If you are using "Fullscreen Exclusive" and there is some chance your TV may still trigger ALLM mode it is wise to change this option to "Disable". This will ensure you still have access to BFI and also that the glasses don't lose sync due to ALLM kicking in.
+  * Some users have reported that setting "Video Renderer" to "Built-in Direct3D 11 Video Renderer" gives more stable and lower CPU usage as well as page flipping works when the video is paused better. Based on my testing changing this does seem to help.
 * Navigate to "Video -> AVI Synth"
   * Check "Enable AviSynth processing"
   * Click on "Load script -> Load script from a file"
