@@ -26,6 +26,7 @@ import emitter_settings
 import display_settings
 import start_video
 import thanks
+from software_sync_background_mode import SoftwareSyncBackgroundModeGLWindow
 
 
 class TopWindow:
@@ -39,6 +40,7 @@ class TopWindow:
 
         self.pageflipglsink = None
         self.subtitle3dsink = None
+        self.__software_sync_background_mode = None
 
         # set base path
         self.internal_base_path = os.path.dirname(os.path.abspath(__file__))
@@ -300,6 +302,22 @@ class TopWindow:
         self.__forward_big_button.bind(
             "<Button-1>", functools.partial(self.perform_seek, "seek_forward_big")
         )
+        software_sync_background_mode_button_image = util.svg_to_imagetk_photoimage(
+            self.internal_base_path, "./images/arrow-repeat.svg"
+        )
+        software_sync_background_mode_button = tkinter.Button(
+            top_frame,
+            text="Start Software Sync Background Mode",
+            image=software_sync_background_mode_button_image,
+            highlightthickness=0,
+            bd=0,
+        )
+        software_sync_background_mode_button.tk_img = software_sync_background_mode_button_image
+        software_sync_background_mode_button_tooltip = idlelib.tooltip.Hovertip(  # @UnusedVariable
+            software_sync_background_mode_button, f"Start/Stop Software Sync Background Mode.\nPress ctrl + shift + f to flip eyes once started.\nRequires one to connect to emitter unit via serial over USB and unit to be PCSerial mode to actually do anything.", hover_delay=100
+        )
+        software_sync_background_mode_button.pack(padx=5, side=tkinter.LEFT)
+        software_sync_background_mode_button.bind("<Button-1>", self.toggle_software_sync_background_mode)
         thanks_button_image = util.svg_to_imagetk_photoimage(
             self.internal_base_path, "./images/bookmark-heart.svg"
         )
@@ -476,10 +494,27 @@ class TopWindow:
         self.set_menu_on_top(True, False, False, False)
         # Gst.deinit()
         return "break"
+    
+    def toggle_software_sync_background_mode(self, event=None):
+        if self.__software_sync_background_mode is None:
+            self.__software_sync_background_mode = SoftwareSyncBackgroundModeGLWindow(
+                self.on_synced_flip, 
+                self.display_settings_dialog.target_framerate_variable.get()
+            )
+            self.__software_sync_background_mode.start()
+            print("Started Software Sync Background Mode")
+        else:
+            self.__software_sync_background_mode.stop()
+            self.__software_sync_background_mode = None
+            print("Stopped Software Sync Background Mode")
+            
 
     def close_player(self, event=None):  # @UnusedVariable
         if self.video_open:
             self.stop_player()
+        if self.__software_sync_background_mode is not None: 
+            self.__software_sync_background_mode.stop()
+            print("Stopped Software Sync Background Mode")
         self.close = True
         self.set_menu_on_top(True, False, False, False)
         if self.emitter_serial:
@@ -616,23 +651,26 @@ class TopWindow:
         }
 
         self.start_video(playback_parameters)
+        
+    def on_synced_flip(self, synced_signal_left_or_right):
+        if (
+            self.emitter_serial is not None
+            and self.emitter_serial.ir_drive_mode
+            == emitter_settings.IR_DRIVE_MODE_SERIAL
+        ):
+            if synced_signal_left_or_right == emitter_settings.SYNC_SIGNAL_LEFT:
+                self.emitter_serial.line_reader.async_command(
+                    emitter_settings.SERIAL_DRIVE_MODE_LEFT_COMMAND
+                )
+            elif synced_signal_left_or_right == emitter_settings.SYNC_SIGNAL_RIGHT:
+                self.emitter_serial.line_reader.async_command(
+                    emitter_settings.SERIAL_DRIVE_MODE_RIGHT_COMMAND
+                )
 
-    def on_synced_flip(self, plugin, synced_signal_left_or_right):
+    def on_gstreamer_synced_flip(self, plugin, synced_signal_left_or_right):
         if self.player is not None and self.video_open:
-            if (
-                self.emitter_serial is not None
-                and self.emitter_serial.ir_drive_mode
-                == emitter_settings.IR_DRIVE_MODE_SERIAL
-            ):
-                if synced_signal_left_or_right == emitter_settings.SYNC_SIGNAL_LEFT:
-                    self.emitter_serial.line_reader.async_command(
-                        emitter_settings.SERIAL_DRIVE_MODE_LEFT_COMMAND
-                    )
-                elif synced_signal_left_or_right == emitter_settings.SYNC_SIGNAL_RIGHT:
-                    self.emitter_serial.line_reader.async_command(
-                        emitter_settings.SERIAL_DRIVE_MODE_RIGHT_COMMAND
-                    )
-
+            self.on_synced_flip(synced_signal_left_or_right)
+            
     def start_video(self, playback_parameters):
 
         video_file_name = playback_parameters["video_file_name"]
@@ -818,7 +856,7 @@ class TopWindow:
         if self.pageflipglsink is None:
             print("Unable to find/initialize GStreamer plugin GSTPageflipGLSink.")
             return
-        self.pageflipglsink.connect("synced-flip", self.on_synced_flip)
+        self.pageflipglsink.connect("synced-flip", self.on_gstreamer_synced_flip)
         if self.emitter_serial is not None:
             self.emitter_serial.pageflipglsink = self.pageflipglsink
 

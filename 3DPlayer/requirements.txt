@@ -11,3 +11,4 @@ line-profiler
 pyopengl
 pyopengl-accelerate
 numpy
+pynput
