@@ -13,6 +13,10 @@ from pynput import keyboard
 import OpenGL.GL as gl
 import pygame as pg
 
+if os.name == "nt":
+    user32 = ctypes.windll.user32
+    gdi32 = ctypes.windll.gdi32
+                
 WINDOW_NAME = "Open3DOLED3DSoftwareSyncBackgroundModeWindow"
 SYNC_SIGNAL_LEFT = 1
 SYNC_SIGNAL_RIGHT = 2
@@ -37,7 +41,13 @@ class SoftwareSyncBackgroundModeGLWindow(threading.Thread):
         self.__flip_eyes = False
         self.__ctrl_pressed = False
         self.__shift_pressed = False
-        # self.__cycle_count = 0
+        self.__trigger_pixel_brightness = 0
+        self.__trigger_pixel_last_brightness = 0
+        self.__hdc = None
+        
+        self.__cycle_count = 0
+        self.__last_time = 0
+        
         pg.init()
 
     def __start(self):
@@ -111,11 +121,18 @@ class SoftwareSyncBackgroundModeGLWindow(threading.Thread):
             )
             self.__keyboard_listener.start()
 
+        if os.name == "nt":
+            self.__hdc = user32.GetDC(0)  # entire desktop
+
         self.__started = True
         self.__time_started = time.perf_counter()
 
     def __stop(self):
 
+        if os.name == "nt":
+            user32.ReleaseDC(0, self.__hdc)
+            self.__hdc = None
+                
         if self.__keyboard_listener is not None:
             self.__keyboard_listener.stop()
             self.__keyboard_listener = None
@@ -126,15 +143,28 @@ class SoftwareSyncBackgroundModeGLWindow(threading.Thread):
 
     def __update(self):
         try:
-            if self.__target_frametime is not None:
-                time_delta = time.perf_counter() - self.__time_started
-                frame_type_modulus = (time_delta / self.__target_frametime) % 2
-                if frame_type_modulus <= 1.0:
-                    self.__left_or_bottom_page = True
-                else:
-                    self.__left_or_bottom_page = False
 
             pg.display.flip()
+            
+            if os.name == 'nt':
+                color = gdi32.GetPixel(self.__hdc, 0, 0)
+                r = color & 0xFF
+                g = (color >> 8) & 0xFF
+                b = (color >> 16) & 0xFF
+                self.__trigger_pixel_last_brightness = self.__trigger_pixel_brightness
+                self.__trigger_pixel_brightness = r + g + b
+                self.__left_or_bottom_page = (self.__trigger_pixel_last_brightness > self.__trigger_pixel_brightness)
+            else:
+                if self.__target_frametime is not None:
+                    time_delta = time.perf_counter() - self.__time_started
+                    frame_type_modulus = (time_delta / self.__target_frametime) % 2
+                    if frame_type_modulus <= 1.0:
+                        self.__left_or_bottom_page = True
+                    else:
+                        self.__left_or_bottom_page = False    
+                else:
+                    self.__left_or_bottom_page = not self.__left_or_bottom_page
+            
             if self.__flip_eyes:
                 new_sync_value = (
                     SYNC_SIGNAL_RIGHT
@@ -147,14 +177,15 @@ class SoftwareSyncBackgroundModeGLWindow(threading.Thread):
                     if self.__left_or_bottom_page
                     else SYNC_SIGNAL_RIGHT
                 )
+                
             self.__synced_flip_event_callback(new_sync_value)
 
-            if self.__target_frametime is None:
-                self.__left_or_bottom_page = not self.__left_or_bottom_page
-
-            # self.__cycle_count += 1
-            # if self.__cycle_count % 100 == 0:
-            #     print(self.__cycle_count)
+            self.__cycle_count += 1
+            now_time = int(time.time())
+            if now_time > self.__last_time:
+                self.__last_time = now_time
+                print(f"{self.__last_time} {self.__cycle_count}")
+                self.__cycle_count = 0
 
         except Exception as e:
             traceback.print_exc()
