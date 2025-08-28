@@ -1,6 +1,10 @@
 flip_eyes = 0
 left_brightness = 0
 right_brightness = 10
+triggerbox_horizontal_position = 0
+triggerbox_vertical_position = 0
+triggerbox_width_ppc = 2
+triggerbox_height_ppc = 2
 
 # assume half is sbs or tab (when we get a half tab or half sbs video we can't tell which is which)
 assume_for_half = "half_sbs" # "half_sbs" ? "half_tab"
@@ -18,10 +22,6 @@ display_resolution_height = Int(clip.Height * (layout == "full_tab" ? 0.5 : 1) *
 
 left_brightness_bgr = left_brightness*65536 + left_brightness*256 + left_brightness
 right_brightness_bgr = right_brightness*65536 + right_brightness*256 + right_brightness
-triggerbox_horizontal_position = 0
-triggerbox_vertical_position = 0
-triggerbox_width_ppc = 1
-triggerbox_height_ppc = 1
 
 triggerbox_horizontal_position_left = (flip_eyes == 1 ? (layout_sbs == 1 ? display_resolution_width+triggerbox_horizontal_position : triggerbox_horizontal_position) : triggerbox_horizontal_position)
 triggerbox_vertical_position_left = (flip_eyes == 1 ? (layout_sbs == 0 ? display_resolution_height+triggerbox_vertical_position : triggerbox_vertical_position) : triggerbox_vertical_position)
