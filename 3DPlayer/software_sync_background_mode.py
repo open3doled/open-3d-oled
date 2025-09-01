@@ -21,7 +21,22 @@ WINDOW_NAME = "Open3DOLED3DSoftwareSyncBackgroundModeWindow"
 SYNC_SIGNAL_LEFT = 1
 SYNC_SIGNAL_RIGHT = 2
 
+WINDOWS_OS_NAME = "nt"
+# WINDOWS_OS_NAME = "posix"
 
+USE_LINE_PROFILER = True
+if USE_LINE_PROFILER:
+    from line_profiler import LineProfiler
+
+    line_profiler_obj = LineProfiler()
+else:
+
+    def line_profiler_obj(func):
+        def wrapper(*args, **kwargs):
+            return func(*args, **kwargs)
+
+        return wrapper
+    
 class SoftwareSyncBackgroundModeGLWindow(threading.Thread):
 
     def __init__(self, synced_flip_event_callback, target_framerate):
@@ -52,7 +67,7 @@ class SoftwareSyncBackgroundModeGLWindow(threading.Thread):
 
     def __start(self):
         p = psutil.Process(os.getpid())
-        if os.name == "nt":
+        if os.name == WINDOWS_OS_NAME:
             p.nice(psutil.HIGH_PRIORITY_CLASS)
         else:
             p.nice(10)
@@ -80,7 +95,7 @@ class SoftwareSyncBackgroundModeGLWindow(threading.Thread):
         self.__sdl2_window.position = pygame_sdl2.WINDOWPOS_CENTERED
 
         def minimize_window():
-            if os.name == "nt":
+            if os.name == WINDOWS_OS_NAME:
                 hwnd = ctypes.windll.user32.FindWindowW(None, WINDOW_NAME)
                 SW_MINIMIZE = 6
                 ctypes.windll.user32.ShowWindow(hwnd, SW_MINIMIZE)
@@ -121,7 +136,7 @@ class SoftwareSyncBackgroundModeGLWindow(threading.Thread):
             )
             self.__keyboard_listener.start()
 
-        if os.name == "nt":
+        if os.name == WINDOWS_OS_NAME:
             self.__hdc = user32.GetDC(0)  # entire desktop
 
         self.__started = True
@@ -129,7 +144,7 @@ class SoftwareSyncBackgroundModeGLWindow(threading.Thread):
 
     def __stop(self):
 
-        if os.name == "nt":
+        if os.name == WINDOWS_OS_NAME:
             user32.ReleaseDC(0, self.__hdc)
             self.__hdc = None
                 
@@ -140,13 +155,17 @@ class SoftwareSyncBackgroundModeGLWindow(threading.Thread):
         self.__pg_window = None
         self.__sdl2_window = None
         pg.quit()
-
+        
+        if USE_LINE_PROFILER:
+            line_profiler_obj.print_stats()
+        
+    @line_profiler_obj
     def __update(self):
         try:
 
             pg.display.flip()
             
-            if os.name == 'nt':
+            if True and os.name == WINDOWS_OS_NAME:
                 color = gdi32.GetPixel(self.__hdc, 0, 0)
                 r = color & 0xFF
                 g = (color >> 8) & 0xFF
