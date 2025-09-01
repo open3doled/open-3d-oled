@@ -1,4 +1,5 @@
-import dxcam
+import ctypes
+from ctypes import wintypes
 import time
 
 import os
@@ -10,9 +11,13 @@ from pygame import locals as pg_locals
 import OpenGL.GL as gl
 import pygame as pg
 
-if os.name == "nt":
-    user32 = ctypes.windll.user32
-    gdi32 = ctypes.windll.gdi32
+
+user32 = ctypes.windll.user32
+gdi32 = ctypes.windll.gdi32
+
+hdc = user32.GetDC(0)  # entire desktop
+if not hdc:
+    raise RuntimeError("Failed to get DC for window")
                 
 WINDOW_NAME = "Open3DOLED3DSoftwareSyncBackgroundModeWindow"
 WINDOWS_OS_NAME = "nt"
@@ -81,25 +86,23 @@ gl.glOrtho(
 gl.glMatrixMode(gl.GL_MODELVIEW)
 gl.glLoadIdentity()
 
-# Create a capture object for the primary display (index 0)
-camera = dxcam.create(output_idx=0)
-camera.region = (0,0,1,1)
 
 # Give the system a moment to warm up
-time.sleep(5)
+time.sleep(0)
 
 colors = {}
 start = time.time()
 
 for _ in range(600):
-    #pg.display.flip()
+    pg.display.flip()
     
     # Grab the latest frame from the desktop
-    frame = camera.grab()
+    data = gdi32.GetPixel(hdc, 0, 0)
 
-    # dxcam returns a NumPy array in BGR format
-    if frame is not None:
-        b, g, r = frame[0, 0]
+    if data != -1:
+        r = data & 0xFF
+        g = (data >> 8) & 0xFF
+        b = (data >> 16) & 0xFF
         color = (r, g, b)
     else:
         color = None
@@ -114,3 +117,6 @@ for color, count in colors.items():
     print(f"RGB: {color} count {count}")
 
 pg.quit()
+
+# Release the DC
+user32.ReleaseDC(0, hdc)
