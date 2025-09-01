@@ -2,7 +2,7 @@ __pycache__/*
 buildtools/*
 build/*
 dist/*
-debug/*
+disabled/debug/*
 installation/*
 old/*
 dot_graph_files/*
