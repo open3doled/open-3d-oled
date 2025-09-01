@@ -14,25 +14,14 @@ The setup of such a system is provided in the steps below.
     * I don't believe the vm0 setup is necessary but if you run into difficulties playing some discs you can try that too.
 * DVDFab Passkey lite also works until the trial runs out, at which point you will only be able to play older 3d blu-ray until you buy a license.
 
-## Install PotPlayer via ThreeDeeJay Installer Script (Includes all AVISynth and MVC Plugins)
-* Users have recently told me this installer is no longer working for them so I now recommend the manual installation instructions below.
-* The following github repository has a prebuilt installer that will allow you to install PotPlayer with AVISynth and basic MVC/Bluray support.
-* https://github.com/ThreeDeeJay/PotPlayer3D
-* Installing using this script is simplest and allows you to skip directly to "First usage" below.
-* Additionally it includes optional plugins to improve video quality using SVP motion interpolation and madVR Upscaling.
-
 ## Install PotPlayer and Required Plugins Manually
 
 ### Install AVISynth+
-* First download and install the main AVISynth 2.6 32bit software
-  * Download from https://www.videohelp.com/software/Avisynth
-  * Install with default settings
-* Next install AVISynth 2.6 MT replacement plugin for improved performance
-  * Download from https://forum.doom9.org/showthread.php?t=148782
-  * Extract avisynth.dll from the 7zip file over your file in C:\Windows\SysWOW64
+* Download and install AVISynth+ from the following github page. I've tested with 3.7.5 but newer versions may work as well.
+  * https://github.com/AviSynth/AviSynthPlus/releases/
 
 ### Install PotPlayer
-* Download and install PotPlayer 32 bit from https://potplayer.daum.net/
+* Download and install PotPlayer 32 or 64 bit from https://potplayer.daum.net/
 * Be sure to select "Install additional codec (OpenCodec)" on the "Complete install PotPlayer" screen at the end.
 * When installing OpenCodec be sure to select "Intel H.264 MVC Decoder"
 * When it completes PotPlayer will auto-launch by default (unless you disabled it)
