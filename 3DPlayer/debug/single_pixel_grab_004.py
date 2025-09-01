@@ -1,6 +1,9 @@
 import dxcam
 import time
 
+# pacman -S mingw-w64-ucrt-x86_64-python-opencv
+# pip install dxcam
+
 import os
 import ctypes
 import psutil
