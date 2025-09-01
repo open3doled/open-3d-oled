@@ -1,3 +1,4 @@
+import glfw
 import ctypes
 import logging
 import os
@@ -5,13 +6,9 @@ import threading
 import time
 import traceback
 
-import psutil
-from pygame import _sdl2 as pygame_sdl2
-from pygame import locals as pg_locals
 from pynput import keyboard
 
 import OpenGL.GL as gl
-import pygame as pg
 
 
 WINDOW_NAME = "Open3DOLED3DSoftwareSyncBackgroundModeWindow"
@@ -22,7 +19,7 @@ MINIMIZE_WINDOW = False
 PIXEL_GRABBER_THRESHOLD = 15  # 0 - left, 30 - right
 USE_PIXEL_GRABBER_WINDOWS_GET_DC = False
 USE_PIXEL_GRABBER_DXCAM = False
-SAMPLE_EVERY_NTH_FRAME = 10
+SAMPLE_EVERY_NTH_FRAME = 2
 
 if os.name == "nt":
     if USE_PIXEL_GRABBER_WINDOWS_GET_DC:
@@ -73,40 +70,22 @@ class SoftwareSyncBackgroundModeGLWindow(threading.Thread):
         self.__cycle_count = 0
         self.__last_time = 0
 
-        pg.init()
+        glfw.init()
 
         if USE_PIXEL_GRABBER_DXCAM and os.name == WINDOWS_OS_NAME:
             self.__dxcam_camera = dxcam.create(output_idx=0)
             self.__dxcam_camera.region = (0, 0, 1, 1)
 
     def __start(self):
-        p = psutil.Process(os.getpid())
-        if os.name == WINDOWS_OS_NAME:
-            p.nice(psutil.HIGH_PRIORITY_CLASS)
-        else:
-            p.nice(10)
-
-        flags = pg_locals.DOUBLEBUF | pg_locals.OPENGL | pg_locals.RESIZABLE
-        self.__pg_clock = pg.time.Clock()
-        self.__pg_window = pg.display.set_mode(
-            (self.__display_resolution_width, self.__display_resolution_height),
-            flags,
-            vsync=1,
-        )
-
-        pg.display.set_caption(WINDOW_NAME)
-        pg.display.set_icon(
-            pg.image.load(
-                os.path.join(os.path.dirname(__file__), "python", "blank.ico")
-            )
-        )
-
-        self.__sdl2_window = pygame_sdl2.Window.from_display_module()
-        self.__sdl2_window.size = (
-            self.__display_resolution_width,
-            self.__display_resolution_height,
-        )
-        self.__sdl2_window.position = pygame_sdl2.WINDOWPOS_CENTERED
+        
+        self.__gl_window = glfw.create_window(1, 1, WINDOW_NAME, None, None)
+        if not self.__gl_window:
+            glfw.terminate()
+            raise Exception("Failed to create GLFW window")
+        
+        glfw.make_context_current(self.__gl_window)
+        
+        glfw.swap_interval(1)
 
         def minimize_window():
             if os.name == WINDOWS_OS_NAME:
@@ -120,28 +99,6 @@ class SoftwareSyncBackgroundModeGLWindow(threading.Thread):
             timer = threading.Timer(1, minimize_window)
             timer.start()
 
-        gl.glTexEnvf(gl.GL_TEXTURE_ENV, gl.GL_TEXTURE_ENV_MODE, gl.GL_MODULATE)
-        # gl.glEnable(gl.GL_DEPTH_TEST) # we are disabling this for now because the texture z depth and overlay elements aren't configured right yet.
-        gl.glEnable(gl.GL_BLEND)
-        gl.glEnable(gl.GL_COLOR_MATERIAL)
-        gl.glColorMaterial(gl.GL_FRONT_AND_BACK, gl.GL_AMBIENT_AND_DIFFUSE)
-        gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
-        gl.glEnable(gl.GL_TEXTURE_2D)
-        gl.glViewport(
-            0, 0, self.__display_resolution_width, self.__display_resolution_height
-        )
-        gl.glMatrixMode(gl.GL_PROJECTION)
-        gl.glLoadIdentity()
-        gl.glOrtho(
-            0,
-            self.__display_resolution_width,
-            0,
-            self.__display_resolution_height,
-            -1,
-            1,
-        )
-        gl.glMatrixMode(gl.GL_MODELVIEW)
-        gl.glLoadIdentity()
 
         if self.__keyboard_listener is None:
             self.__keyboard_listener = keyboard.Listener(
@@ -165,18 +122,15 @@ class SoftwareSyncBackgroundModeGLWindow(threading.Thread):
             self.__keyboard_listener.stop()
             self.__keyboard_listener = None
 
-        self.__pg_window = None
-        self.__sdl2_window = None
-        pg.quit()
-
         if USE_LINE_PROFILER:
             line_profiler_obj.print_stats()
 
     @line_profiler_obj
     def __update(self):
         try:
-
-            pg.display.flip()
+            gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
+    
+            glfw.swap_buffers(self.__gl_window)
 
             if self.__target_frametime is not None:
                 time_delta = time.perf_counter() - self.__time_started
@@ -232,6 +186,8 @@ class SoftwareSyncBackgroundModeGLWindow(threading.Thread):
                 self.__last_time = now_time
                 print(f"{self.__last_time} {self.__cycle_count}")
                 self.__cycle_count = 0
+
+            glfw.poll_events()
 
         except Exception as e:
             traceback.print_exc()
