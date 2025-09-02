@@ -16,10 +16,10 @@ SYNC_SIGNAL_LEFT = 1
 SYNC_SIGNAL_RIGHT = 2
 
 MINIMIZE_WINDOW = False
-PIXEL_GRABBER_THRESHOLD = 15  # 0 - left, 30 - right
-USE_PIXEL_GRABBER_WINDOWS_GET_DC = False
+PIXEL_GRABBER_THRESHOLD = 30  # 0 - left, 20*3 - right
+USE_PIXEL_GRABBER_WINDOWS_GET_DC = True
 USE_PIXEL_GRABBER_DXCAM = False
-SAMPLE_EVERY_NTH_FRAME = 2
+SAMPLE_EVERY_NTH_FRAME = 5
 
 if os.name == "nt":
     if USE_PIXEL_GRABBER_WINDOWS_GET_DC:
@@ -67,6 +67,7 @@ class SoftwareSyncBackgroundModeGLWindow(threading.Thread):
         self.__hdc = None
 
         self.__grab_count = 0
+        self.__last_trigger_pixel_brightness = -1
         self.__cycle_count = 0
         self.__last_time = 0
 
@@ -77,14 +78,14 @@ class SoftwareSyncBackgroundModeGLWindow(threading.Thread):
             self.__dxcam_camera.region = (0, 0, 1, 1)
 
     def __start(self):
-        
+
         self.__gl_window = glfw.create_window(1, 1, WINDOW_NAME, None, None)
         if not self.__gl_window:
             glfw.terminate()
             raise Exception("Failed to create GLFW window")
-        
+
         glfw.make_context_current(self.__gl_window)
-        
+
         glfw.swap_interval(1)
 
         def minimize_window():
@@ -98,7 +99,6 @@ class SoftwareSyncBackgroundModeGLWindow(threading.Thread):
         if MINIMIZE_WINDOW:
             timer = threading.Timer(1, minimize_window)
             timer.start()
-
 
         if self.__keyboard_listener is None:
             self.__keyboard_listener = keyboard.Listener(
@@ -129,7 +129,7 @@ class SoftwareSyncBackgroundModeGLWindow(threading.Thread):
     def __update(self):
         try:
             gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
-    
+
             glfw.swap_buffers(self.__gl_window)
 
             if self.__target_frametime is not None:
@@ -144,8 +144,7 @@ class SoftwareSyncBackgroundModeGLWindow(threading.Thread):
 
             self.__grab_count += 1
             if (
-                False
-                and (USE_PIXEL_GRABBER_WINDOWS_GET_DC or USE_PIXEL_GRABBER_DXCAM)
+                (USE_PIXEL_GRABBER_WINDOWS_GET_DC or USE_PIXEL_GRABBER_DXCAM)
                 and os.name == WINDOWS_OS_NAME
                 and self.__grab_count % SAMPLE_EVERY_NTH_FRAME == 0
             ):
@@ -159,10 +158,11 @@ class SoftwareSyncBackgroundModeGLWindow(threading.Thread):
                     if frame is not None:
                         b, g, r = frame[0, 0]
                 if USE_PIXEL_GRABBER_WINDOWS_GET_DC or frame is not None:
-                    trigger_pixel_brightness = r + g + b
-                    if (trigger_pixel_brightness > PIXEL_GRABBER_THRESHOLD) == (
-                        not self.__left_or_bottom_page
-                    ):
+                    self.__last_trigger_pixel_brightness = r + g + b
+                    if (
+                        self.__last_trigger_pixel_brightness > PIXEL_GRABBER_THRESHOLD
+                    ) == (not self.__left_or_bottom_page ^ self.__flip_eyes):
+                        print("F", end="")
                         self.__flip_eyes = not self.__flip_eyes
 
             if self.__flip_eyes:
@@ -184,7 +184,9 @@ class SoftwareSyncBackgroundModeGLWindow(threading.Thread):
             now_time = int(time.time())
             if now_time > self.__last_time:
                 self.__last_time = now_time
-                print(f"{self.__last_time} {self.__cycle_count}")
+                print(
+                    f"{self.__last_time} {self.__cycle_count} {self.__last_trigger_pixel_brightness}"
+                )
                 self.__cycle_count = 0
 
             glfw.poll_events()
