@@ -114,12 +114,15 @@ static void on_present(reshade::api::command_queue* queue, reshade::api::swapcha
     device->destroy_resource(staging);
 }
 
-BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID)
+BOOL WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID)
 {
     if (fdwReason == DLL_PROCESS_ATTACH)
     {
         read_settings();
         open_serial_port();
+
+        if (!reshade::register_addon(hModule))
+            return FALSE;
 
         reshade::register_event<reshade::addon_event::present>(on_present);
     }
@@ -127,6 +130,8 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID)
     {
         if (hSerial != INVALID_HANDLE_VALUE)
             CloseHandle(hSerial);
+
+        reshade::unregister_addon(hModule);
     }
 
     return TRUE;
