@@ -69,6 +69,7 @@ class SoftwareSyncBackgroundModeGLWindow(threading.Thread):
         self.__grab_count = 0
         self.__last_trigger_pixel_brightness = -1
         self.__cycle_count = 0
+        self.__sync_count = {1: 0, 2: 0}
         self.__last_time = 0
 
         glfw.init()
@@ -132,6 +133,21 @@ class SoftwareSyncBackgroundModeGLWindow(threading.Thread):
 
             glfw.swap_buffers(self.__gl_window)
 
+            if self.__flip_eyes:
+                new_sync_value = (
+                    SYNC_SIGNAL_RIGHT
+                    if self.__left_or_bottom_page
+                    else SYNC_SIGNAL_LEFT
+                )
+            else:
+                new_sync_value = (
+                    SYNC_SIGNAL_LEFT
+                    if self.__left_or_bottom_page
+                    else SYNC_SIGNAL_RIGHT
+                )
+
+            self.__synced_flip_event_callback(new_sync_value)
+
             if self.__target_frametime is not None:
                 time_delta = time.perf_counter() - self.__time_started
                 frame_type_modulus = (time_delta / self.__target_frametime) % 2
@@ -149,44 +165,51 @@ class SoftwareSyncBackgroundModeGLWindow(threading.Thread):
                 and self.__grab_count % SAMPLE_EVERY_NTH_FRAME == 0
             ):
                 if USE_PIXEL_GRABBER_WINDOWS_GET_DC:
-                    color = gdi32.GetPixel(self.__hdc, 0, 0)
-                    r = color & 0xFF
-                    g = (color >> 8) & 0xFF
-                    b = (color >> 16) & 0xFF
+                    
+                    def get_pixel_with_timeout(hdc, x, y, timeout=0.007):  # 7 ms
+                        result = [None]
+                        def worker():
+                            try:
+                                result[0] = gdi32.GetPixel(hdc, x, y)
+                            except Exception:
+                                pass
+                
+                        t = threading.Thread(target=worker)
+                        t.start()
+                        t.join(timeout)
+                        if t.is_alive():
+                            # Took too long, ignore
+                            return None
+                        return result[0]
+                
+                    data = get_pixel_with_timeout(self.__hdc, 0, 0)
+                    # data = gdi32.GetPixel(self.__hdc, 0, 0)
+                    if data is not None:
+                        r = data & 0xFF
+                        g = (data >> 8) & 0xFF
+                        b = (data >> 16) & 0xFF
                 if USE_PIXEL_GRABBER_DXCAM:
-                    frame = self.__dxcam_camera.grab()
-                    if frame is not None:
-                        b, g, r = frame[0, 0]
-                if USE_PIXEL_GRABBER_WINDOWS_GET_DC or frame is not None:
+                    data = self.__dxcam_camera.grab()
+                    if data is not None:
+                        b, g, r = data[0, 0]
+                if data is not None:
                     self.__last_trigger_pixel_brightness = r + g + b
+                    # print(f"{self.__last_trigger_pixel_brightness},", end="")
                     if (
                         self.__last_trigger_pixel_brightness > PIXEL_GRABBER_THRESHOLD
                     ) == (not self.__left_or_bottom_page ^ self.__flip_eyes):
                         print("F", end="")
                         self.__flip_eyes = not self.__flip_eyes
 
-            if self.__flip_eyes:
-                new_sync_value = (
-                    SYNC_SIGNAL_RIGHT
-                    if self.__left_or_bottom_page
-                    else SYNC_SIGNAL_LEFT
-                )
-            else:
-                new_sync_value = (
-                    SYNC_SIGNAL_LEFT
-                    if self.__left_or_bottom_page
-                    else SYNC_SIGNAL_RIGHT
-                )
-
-            self.__synced_flip_event_callback(new_sync_value)
-
+            self.__sync_count[new_sync_value] += 1
             self.__cycle_count += 1
             now_time = int(time.time())
             if now_time > self.__last_time:
                 self.__last_time = now_time
                 print(
-                    f"{self.__last_time} {self.__cycle_count} {self.__last_trigger_pixel_brightness}"
+                    f"{self.__last_time} {self.__cycle_count} {self.__last_trigger_pixel_brightness} {self.__sync_count}"
                 )
+                self.__sync_count = {1: 0, 2: 0}
                 self.__cycle_count = 0
 
             glfw.poll_events()
