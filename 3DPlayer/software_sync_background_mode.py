@@ -13,18 +13,28 @@ from pynput import keyboard
 import OpenGL.GL as gl
 import pygame as pg
 
-if os.name == "nt":
-    user32 = ctypes.windll.user32
-    gdi32 = ctypes.windll.gdi32
-                
+
 WINDOW_NAME = "Open3DOLED3DSoftwareSyncBackgroundModeWindow"
 SYNC_SIGNAL_LEFT = 1
 SYNC_SIGNAL_RIGHT = 2
 
+MINIMIZE_WINDOW = False
+PIXEL_GRABBER_THRESHOLD = 15  # 0 - left, 30 - right
+USE_PIXEL_GRABBER_WINDOWS_GET_DC = False
+USE_PIXEL_GRABBER_DXCAM = False
+SAMPLE_EVERY_NTH_FRAME = 10
+
+if os.name == "nt":
+    if USE_PIXEL_GRABBER_WINDOWS_GET_DC:
+        user32 = ctypes.windll.user32
+        gdi32 = ctypes.windll.gdi32
+    if USE_PIXEL_GRABBER_DXCAM:
+        import dxcam
+
 WINDOWS_OS_NAME = "nt"
 # WINDOWS_OS_NAME = "posix"
 
-USE_LINE_PROFILER = True
+USE_LINE_PROFILER = False
 if USE_LINE_PROFILER:
     from line_profiler import LineProfiler
 
@@ -36,7 +46,8 @@ else:
             return func(*args, **kwargs)
 
         return wrapper
-    
+
+
 class SoftwareSyncBackgroundModeGLWindow(threading.Thread):
 
     def __init__(self, synced_flip_event_callback, target_framerate):
@@ -56,14 +67,17 @@ class SoftwareSyncBackgroundModeGLWindow(threading.Thread):
         self.__flip_eyes = False
         self.__ctrl_pressed = False
         self.__shift_pressed = False
-        self.__trigger_pixel_brightness = 0
-        self.__trigger_pixel_last_brightness = 0
         self.__hdc = None
-        
+
+        self.__grab_count = 0
         self.__cycle_count = 0
         self.__last_time = 0
-        
+
         pg.init()
+
+        if USE_PIXEL_GRABBER_DXCAM and os.name == WINDOWS_OS_NAME:
+            self.__dxcam_camera = dxcam.create(output_idx=0)
+            self.__dxcam_camera.region = (0, 0, 1, 1)
 
     def __start(self):
         p = psutil.Process(os.getpid())
@@ -101,11 +115,10 @@ class SoftwareSyncBackgroundModeGLWindow(threading.Thread):
                 ctypes.windll.user32.ShowWindow(hwnd, SW_MINIMIZE)
             else:
                 self.__sdl2_window.minimize()
-            # timer = threading.Timer(2, minimize_window)
-            # timer.start()
 
-        timer = threading.Timer(1, minimize_window)
-        timer.start()
+        if MINIMIZE_WINDOW:
+            timer = threading.Timer(1, minimize_window)
+            timer.start()
 
         gl.glTexEnvf(gl.GL_TEXTURE_ENV, gl.GL_TEXTURE_ENV_MODE, gl.GL_MODULATE)
         # gl.glEnable(gl.GL_DEPTH_TEST) # we are disabling this for now because the texture z depth and overlay elements aren't configured right yet.
@@ -136,7 +149,7 @@ class SoftwareSyncBackgroundModeGLWindow(threading.Thread):
             )
             self.__keyboard_listener.start()
 
-        if os.name == WINDOWS_OS_NAME:
+        if USE_PIXEL_GRABBER_WINDOWS_GET_DC and os.name == WINDOWS_OS_NAME:
             self.__hdc = user32.GetDC(0)  # entire desktop
 
         self.__started = True
@@ -144,10 +157,10 @@ class SoftwareSyncBackgroundModeGLWindow(threading.Thread):
 
     def __stop(self):
 
-        if os.name == WINDOWS_OS_NAME:
+        if USE_PIXEL_GRABBER_WINDOWS_GET_DC and os.name == WINDOWS_OS_NAME:
             user32.ReleaseDC(0, self.__hdc)
             self.__hdc = None
-                
+
         if self.__keyboard_listener is not None:
             self.__keyboard_listener.stop()
             self.__keyboard_listener = None
@@ -155,35 +168,49 @@ class SoftwareSyncBackgroundModeGLWindow(threading.Thread):
         self.__pg_window = None
         self.__sdl2_window = None
         pg.quit()
-        
+
         if USE_LINE_PROFILER:
             line_profiler_obj.print_stats()
-        
+
     @line_profiler_obj
     def __update(self):
         try:
 
             pg.display.flip()
-            
-            if True and os.name == WINDOWS_OS_NAME:
-                color = gdi32.GetPixel(self.__hdc, 0, 0)
-                r = color & 0xFF
-                g = (color >> 8) & 0xFF
-                b = (color >> 16) & 0xFF
-                self.__trigger_pixel_last_brightness = self.__trigger_pixel_brightness
-                self.__trigger_pixel_brightness = r + g + b
-                self.__left_or_bottom_page = (self.__trigger_pixel_last_brightness > self.__trigger_pixel_brightness)
-            else:
-                if self.__target_frametime is not None:
-                    time_delta = time.perf_counter() - self.__time_started
-                    frame_type_modulus = (time_delta / self.__target_frametime) % 2
-                    if frame_type_modulus <= 1.0:
-                        self.__left_or_bottom_page = True
-                    else:
-                        self.__left_or_bottom_page = False    
+
+            if self.__target_frametime is not None:
+                time_delta = time.perf_counter() - self.__time_started
+                frame_type_modulus = (time_delta / self.__target_frametime) % 2
+                if frame_type_modulus <= 1.0:
+                    self.__left_or_bottom_page = True
                 else:
-                    self.__left_or_bottom_page = not self.__left_or_bottom_page
-            
+                    self.__left_or_bottom_page = False
+            else:
+                self.__left_or_bottom_page = not self.__left_or_bottom_page
+
+            self.__grab_count += 1
+            if (
+                False
+                and (USE_PIXEL_GRABBER_WINDOWS_GET_DC or USE_PIXEL_GRABBER_DXCAM)
+                and os.name == WINDOWS_OS_NAME
+                and self.__grab_count % SAMPLE_EVERY_NTH_FRAME == 0
+            ):
+                if USE_PIXEL_GRABBER_WINDOWS_GET_DC:
+                    color = gdi32.GetPixel(self.__hdc, 0, 0)
+                    r = color & 0xFF
+                    g = (color >> 8) & 0xFF
+                    b = (color >> 16) & 0xFF
+                if USE_PIXEL_GRABBER_DXCAM:
+                    frame = self.__dxcam_camera.grab()
+                    if frame is not None:
+                        b, g, r = frame[0, 0]
+                if USE_PIXEL_GRABBER_WINDOWS_GET_DC or frame is not None:
+                    trigger_pixel_brightness = r + g + b
+                    if (trigger_pixel_brightness > PIXEL_GRABBER_THRESHOLD) == (
+                        not self.__left_or_bottom_page
+                    ):
+                        self.__flip_eyes = not self.__flip_eyes
+
             if self.__flip_eyes:
                 new_sync_value = (
                     SYNC_SIGNAL_RIGHT
@@ -196,7 +223,7 @@ class SoftwareSyncBackgroundModeGLWindow(threading.Thread):
                     if self.__left_or_bottom_page
                     else SYNC_SIGNAL_RIGHT
                 )
-                
+
             self.__synced_flip_event_callback(new_sync_value)
 
             self.__cycle_count += 1

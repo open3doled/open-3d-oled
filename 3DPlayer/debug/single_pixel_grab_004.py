@@ -13,7 +13,7 @@ import pygame as pg
 if os.name == "nt":
     user32 = ctypes.windll.user32
     gdi32 = ctypes.windll.gdi32
-                
+
 WINDOW_NAME = "Open3DOLED3DSoftwareSyncBackgroundModeWindow"
 WINDOWS_OS_NAME = "nt"
 
@@ -27,7 +27,7 @@ else:
     p.nice(10)
 
 pg.init()
-        
+
 flags = pg_locals.DOUBLEBUF | pg_locals.OPENGL | pg_locals.RESIZABLE
 pg_clock = pg.time.Clock()
 pg_window = pg.display.set_mode(
@@ -45,6 +45,7 @@ sdl2_window.size = (
 )
 sdl2_window.position = pygame_sdl2.WINDOWPOS_CENTERED
 
+
 def minimize_window():
     if os.name == WINDOWS_OS_NAME:
         hwnd = ctypes.windll.user32.FindWindowW(None, WINDOW_NAME)
@@ -54,6 +55,7 @@ def minimize_window():
         sdl2_window.minimize()
     # timer = threading.Timer(2, minimize_window)
     # timer.start()
+
 
 timer = threading.Timer(1, minimize_window)
 timer.start()
@@ -65,9 +67,7 @@ gl.glEnable(gl.GL_COLOR_MATERIAL)
 gl.glColorMaterial(gl.GL_FRONT_AND_BACK, gl.GL_AMBIENT_AND_DIFFUSE)
 gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
 gl.glEnable(gl.GL_TEXTURE_2D)
-gl.glViewport(
-    0, 0, display_resolution_width, display_resolution_height
-)
+gl.glViewport(0, 0, display_resolution_width, display_resolution_height)
 gl.glMatrixMode(gl.GL_PROJECTION)
 gl.glLoadIdentity()
 gl.glOrtho(
@@ -83,7 +83,7 @@ gl.glLoadIdentity()
 
 # Create a capture object for the primary display (index 0)
 camera = dxcam.create(output_idx=0)
-camera.region = (0,0,1,1)
+camera.region = (0, 0, 1, 1)
 
 # Give the system a moment to warm up
 time.sleep(5)
@@ -92,8 +92,8 @@ colors = {}
 start = time.time()
 
 for _ in range(1200):
-    #pg.display.flip()
-    
+    pg.display.flip()
+
     # Grab the latest frame from the desktop
     frame = camera.grab()
 
@@ -103,12 +103,12 @@ for _ in range(1200):
         color = (r, g, b)
     else:
         colors[None] = colors.get(None, 0) + 1
-    
+
     # Count occurrences
     colors[color] = colors.get(color, 0) + 1
 
 elapsed = time.time() - start
-print(f"Elapsed: {elapsed:.4f} sec for 600 samples")
+print(f"Elapsed: {elapsed:.4f} sec for 1200 samples")
 
 for color, count in colors.items():
     print(f"RGB: {color} count {count}")
