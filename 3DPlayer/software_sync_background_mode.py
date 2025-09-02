@@ -15,11 +15,14 @@ WINDOW_NAME = "Open3DOLED3DSoftwareSyncBackgroundModeWindow"
 SYNC_SIGNAL_LEFT = 1
 SYNC_SIGNAL_RIGHT = 2
 
-MINIMIZE_WINDOW = False
+
+SW_MINIMIZE = 6
+SW_MAXIMIZE = 3
+RESIZE_WINDOW = SW_MAXIMIZE  # None - do nothing, SW_MINIMIZE, SW_MAXIMIZE
 PIXEL_GRABBER_THRESHOLD = 30  # 0 - left, 20*3 - right
-USE_PIXEL_GRABBER_WINDOWS_GET_DC = True
+USE_PIXEL_GRABBER_WINDOWS_GET_DC = False
 USE_PIXEL_GRABBER_DXCAM = False
-SAMPLE_EVERY_NTH_FRAME = 5
+SAMPLE_EVERY_NTH_FRAME = 3
 
 if os.name == "nt":
     if USE_PIXEL_GRABBER_WINDOWS_GET_DC:
@@ -66,6 +69,7 @@ class SoftwareSyncBackgroundModeGLWindow(threading.Thread):
         self.__shift_pressed = False
         self.__hdc = None
 
+        self.__next_sync_value = None
         self.__grab_count = 0
         self.__last_trigger_pixel_brightness = -1
         self.__cycle_count = 0
@@ -92,12 +96,11 @@ class SoftwareSyncBackgroundModeGLWindow(threading.Thread):
         def minimize_window():
             if os.name == WINDOWS_OS_NAME:
                 hwnd = ctypes.windll.user32.FindWindowW(None, WINDOW_NAME)
-                SW_MINIMIZE = 6
-                ctypes.windll.user32.ShowWindow(hwnd, SW_MINIMIZE)
+                ctypes.windll.user32.ShowWindow(hwnd, RESIZE_WINDOW)
             else:
                 self.__sdl2_window.minimize()
 
-        if MINIMIZE_WINDOW:
+        if RESIZE_WINDOW is not None:
             timer = threading.Timer(1, minimize_window)
             timer.start()
 
@@ -129,24 +132,13 @@ class SoftwareSyncBackgroundModeGLWindow(threading.Thread):
     @line_profiler_obj
     def __update(self):
         try:
+            glfw.poll_events()
+
             gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
 
             glfw.swap_buffers(self.__gl_window)
 
-            if self.__flip_eyes:
-                new_sync_value = (
-                    SYNC_SIGNAL_RIGHT
-                    if self.__left_or_bottom_page
-                    else SYNC_SIGNAL_LEFT
-                )
-            else:
-                new_sync_value = (
-                    SYNC_SIGNAL_LEFT
-                    if self.__left_or_bottom_page
-                    else SYNC_SIGNAL_RIGHT
-                )
-
-            self.__synced_flip_event_callback(new_sync_value)
+            self.__synced_flip_event_callback(self.__next_sync_value)
 
             if self.__target_frametime is not None:
                 time_delta = time.perf_counter() - self.__time_started
@@ -165,15 +157,16 @@ class SoftwareSyncBackgroundModeGLWindow(threading.Thread):
                 and self.__grab_count % SAMPLE_EVERY_NTH_FRAME == 0
             ):
                 if USE_PIXEL_GRABBER_WINDOWS_GET_DC:
-                    
+
                     def get_pixel_with_timeout(hdc, x, y, timeout=0.007):  # 7 ms
                         result = [None]
+
                         def worker():
                             try:
                                 result[0] = gdi32.GetPixel(hdc, x, y)
                             except Exception:
                                 pass
-                
+
                         t = threading.Thread(target=worker)
                         t.start()
                         t.join(timeout)
@@ -181,7 +174,7 @@ class SoftwareSyncBackgroundModeGLWindow(threading.Thread):
                             # Took too long, ignore
                             return None
                         return result[0]
-                
+
                     data = get_pixel_with_timeout(self.__hdc, 0, 0)
                     # data = gdi32.GetPixel(self.__hdc, 0, 0)
                     if data is not None:
@@ -201,7 +194,20 @@ class SoftwareSyncBackgroundModeGLWindow(threading.Thread):
                         print("F", end="")
                         self.__flip_eyes = not self.__flip_eyes
 
-            self.__sync_count[new_sync_value] += 1
+            if self.__flip_eyes:
+                self.__next_sync_value = (
+                    SYNC_SIGNAL_RIGHT
+                    if self.__left_or_bottom_page
+                    else SYNC_SIGNAL_LEFT
+                )
+            else:
+                self.__next_sync_value = (
+                    SYNC_SIGNAL_LEFT
+                    if self.__left_or_bottom_page
+                    else SYNC_SIGNAL_RIGHT
+                )
+
+            self.__sync_count[self.__next_sync_value] += 1
             self.__cycle_count += 1
             now_time = int(time.time())
             if now_time > self.__last_time:
@@ -211,8 +217,6 @@ class SoftwareSyncBackgroundModeGLWindow(threading.Thread):
                 )
                 self.__sync_count = {1: 0, 2: 0}
                 self.__cycle_count = 0
-
-            glfw.poll_events()
 
         except Exception as e:
             traceback.print_exc()
