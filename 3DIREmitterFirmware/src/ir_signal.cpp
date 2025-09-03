@@ -39,8 +39,6 @@ const uint16_t *ir_signal_send_current_timings;
 uint8_t ir_signal_send_current_token_position;
 uint8_t ir_signal_send_current_token_length;
 uint16_t ir_signal_send_current_token_timing;
-// uint16_t ir_signal_send_last_open_right_tcnt1;
-// uint16_t ir_signal_send_last_open_left_tcnt1;
 
 // For timer 1 and isrs
 ir_signal_type ir_signal_next_timer1_compb_scheduled_signal = SIGNAL_NONE;
@@ -73,6 +71,24 @@ volatile int16_t ir_signal_trigger_frame_delay_adjustment[2] = {0};
 #ifdef DEBUG_AVERAGE_TIMING_MODE
 volatile uint16_t ir_signal_trigger_logger_counter = 0;
 #endif
+
+// --- PI controller tuning and state (fixed-point, integer only) ---
+// Designed for AVR (8-bit) to avoid floats. Q = fixed point scale.
+#define IR_PI_Q 10      // Q-format shift (2^IR_PI_Q scale)
+#define IR_KP_DIV 16    // Kp = 1/IR_KP_DIV  (approx old >>4)
+#define IR_KI_DIV 512   // Ki = 1/IR_KI_DIV (very slow integrator)
+#define IR_ADJ_MAX 1000 // clamp max adjustment in timer units
+#define IR_ADJ_MIN (-IR_ADJ_MAX)
+
+// Precomputed Q-scaled gains (compile-time friendly macros)
+#define IR_KP_Q ((1 << IR_PI_Q) / IR_KP_DIV) // Kp scaled by Q
+#define IR_KI_Q ((1 << IR_PI_Q) / IR_KI_DIV) // Ki scaled by Q
+
+// Integral accumulator stored in Q-scale (int32)
+static int32_t ir_pi_integral_q[2] = {0, 0}; // per-eye integrator (Q scaled)
+static int16_t ir_pi_prev_err[2] = {0, 0};   // last error (not really used but kept for potential D)
+
+// ------------------ end PI controller state -----------------------
 
 // This should initialize timer1 for sending ir signals and timer4 for scheduling
 // ir signals on both left and right eyes using two different comparators.
@@ -124,6 +140,12 @@ void ir_signal_init()
   ir_signal_trigger_frametime_average_effective = 0;
   ir_signal_trigger_frametime_average_effective_counter = 0;
   memset((void *)ir_signal_trigger_frame_delay_adjustment, 0, sizeof(ir_signal_trigger_frame_delay_adjustment));
+
+  // Reset PI state
+  ir_pi_integral_q[0] = 0;
+  ir_pi_integral_q[1] = 0;
+  ir_pi_prev_err[0] = 0;
+  ir_pi_prev_err[1] = 0;
 
 #ifdef DEBUG_AVERAGE_TIMING_MODE
   ir_signal_trigger_logger_counter = 0;
@@ -692,9 +714,38 @@ void ir_signal_process_trigger(uint8_t left_eye_in)
           }
           else
           {
-            temp_ir_signal_trigger_frame_delay_adjustment[0] = time_error >> 4; // Otherwise applya a correction (~1/16th of error)
-            // temp_ir_signal_trigger_frame_delay_adjustment[0] = time_error >> 5; // Otherwise applya a correction (~1/32nd of error)
-            temp_ir_signal_trigger_frame_delay_adjustment[1] = temp_ir_signal_trigger_frame_delay_adjustment[0];
+            // ----- Begin PI controller based adjustment (replaces time_error >> 4) -----
+            // Use fixed-point integer math with Q = IR_PI_Q. This gives tunable Kp and Ki while avoiding floats.
+            int16_t err = time_error; // signed 16-bit
+
+            // Proportional term in Q-scale (int32 intermediate)
+            int32_t P_q = (int32_t)IR_KP_Q * (int32_t)err; // scaled by IR_PI_Q
+
+            // Integrator update (Q-scale accumulator)
+            // integral_q += Ki_q * err
+            ir_pi_integral_q[left_eye] += (int32_t)IR_KI_Q * (int32_t)err;
+
+            // Anti-windup: clamp integral accumulator to reasonable limits in Q-scale
+            int32_t integral_max_q = ((int32_t)IR_ADJ_MAX) << IR_PI_Q;
+            int32_t integral_min_q = ((int32_t)IR_ADJ_MIN) << IR_PI_Q;
+            if (ir_pi_integral_q[left_eye] > integral_max_q)
+              ir_pi_integral_q[left_eye] = integral_max_q;
+            if (ir_pi_integral_q[left_eye] < integral_min_q)
+              ir_pi_integral_q[left_eye] = integral_min_q;
+
+            // Combine P and I (Q-scale). No derivative to keep noise low.
+            int32_t out_q = P_q + ir_pi_integral_q[left_eye];
+
+            // Convert back to timer units and clamp
+            int32_t adjustment = out_q >> IR_PI_Q;
+            if (adjustment > IR_ADJ_MAX)
+              adjustment = IR_ADJ_MAX;
+            if (adjustment < IR_ADJ_MIN)
+              adjustment = IR_ADJ_MIN;
+
+            temp_ir_signal_trigger_frame_delay_adjustment[0] = (int16_t)adjustment;
+            temp_ir_signal_trigger_frame_delay_adjustment[1] = (int16_t)adjustment;
+            // ----- End PI controller based adjustment -----
           }
 
           int16_t diff_time_left_right = 0;
