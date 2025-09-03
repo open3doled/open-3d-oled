@@ -85,6 +85,7 @@ Destroyed staging resource.
 * Press "Enter" to exit fullscreen and "Stop" the video with "F4"
 * Repeat the 6-7 steps above until you get it centered.
 * I've notest the "IR Average Timing Mode" is slightly non-deterministic in where it finally settles, I'm going to work on improving this in the ir emitters firmware. But for now you can just click "Enter" afew times to exit and enter "Fullscreen" afew times and see where it settles each time.
+  * I've made a test firwmare with an updated PID controller that smooths out the jitter more and settles more deterministically. Any firmware after from [22b_20250903](../3DPlayer/firmwares/firmware_v22b_20250903.hex) onwards should have this algorithm.
 
 
 ## Questions
