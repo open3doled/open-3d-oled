@@ -1,8 +1,9 @@
 __pycache__/*
 buildtools/*
 build/*
-dist/*
 debug/*
+dist/*
+disabled/debug/*
 installation/*
 old/*
 dot_graph_files/*

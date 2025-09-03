@@ -1,3 +1,4 @@
+import glfw
 import ctypes
 import logging
 import os
@@ -5,17 +6,47 @@ import threading
 import time
 import traceback
 
-import psutil
-from pygame import _sdl2 as pygame_sdl2
-from pygame import locals as pg_locals
 from pynput import keyboard
 
 import OpenGL.GL as gl
-import pygame as pg
+
 
 WINDOW_NAME = "Open3DOLED3DSoftwareSyncBackgroundModeWindow"
 SYNC_SIGNAL_LEFT = 1
 SYNC_SIGNAL_RIGHT = 2
+
+
+SW_MINIMIZE = 6
+SW_MAXIMIZE = 3
+RESIZE_WINDOW = None  # None - do nothing, SW_MINIMIZE, SW_MAXIMIZE
+PIXEL_GRABBER_THRESHOLD = 30  # 0 - left, 20*3 - right
+USE_PIXEL_GRABBER_WINDOWS_GET_DC = False
+USE_PIXEL_GRABBER_DXCAM = False
+SAMPLE_EVERY_NTH_FRAME = 3
+
+if os.name == "nt":
+    if USE_PIXEL_GRABBER_WINDOWS_GET_DC:
+        user32 = ctypes.windll.user32
+        gdi32 = ctypes.windll.gdi32
+    if USE_PIXEL_GRABBER_DXCAM:
+        pass
+        # import dxcam # hard comment to prevent import for pyinstaller
+
+WINDOWS_OS_NAME = "nt"
+# WINDOWS_OS_NAME = "posix"
+
+USE_LINE_PROFILER = False
+if USE_LINE_PROFILER:
+    from line_profiler import LineProfiler
+
+    line_profiler_obj = LineProfiler()
+else:
+
+    def line_profiler_obj(func):
+        def wrapper(*args, **kwargs):
+            return func(*args, **kwargs)
+
+        return wrapper
 
 
 class SoftwareSyncBackgroundModeGLWindow(threading.Thread):
@@ -37,73 +68,42 @@ class SoftwareSyncBackgroundModeGLWindow(threading.Thread):
         self.__flip_eyes = False
         self.__ctrl_pressed = False
         self.__shift_pressed = False
-        # self.__cycle_count = 0
-        pg.init()
+        self.__hdc = None
+
+        self.__next_sync_value = None
+        self.__grab_count = 0
+        self.__last_trigger_pixel_brightness = -1
+        self.__cycle_count = 0
+        self.__sync_count = {1: 0, 2: 0}
+        self.__last_time = 0
+
+        glfw.init()
+
+        if USE_PIXEL_GRABBER_DXCAM and os.name == WINDOWS_OS_NAME:
+            # self.__dxcam_camera = dxcam.create(output_idx=0) # hard comment to prevent import for pyinstaller
+            self.__dxcam_camera.region = (0, 0, 1, 1)
 
     def __start(self):
-        p = psutil.Process(os.getpid())
-        if os.name == "nt":
-            p.nice(psutil.HIGH_PRIORITY_CLASS)
-        else:
-            p.nice(10)
 
-        flags = pg_locals.DOUBLEBUF | pg_locals.OPENGL | pg_locals.RESIZABLE
-        self.__pg_clock = pg.time.Clock()
-        self.__pg_window = pg.display.set_mode(
-            (self.__display_resolution_width, self.__display_resolution_height),
-            flags,
-            vsync=1,
-        )
+        self.__gl_window = glfw.create_window(1, 1, WINDOW_NAME, None, None)
+        if not self.__gl_window:
+            glfw.terminate()
+            raise Exception("Failed to create GLFW window")
 
-        pg.display.set_caption(WINDOW_NAME)
-        pg.display.set_icon(
-            pg.image.load(
-                os.path.join(os.path.dirname(__file__), "python", "blank.ico")
-            )
-        )
+        glfw.make_context_current(self.__gl_window)
 
-        self.__sdl2_window = pygame_sdl2.Window.from_display_module()
-        self.__sdl2_window.size = (
-            self.__display_resolution_width,
-            self.__display_resolution_height,
-        )
-        self.__sdl2_window.position = pygame_sdl2.WINDOWPOS_CENTERED
+        glfw.swap_interval(1)
 
         def minimize_window():
-            if os.name == "nt":
+            if os.name == WINDOWS_OS_NAME:
                 hwnd = ctypes.windll.user32.FindWindowW(None, WINDOW_NAME)
-                SW_MINIMIZE = 6
-                ctypes.windll.user32.ShowWindow(hwnd, SW_MINIMIZE)
+                ctypes.windll.user32.ShowWindow(hwnd, RESIZE_WINDOW)
             else:
                 self.__sdl2_window.minimize()
-            # timer = threading.Timer(2, minimize_window)
-            # timer.start()
 
-        timer = threading.Timer(1, minimize_window)
-        timer.start()
-
-        gl.glTexEnvf(gl.GL_TEXTURE_ENV, gl.GL_TEXTURE_ENV_MODE, gl.GL_MODULATE)
-        # gl.glEnable(gl.GL_DEPTH_TEST) # we are disabling this for now because the texture z depth and overlay elements aren't configured right yet.
-        gl.glEnable(gl.GL_BLEND)
-        gl.glEnable(gl.GL_COLOR_MATERIAL)
-        gl.glColorMaterial(gl.GL_FRONT_AND_BACK, gl.GL_AMBIENT_AND_DIFFUSE)
-        gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
-        gl.glEnable(gl.GL_TEXTURE_2D)
-        gl.glViewport(
-            0, 0, self.__display_resolution_width, self.__display_resolution_height
-        )
-        gl.glMatrixMode(gl.GL_PROJECTION)
-        gl.glLoadIdentity()
-        gl.glOrtho(
-            0,
-            self.__display_resolution_width,
-            0,
-            self.__display_resolution_height,
-            -1,
-            1,
-        )
-        gl.glMatrixMode(gl.GL_MODELVIEW)
-        gl.glLoadIdentity()
+        if RESIZE_WINDOW is not None:
+            timer = threading.Timer(1, minimize_window)
+            timer.start()
 
         if self.__keyboard_listener is None:
             self.__keyboard_listener = keyboard.Listener(
@@ -111,21 +111,36 @@ class SoftwareSyncBackgroundModeGLWindow(threading.Thread):
             )
             self.__keyboard_listener.start()
 
+        if USE_PIXEL_GRABBER_WINDOWS_GET_DC and os.name == WINDOWS_OS_NAME:
+            self.__hdc = user32.GetDC(0)  # entire desktop
+
         self.__started = True
         self.__time_started = time.perf_counter()
 
     def __stop(self):
 
+        if USE_PIXEL_GRABBER_WINDOWS_GET_DC and os.name == WINDOWS_OS_NAME:
+            user32.ReleaseDC(0, self.__hdc)
+            self.__hdc = None
+
         if self.__keyboard_listener is not None:
             self.__keyboard_listener.stop()
             self.__keyboard_listener = None
 
-        self.__pg_window = None
-        self.__sdl2_window = None
-        pg.quit()
+        if USE_LINE_PROFILER:
+            line_profiler_obj.print_stats()
 
+    @line_profiler_obj
     def __update(self):
         try:
+            glfw.poll_events()
+
+            gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
+
+            glfw.swap_buffers(self.__gl_window)
+
+            self.__synced_flip_event_callback(self.__next_sync_value)
+
             if self.__target_frametime is not None:
                 time_delta = time.perf_counter() - self.__time_started
                 frame_type_modulus = (time_delta / self.__target_frametime) % 2
@@ -133,28 +148,76 @@ class SoftwareSyncBackgroundModeGLWindow(threading.Thread):
                     self.__left_or_bottom_page = True
                 else:
                     self.__left_or_bottom_page = False
+            else:
+                self.__left_or_bottom_page = not self.__left_or_bottom_page
 
-            pg.display.flip()
+            self.__grab_count += 1
+            if (
+                (USE_PIXEL_GRABBER_WINDOWS_GET_DC or USE_PIXEL_GRABBER_DXCAM)
+                and os.name == WINDOWS_OS_NAME
+                and self.__grab_count % SAMPLE_EVERY_NTH_FRAME == 0
+            ):
+                if USE_PIXEL_GRABBER_WINDOWS_GET_DC:
+
+                    def get_pixel_with_timeout(hdc, x, y, timeout=0.007):  # 7 ms
+                        result = [None]
+
+                        def worker():
+                            try:
+                                result[0] = gdi32.GetPixel(hdc, x, y)
+                            except Exception:
+                                pass
+
+                        t = threading.Thread(target=worker)
+                        t.start()
+                        t.join(timeout)
+                        if t.is_alive():
+                            # Took too long, ignore
+                            return None
+                        return result[0]
+
+                    data = get_pixel_with_timeout(self.__hdc, 0, 0)
+                    # data = gdi32.GetPixel(self.__hdc, 0, 0)
+                    if data is not None:
+                        r = data & 0xFF
+                        g = (data >> 8) & 0xFF
+                        b = (data >> 16) & 0xFF
+                if USE_PIXEL_GRABBER_DXCAM:
+                    data = self.__dxcam_camera.grab()
+                    if data is not None:
+                        b, g, r = data[0, 0]
+                if data is not None:
+                    self.__last_trigger_pixel_brightness = r + g + b
+                    # print(f"{self.__last_trigger_pixel_brightness},", end="")
+                    if (
+                        self.__last_trigger_pixel_brightness > PIXEL_GRABBER_THRESHOLD
+                    ) == (not self.__left_or_bottom_page ^ self.__flip_eyes):
+                        print("F", end="")
+                        self.__flip_eyes = not self.__flip_eyes
+
             if self.__flip_eyes:
-                new_sync_value = (
+                self.__next_sync_value = (
                     SYNC_SIGNAL_RIGHT
                     if self.__left_or_bottom_page
                     else SYNC_SIGNAL_LEFT
                 )
             else:
-                new_sync_value = (
+                self.__next_sync_value = (
                     SYNC_SIGNAL_LEFT
                     if self.__left_or_bottom_page
                     else SYNC_SIGNAL_RIGHT
                 )
-            self.__synced_flip_event_callback(new_sync_value)
 
-            if self.__target_frametime is None:
-                self.__left_or_bottom_page = not self.__left_or_bottom_page
-
-            # self.__cycle_count += 1
-            # if self.__cycle_count % 100 == 0:
-            #     print(self.__cycle_count)
+            self.__sync_count[self.__next_sync_value] += 1
+            self.__cycle_count += 1
+            now_time = int(time.time())
+            if now_time > self.__last_time:
+                self.__last_time = now_time
+                print(
+                    f"{self.__last_time} {self.__cycle_count} {self.__last_trigger_pixel_brightness} {self.__sync_count}"
+                )
+                self.__sync_count = {1: 0, 2: 0}
+                self.__cycle_count = 0
 
         except Exception as e:
             traceback.print_exc()
