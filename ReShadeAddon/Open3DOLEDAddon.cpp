@@ -10,6 +10,7 @@
 
 static HANDLE hSerial = INVALID_HANDLE_VALUE;
 static std::wstring sComPort;
+static int iTriggerChannel = 1;
 static int iTriggerThreshold = 20;
 static int iTriggerMin = 5;
 static int iTriggerMax = 40;
@@ -56,12 +57,14 @@ void read_settings()
     GetPrivateProfileStringW(L"OPEN3DOLED", L"COMPort", L"COM7", port, 16, exe_path.c_str());
     sComPort = std::wstring(port);
 
+    iTriggerChannel = GetPrivateProfileIntW(L"OPEN3DOLED", L"TriggerChannel", 1, exe_path.c_str());
     iTriggerThreshold = GetPrivateProfileIntW(L"OPEN3DOLED", L"TriggerThreshold", 20, exe_path.c_str());
     iTriggerMin = GetPrivateProfileIntW(L"OPEN3DOLED", L"TriggerMin", 5, exe_path.c_str());
     iTriggerMax = GetPrivateProfileIntW(L"OPEN3DOLED", L"TriggerMax", 40, exe_path.c_str());
     iDebugMode = GetPrivateProfileIntW(L"OPEN3DOLED", L"DebugMode", 0, exe_path.c_str());
 
     log_info(L"COMPort: " + sComPort);
+    log_info(L"TriggerChannel: " + std::to_wstring(iTriggerChannel));
     log_info(L"TriggerThreshold: " + std::to_wstring(iTriggerThreshold));
     log_info(L"TriggerMin: " + std::to_wstring(iTriggerMin));
     log_info(L"TriggerMax: " + std::to_wstring(iTriggerMax));
@@ -70,7 +73,7 @@ void read_settings()
 
 static void open_serial_port()
 {
-    hSerial = CreateFileW((L"\\.\\" + sComPort).c_str(),
+    hSerial = CreateFileW((L"" + sComPort).c_str(),
         GENERIC_WRITE, 0, nullptr,
         OPEN_EXISTING, 0, nullptr);
 
@@ -267,7 +270,7 @@ static void on_present(reshade::api::command_queue* queue, reshade::api::swapcha
     device->unmap_texture_region(staging, 0);
 
 
-    if (iDebugMode)
+    if (iDebugMode > 0)
     {
         // Pull in a pixel from the main image to check the color (useful for debugging with red blue alternative frame test video
         uint32_t y = (bb_desc.texture.height > 0) ? (bb_desc.texture.height - 1) : 0;
@@ -294,7 +297,7 @@ static void on_present(reshade::api::command_queue* queue, reshade::api::swapcha
     if (ok)
     {
         uint32_t left_eye = 0;
-        uint32_t trigger_brightness = (uint32_t)rgb[1]; // We use the green channel only for now 
+        uint32_t trigger_brightness = (uint32_t)rgb[iTriggerChannel];
         
         // log_info(L"Trigger R: " + std::to_wstring((uint32_t)rgb[0]) + L" G: " + std::to_wstring((uint32_t)rgb[1]) + L" B: " + std::to_wstring((uint32_t)rgb[2]) + L".");
         
@@ -325,9 +328,11 @@ static void on_present(reshade::api::command_queue* queue, reshade::api::swapcha
             }
         }
 
-        if (iDebugMode == 1) {
-            // log_info(L"Debug Trigger LeftEye: " + std::to_wstring((uint32_t)left_eye) + L"      R: " + std::to_wstring((uint32_t)rgb[0]) + L" G: " + std::to_wstring((uint32_t)rgb[1]) + L" B: " + std::to_wstring((uint32_t)rgb[2]) + L"       R2: " + std::to_wstring((uint32_t)rgb2[0]) + L" G2: " + std::to_wstring((uint32_t)rgb2[1]) + L" B2: " + std::to_wstring((uint32_t)rgb2[2]) + L".");
-            if (left_eye && rgb2[0] < 50 && rgb2[2] > 200) {
+        if (iDebugMode > 0) {
+            if (iDebugMode > 1) {
+                log_info(L"Debug Trigger LeftEye: " + std::to_wstring((uint32_t)left_eye) + L"      R: " + std::to_wstring((uint32_t)rgb[0]) + L" G: " + std::to_wstring((uint32_t)rgb[1]) + L" B: " + std::to_wstring((uint32_t)rgb[2]) + L"       R2: " + std::to_wstring((uint32_t)rgb2[0]) + L" G2: " + std::to_wstring((uint32_t)rgb2[1]) + L" B2: " + std::to_wstring((uint32_t)rgb2[2]) + L".");
+            }
+            else if (left_eye && rgb2[0] < 50 && rgb2[2] > 200) {
                 log_info(L"Error Wrong Eye Debug Trigger LeftEye: " + std::to_wstring((uint32_t)left_eye) + L"      R: " + std::to_wstring((uint32_t)rgb[0]) + L" G: " + std::to_wstring((uint32_t)rgb[1]) + L" B: " + std::to_wstring((uint32_t)rgb[2]) + L"       R2: " + std::to_wstring((uint32_t)rgb2[0]) + L" G2: " + std::to_wstring((uint32_t)rgb2[1]) + L" B2: " + std::to_wstring((uint32_t)rgb2[2]) + L".");
             }
         }
