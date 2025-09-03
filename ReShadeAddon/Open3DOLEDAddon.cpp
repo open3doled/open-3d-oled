@@ -3,31 +3,37 @@
 #include <fstream>
 #include <string>
 #include <iostream>
+#include <iomanip>
 #include <sstream>
 #include <atomic>
 #include <chrono>
 
-// Shader-sampling readback addon
-// * Samples a pixel using a small GPU compute shader and writes color into a GPU buffer
-// * Copies GPU buffer -> readback staging buffer -> maps on CPU
+// Render-to-1x1 readback addon
+// Approach used here:
+// 1) Create a 1x1 GPU render-target/UAV texture (gpu_write_tex) that shaders can write to.
+// 2) Create a 1x1 CPU-readable staging texture (staging_readback_tex) in gpu_to_cpu heap.
+// 3) On present: sample the swapchain/backbuffer via a small fullscreen draw (or compute) that writes
+//    the sampled pixel into gpu_write_tex. Then copy gpu_write_tex -> staging_readback_tex, flush and map.
+// 4) Read RGB from mapped staging and use that for serial trigger logic.
 // Notes:
-// - This is a more robust fallback when direct texture copies from the swapchain fail
-// - It assumes the backbuffer can be sampled by shaders (Reshade effects usually can)
-// - This code is written against the ReShade add-on API surface. You may need to tweak
-//   the pipeline creation code depending on your ReShade headers and shader compiler setup.
+// - Pipeline creation & shader compilation details can be backend- and SDK-version-specific. This file
+//   attempts a portable, best-effort implementation against common ReShade headers. If your build
+//   complains about specific field names for pipeline creation, paste the compile/link errors and I will
+//   adapt the pipeline creation code to your ReShade headers.
 
 static HANDLE hSerial = INVALID_HANDLE_VALUE;
 static std::wstring sComPort;
 static int iThreshold = 30;
 
 // GPU resources
-static reshade::api::resource gpu_readback_buffer = {};
-static reshade::api::resource staging_readback = {}; // gpu_to_cpu
-static reshade::api::pipeline compute_pipeline = {};
-static reshade::api::pipeline_layout pipeline_layout = {};
+static reshade::api::resource gpu_write_tex = {};
+static reshade::api::resource staging_readback_tex = {};
 static reshade::api::resource_view backbuffer_srv = {};
-static reshade::api::resource_desc staging_desc = {};
+static reshade::api::resource_view gpu_write_uav = {};
+static reshade::api::pipeline draw_pipeline = {};
+static reshade::api::pipeline_layout draw_pipeline_layout = {};
 
+static reshade::api::swapchain* g_sc = nullptr;
 static std::atomic<uint32_t> left_eye_count(0);
 static std::atomic<uint32_t> right_eye_count(0);
 static auto last_log_time = std::chrono::steady_clock::now();
@@ -35,6 +41,12 @@ static auto last_log_time = std::chrono::steady_clock::now();
 void log_info(const std::wstring& s)
 {
     std::wofstream f("Open3DOLED.log", std::ios::app);
+    f << s << std::endl;
+}
+
+void log_hex_line(const std::string& s)
+{
+    std::ofstream f("Open3DOLED_hex.log", std::ios::app);
     f << s << std::endl;
 }
 
@@ -69,22 +81,34 @@ static void open_serial_port()
     else log_info(L"Failed to open COM port: " + sComPort);
 }
 
-// --- Minimal shader source (HLSL) ---
-// This compute shader samples a typed2D<float4> SRV at given integer coords (push_constants)
-// and writes a uint32 RGBA8 packed value into an RW structured buffer at index 0.
-// The shader code is included as a byte string to be compiled by the ReShade device.
-
-static const char cs_source[] = R"delimiter(Texture2D<float4> src : register(t0);
-RWByteAddressBuffer dst : register(u0);
-
-cbuffer Push : register(b0)
+// Simple helper to dump the first N bytes of mapped memory as hex
+static void dump_mapped_hex(const uint8_t* data, size_t len, uint32_t row_pitch)
 {
-    uint px;
-    uint py;
-    uint width;
-    uint height;
+    std::ostringstream ss;
+    ss << "Timestamp: " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+    ss << " | row_pitch=" << row_pitch << " | ";
+    for (size_t i = 0; i < len; ++i)
+    {
+        if (i) ss << ' ';
+        ss << std::hex << std::setw(2) << std::setfill('0') << (int)data[i];
+    }
+    log_hex_line(ss.str());
 }
 
+// Small pixel shader source (HLSL) to sample backbuffer and write to UAV 1x1 texture.
+// We'll sample using integer Load to avoid filtering.
+static const char ps_source_rgb_to_uav[] = R"delimiter(
+Texture2D<float4> src : register(t0);
+RWTexture2D<uint4> dst : register(u0);
+cbuffer Push { uint px; uint py; uint width; uint height; };
+
+float4 main_ps(uint2 coord : SV_Position) : SV_Target
+{
+    // Not used in this simple compute-like pixel shader flow; we will use a draw call with a fullscreen quad
+    return float4(0,0,0,0);
+}
+
+// Compute equivalent (HLSL) - prefer compute for direct UAV writes
 [numthreads(1,1,1)]
 void main(uint3 id : SV_DispatchThreadID)
 {
@@ -92,149 +116,140 @@ void main(uint3 id : SV_DispatchThreadID)
     uint r = (uint)(saturate(c.r) * 255.0f);
     uint g = (uint)(saturate(c.g) * 255.0f);
     uint b = (uint)(saturate(c.b) * 255.0f);
-    uint packed = (r) | (g << 8) | (b << 16);
-    dst.Store(0, packed);
+    dst[id.xy].xyz = uint3(r, g, b);
 }
 )delimiter";
 
-// NOTE: ReShade's API expects precompiled shader binaries for pipeline creation in many backends.
-// For portability we will attempt to create a compute pipeline with the device's create_pipeline
-// using the precompiled bytecode path. For the sake of this example the code shows the intended
-// flow and will fall back to a simple path (no-op) if the pipeline cannot be created.
-
-static bool create_readback_pipeline(reshade::api::device * device, reshade::api::resource_desc backbuffer_desc)
+// Try to create 1x1 GPU texture (UAV writable). If this fails on some backends, we'll try a slightly different usage combo.
+static bool create_gpu_write_texture(reshade::api::device* device, reshade::api::format fmt)
 {
-    // Create GPU-side buffer (uav) for small result (16 bytes) on GPU-only heap
-    reshade::api::resource_desc gpu_buf_desc = {};
-    gpu_buf_desc.type = reshade::api::resource_type::buffer;
-    gpu_buf_desc.heap = reshade::api::memory_heap::gpu_only;
-    gpu_buf_desc.buffer.size = 16; // 4 bytes * 4 channels
-    gpu_buf_desc.usage = reshade::api::resource_usage::unordered_access | reshade::api::resource_usage::copy_source;
+    reshade::api::resource_desc desc = {};
+    desc.type = reshade::api::resource_type::texture_2d;
+    desc.texture.width = 1;
+    desc.texture.height = 1;
+    desc.texture.depth_or_layers = 1;
+    desc.texture.levels = 1;
+    desc.texture.format = fmt;
+    desc.texture.samples = 1;
+    desc.heap = reshade::api::memory_heap::gpu_only;
+    desc.usage = reshade::api::resource_usage::unordered_access | reshade::api::resource_usage::copy_source | reshade::api::resource_usage::shader_resource;
 
-    // try initial create
-    if (!device->create_resource(gpu_buf_desc, nullptr, reshade::api::resource_usage::unordered_access, &gpu_readback_buffer))
+    if (!device->create_resource(desc, nullptr, reshade::api::resource_usage::unordered_access, &gpu_write_tex))
     {
-        log_info(L"Failed to create GPU readback buffer with unordered_access. Trying alternate usage flags...");
-        // try alternate: only copy_source (some drivers want this separate)
-        gpu_buf_desc.usage = reshade::api::resource_usage::copy_source;
-        if (!device->create_resource(gpu_buf_desc, nullptr, reshade::api::resource_usage::copy_source, &gpu_readback_buffer))
+        log_info(L"Failed to create gpu_write_tex with unordered_access. Trying without shader_resource flag...");
+        desc.usage = reshade::api::resource_usage::unordered_access | reshade::api::resource_usage::copy_source;
+        if (!device->create_resource(desc, nullptr, reshade::api::resource_usage::unordered_access, &gpu_write_tex))
         {
-            log_info(L"Failed to create GPU readback buffer with copy_source flag as well.");
-            gpu_readback_buffer = {};
+            log_info(L"Failed to create gpu_write_tex with alternate usage flags.");
+            gpu_write_tex = {};
             return false;
         }
     }
 
-
-    // staging readback buffer (cpu-readable)
-    reshade::api::resource_desc st_desc = {};
-    st_desc.type = reshade::api::resource_type::buffer;
-    st_desc.heap = reshade::api::memory_heap::gpu_to_cpu;
-    st_desc.buffer.size = 16;
-    st_desc.usage = reshade::api::resource_usage::copy_dest;
-
-    if (!device->create_resource(st_desc, nullptr, reshade::api::resource_usage::copy_dest, &staging_readback))
-    {
-        log_info(L"Failed to create staging readback buffer.");
-        staging_readback = {};
-        return false;
-    }
-
-    staging_desc = {}; // not used for buffers but keep
-
-    // Pipeline creation: we try to create a compute pipeline. The exact details for filling
-    // pipeline_desc depend on the ReShade headers; here we show the conceptual steps.
-    // If device->create_pipeline is unavailable or you don't have compiled shader bytes,
-    // you can instead implement a small fullscreen draw using existing ReShade effects.
-
-    // For safety in this addon we won't fail if pipeline creation isn't possible; we'll
-    // gracefully fall back to not sampling.
+    // Create UAV view for the texture (platform-specific; attempt generic view creation)
+    reshade::api::resource_view_desc view_desc = {};
+    view_desc.format = fmt;
+    // view_desc.type = reshade::api::resource_view_type::unordered_access_view;
+    view_desc.type = reshade::api::resource_view_type::texture_2d;
+    view_desc.texture.first_level = 0;
+    view_desc.texture.level_count = 1;
+    view_desc.texture.first_layer = 0;
+    view_desc.texture.layer_count = 1;
+    device->create_resource_view(gpu_write_tex, reshade::api::resource_usage::unordered_access, view_desc, &gpu_write_uav);
 
     return true;
 }
 
-static void destroy_readback_pipeline(reshade::api::device* device)
+static bool create_staging_readback_texture(reshade::api::device* device, reshade::api::format fmt)
 {
-    if (gpu_readback_buffer.handle != 0) device->destroy_resource(gpu_readback_buffer);
-    if (staging_readback.handle != 0) device->destroy_resource(staging_readback);
-    gpu_readback_buffer = {};
-    staging_readback = {};
-    // destroying pipeline/pipeline_layout if created omitted for brevity
+    reshade::api::resource_desc desc = {};
+    desc.type = reshade::api::resource_type::texture_2d;
+    desc.texture.width = 1;
+    desc.texture.height = 1;
+    desc.texture.depth_or_layers = 1;
+    desc.texture.levels = 1;
+    desc.texture.format = fmt;
+    desc.texture.samples = 1;
+    desc.heap = reshade::api::memory_heap::gpu_to_cpu;
+    desc.usage = reshade::api::resource_usage::copy_dest;
+
+    if (!device->create_resource(desc, nullptr, reshade::api::resource_usage::copy_dest, &staging_readback_tex))
+    {
+        log_info(L"Failed to create staging_readback_tex.");
+        staging_readback_tex = {};
+        return false;
+    }
+
+    return true;
 }
 
-// Helper to dispatch compute shader that samples the backbuffer at (x,y) and writes result to gpu_readback_buffer.
-// Then copies gpu_readback_buffer -> staging_readback and maps the staging to CPU.
-static bool sample_pixel_via_compute(reshade::api::command_list* cmd, reshade::api::command_queue* queue, reshade::api::resource backbuffer, uint32_t x, uint32_t y, uint8_t out_rgb[3])
+// Simple function to dispatch a compute shader-like program that samples the backbuffer at (x,y)
+// and writes the RGB into gpu_write_tex via its UAV view. This code is intentionally high-level
+// because exact descriptor update & pipeline creation calls depend on the ReShade header version.
+static bool dispatch_sample_and_read(reshade::api::device* device, reshade::api::command_queue* queue, reshade::api::resource backbuffer, uint32_t px, uint32_t py, uint8_t out_rgb[3])
 {
-    if (gpu_readback_buffer.handle == 0 || staging_readback.handle == 0)
-        return false;
+    if (gpu_write_tex.handle == 0 || staging_readback_tex.handle == 0) return false;
 
-    reshade::api::device* const device = cmd->get_device();
+    reshade::api::command_list* cmd = queue->get_immediate_command_list();
 
-    // The following sequence is the intended flow:
-    // - Bind backbuffer as SRV (resource_view) for compute shader
-    // - Bind gpu_readback_buffer as UAV
-    // - Push constants (x,y)
-    // - Dispatch compute shader (1 threadgroup)
-    // - Insert a barrier to ensure UAV write finished
-    // - Copy gpu_readback_buffer -> staging_readback (copy_buffer_region)
-    // - Flush and wait
-    // - Map staging_readback and read 4 bytes -> decode to RGB
+    // Transition backbuffer to shader_resource (so shader can sample it)
+    cmd->barrier(backbuffer, reshade::api::resource_usage::present, reshade::api::resource_usage::shader_resource);
 
-    // NOTE: implementation of descriptor updates and pipeline bind is API-specific and
-    // requires exact reshade::api calls to update descriptor tables. See ReShade docs for details.
+    // Transition gpu_write_tex to unordered_access (writeable)
+    cmd->barrier(gpu_write_tex, reshade::api::resource_usage::copy_source, reshade::api::resource_usage::unordered_access);
 
-    // PSEUDO-CODE (replace with actual ReShade calls):
-    // cmd->bind_pipeline(compute_pipeline);
-    // update descriptors: set t0 -> backbuffer_srv, u0 -> gpu_readback_buffer
-    // push constants or update constant buffer with x,y
+    // TODO: bind pipeline + descriptor sets
+    // We will pseudocode the dispatch since the exact API calls to bind descriptors vary by ReShade version.
+    // The key actions that must happen here are:
+    //  - set shader resource view for backbuffer
+    //  - set unordered access view for gpu_write_tex
+    //  - set push constants or constant buffer with px/py
+    //  - dispatch compute with (1,1,1)
+
+    // PSEUDO: bind + dispatch
+    // cmd->bind_pipeline(draw_pipeline);
+    // cmd->bind_pipeline_layout(draw_pipeline_layout);
+    // update descriptor sets: t0 -> backbuffer SRV, u0 -> gpu_write_uav
+    // update push constants: px,py
     // cmd->dispatch(1,1,1);
 
-    // Barrier to ensure UAV writes complete
-    cmd->barrier(gpu_readback_buffer, reshade::api::resource_usage::unordered_access, reshade::api::resource_usage::copy_source);
+    // After dispatch, ensure UAV writes are available to copy
+    cmd->barrier(gpu_write_tex, reshade::api::resource_usage::unordered_access, reshade::api::resource_usage::copy_source);
 
-    // copy buffer region GPU -> staging
-    cmd->copy_buffer_region(gpu_readback_buffer, 0, staging_readback, 0, 16);
+    // Copy gpu_write_tex -> staging_readback_tex
+    cmd->copy_texture_region(staging_readback_tex, 0, nullptr, gpu_write_tex, 0, nullptr);
+
+    // Restore backbuffer to present
+    cmd->barrier(backbuffer, reshade::api::resource_usage::shader_resource, reshade::api::resource_usage::present);
 
     // flush and wait
     queue->flush_immediate_command_list();
     queue->wait_idle();
 
-    // map staging_readback
-    /*
+    // Map staging and read bytes
     reshade::api::subresource_data mapped = {};
-    if (!device->map_buffer_region(staging_readback, 0, 16, reshade::api::map_access::read_only, &mapped))
+    if (!device->map_texture_region(staging_readback_tex, 0, nullptr, reshade::api::map_access::read_only, &mapped))
     {
-        log_info(L"map_buffer_region failed for staging_readback");
+        log_info(L"Failed to map staging_readback_tex");
         return false;
     }
 
-    const uint8_t* data = reinterpret_cast<const uint8_t*>(mapped.data);
-    */
-    void* mapped_ptr = nullptr; // Declare a void pointer
-    if (!device->map_buffer_region(staging_readback, 0, 16, reshade::api::map_access::read_only, &mapped_ptr))
-    {
-        log_info(L"map_buffer_region failed for staging_readback");
-        return false;
-    }
+    // Dump first 16 bytes for debugging
+    dump_mapped_hex(reinterpret_cast<const uint8_t*>(mapped.data), 12, mapped.row_pitch);
 
-    reshade::api::subresource_data mapped_data;
-    mapped_data.data = mapped_ptr;
+    const uint8_t* row = reinterpret_cast<const uint8_t*>(mapped.data);
+    out_rgb[0] = row[2]; // backbuffer is b8g8r8x8 or b8g8r8a8 so ordering may be B G R A
+    out_rgb[1] = row[1];
+    out_rgb[2] = row[0];
 
-    // Cast the mapped data to the appropriate type
-    const uint8_t* data = reinterpret_cast<const uint8_t*>(mapped_data.data);
-
-    // packed RGBA8 in little endian (assuming shader wrote as 0xAARRGGBB or similar)
-    // We expect shader to write as 4 bytes: R,G,B,unused
-    out_rgb[0] = data[0]; out_rgb[1] = data[1]; out_rgb[2] = data[2];
-
-    device->unmap_buffer_region(staging_readback);
+    device->unmap_texture_region(staging_readback_tex, 0);
     return true;
 }
 
-// Events
+// Init/destroy
 static void on_init_swapchain(reshade::api::swapchain* swapchain, bool)
 {
+    g_sc = swapchain;
     auto device = swapchain->get_device();
     auto bb = swapchain->get_current_back_buffer();
     auto bb_desc = device->get_resource_desc(bb);
@@ -243,13 +258,26 @@ static void on_init_swapchain(reshade::api::swapchain* swapchain, bool)
     ss << L"Backbuffer: w=" << bb_desc.texture.width << L" h=" << bb_desc.texture.height << L" fmt=" << (int)bb_desc.texture.format;
     log_info(ss.str());
 
-    create_readback_pipeline(device, bb_desc);
+    // Try to create gpu_write_tex and staging_readback_tex using the backbuffer format
+    if (!create_gpu_write_texture(device, bb_desc.texture.format))
+    {
+        log_info(L"create_gpu_write_texture failed - GPU write path unavailable.");
+    }
+    if (!create_staging_readback_texture(device, bb_desc.texture.format))
+    {
+        log_info(L"create_staging_readback_texture failed - readback unavailable.");
+    }
 }
 
 static void on_destroy_swapchain(reshade::api::swapchain* swapchain, bool)
 {
     auto device = swapchain->get_device();
-    destroy_readback_pipeline(device);
+    if (gpu_write_uav.handle != 0) device->destroy_resource_view(gpu_write_uav);
+    if (gpu_write_tex.handle != 0) device->destroy_resource(gpu_write_tex);
+    if (staging_readback_tex.handle != 0) device->destroy_resource(staging_readback_tex);
+    gpu_write_tex = {};
+    staging_readback_tex = {};
+    gpu_write_uav = {};
 }
 
 static void on_present(reshade::api::command_queue* queue, reshade::api::swapchain* swapchain,
@@ -260,23 +288,30 @@ static void on_present(reshade::api::command_queue* queue, reshade::api::swapcha
     auto backbuffer = swapchain->get_current_back_buffer();
 
     uint8_t rgb[3] = { 0,0,0 };
-    reshade::api::command_list* cmd = queue->get_immediate_command_list();
-
-    // sample at (0,0)
-    if (sample_pixel_via_compute(cmd, queue, backbuffer, 0, 0, rgb))
+    if (gpu_write_tex.handle != 0 && staging_readback_tex.handle != 0)
     {
-        uint32_t trigger = (uint32_t)rgb[0] + (uint32_t)rgb[1] + (uint32_t)rgb[2];
-        char msg[64];
-        if (trigger > (uint32_t)iThreshold) {
-            sprintf_s(msg, "9, 0\n"); 
-            left_eye_count++; 
+        // Attempt to sample pixel (0,0)
+        if (!dispatch_sample_and_read(device, queue, backbuffer, 0, 0, rgb))
+        {
+            log_info(L"dispatch_sample_and_read failed");
         }
-        else {
-            sprintf_s(msg, "9, 1\n"); 
-            right_eye_count++; 
-        }
-        DWORD written; WriteFile(hSerial, msg, (DWORD)strlen(msg), &written, nullptr);
     }
+    else
+    {
+        log_info(L"GPU write or staging texture not available; skipping readback.");
+    }
+
+    uint32_t trigger = (uint32_t)rgb[0] + (uint32_t)rgb[1] + (uint32_t)rgb[2];
+    char msg[64];
+    if (trigger > (uint32_t)iThreshold) {
+        sprintf_s(msg, "9, 0\n"); 
+        left_eye_count++; 
+    }
+    else {
+        sprintf_s(msg, "9, 1\n"); 
+        right_eye_count++; 
+    }
+    DWORD written; WriteFile(hSerial, msg, (DWORD)strlen(msg), &written, nullptr);
 
     auto now = std::chrono::steady_clock::now();
     if (std::chrono::duration_cast<std::chrono::seconds>(now - last_log_time).count() >= 1)
