@@ -75,7 +75,7 @@ volatile uint16_t ir_signal_trigger_logger_counter = 0;
 // --- PI controller tuning and state (fixed-point, integer only) ---
 // Designed for AVR (8-bit) to avoid floats. Q = fixed point scale.
 #define IR_PI_Q 10      // Q-format shift (2^IR_PI_Q scale)
-#define IR_KP_DIV 16    // Kp = 1/IR_KP_DIV  (approx old >>4)
+#define IR_KP_DIV 64    // Kp = 1/IR_KP_DIV  (approx old >>4) was 16
 #define IR_KI_DIV 512   // Ki = 1/IR_KI_DIV (very slow integrator)
 #define IR_ADJ_MAX 1000 // clamp max adjustment in timer units
 #define IR_ADJ_MIN (-IR_ADJ_MAX)
