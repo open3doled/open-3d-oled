@@ -90,3 +90,5 @@ Destroyed staging resource.
 ## Questions
 * This is very much alpha so if you run into any issues just let me know and I'll be happy to get back to you as soon as possible.
 
+## Links
+* https://guides.martysmods.com/reshade/installing/reshademanualinjection/
