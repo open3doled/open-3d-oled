@@ -10,10 +10,11 @@
 
 static HANDLE hSerial = INVALID_HANDLE_VALUE;
 static std::wstring sComPort;
-static int iTriggerThreshold = 2;
-static int iTriggerMin = 1;
-static int iTriggerMax = 3;
+static int iTriggerThreshold = 20;
+static int iTriggerMin = 5;
+static int iTriggerMax = 40;
 static int iTriggerWarningCounter = 0;
+static int iDebugMode = 0;
 static reshade::api::resource staging = {}; // host-readable resource (GPU->CPU)
 static std::chrono::steady_clock::time_point last_log_time = std::chrono::steady_clock::now();
 
@@ -55,14 +56,16 @@ void read_settings()
     GetPrivateProfileStringW(L"OPEN3DOLED", L"COMPort", L"COM7", port, 16, exe_path.c_str());
     sComPort = std::wstring(port);
 
-    iTriggerThreshold = GetPrivateProfileIntW(L"OPEN3DOLED", L"TriggerThreshold", 2, exe_path.c_str());
-    iTriggerMin = GetPrivateProfileIntW(L"OPEN3DOLED", L"TriggerMin", 1, exe_path.c_str());
-    iTriggerMax = GetPrivateProfileIntW(L"OPEN3DOLED", L"TriggerMax", 3, exe_path.c_str());
+    iTriggerThreshold = GetPrivateProfileIntW(L"OPEN3DOLED", L"TriggerThreshold", 20, exe_path.c_str());
+    iTriggerMin = GetPrivateProfileIntW(L"OPEN3DOLED", L"TriggerMin", 5, exe_path.c_str());
+    iTriggerMax = GetPrivateProfileIntW(L"OPEN3DOLED", L"TriggerMax", 40, exe_path.c_str());
+    iDebugMode = GetPrivateProfileIntW(L"OPEN3DOLED", L"DebugMode", 0, exe_path.c_str());
 
-    log_info(L"COM Port: " + sComPort);
+    log_info(L"COMPort: " + sComPort);
     log_info(L"TriggerThreshold: " + std::to_wstring(iTriggerThreshold));
     log_info(L"TriggerMin: " + std::to_wstring(iTriggerMin));
     log_info(L"TriggerMax: " + std::to_wstring(iTriggerMax));
+    log_info(L"DebugMode: " + std::to_wstring(iDebugMode));
 }
 
 static void open_serial_port()
@@ -110,12 +113,13 @@ static void on_init_swapchain(reshade::api::swapchain* swapchain, bool)
     const auto bbfmt = bb_desc.texture.format;
     const bool supportedFormat =
         (bbfmt == format::r8g8b8a8_unorm || bbfmt == format::r8g8b8a8_unorm_srgb ||
-            bbfmt == format::b8g8r8a8_unorm || bbfmt == format::b8g8r8a8_unorm_srgb);
+            bbfmt == format::b8g8r8a8_unorm || bbfmt == format::b8g8r8a8_unorm_srgb ||
+            bbfmt == format::b8g8r8x8_unorm || bbfmt == format::b8g8r8x8_unorm_srgb);
 
     if (!supportedFormat)
     {
         // Still create a staging with same format to allow hex dumps for debugging
-        log_info(L"Backbuffer format not recognized as common 8-bit RGBA. Creating staging anyway for debug.");
+        log_info(L"Backbuffer format not recognized as common 8-bit RGBA. Creating staging anyway for debug. Format : " + std::to_wstring((uint32_t)bbfmt));
     }
 
     reshade::api::resource_desc tex_desc = {};
@@ -173,12 +177,14 @@ static bool extract_rgb_from_mapped(const reshade::api::subresource_data& mapped
     {
     case format::r8g8b8a8_unorm:
     case format::r8g8b8a8_unorm_srgb:
+    case format::r8g8b8x8_unorm_srgb:
         out_rgb[0] = row[0];
         out_rgb[1] = row[1];
         out_rgb[2] = row[2];
         return true;
     case format::b8g8r8a8_unorm:
     case format::b8g8r8a8_unorm_srgb:
+    case format::b8g8r8x8_unorm_srgb:
         out_rgb[0] = row[2];
         out_rgb[1] = row[1];
         out_rgb[2] = row[0];
@@ -246,35 +252,66 @@ static void on_present(reshade::api::command_queue* queue, reshade::api::swapcha
     reshade::api::subresource_data mapped = {};
     if (!device->map_texture_region(staging, 0, nullptr, reshade::api::map_access::read_only, &mapped))
     {
-        log_info(L"Unable to map readback texture region (first attempt).");
+        log_info(L"Unable to map readback texture region (trigger region).");
         return;
     }
 
     // Dump some raw bytes for debugging
-    const uint32_t dump_len = 64;
-    dump_mapped_hex(reinterpret_cast<const uint8_t*>(mapped.data), std::min<size_t>(dump_len, (mapped.row_pitch == 0 ? dump_len : mapped.row_pitch)), mapped.row_pitch, mapped.slice_pitch);
+    // const uint32_t dump_len = 64;
+    // dump_mapped_hex(reinterpret_cast<const uint8_t*>(mapped.data), std::min<size_t>(dump_len, (mapped.row_pitch == 0 ? dump_len : mapped.row_pitch)), mapped.row_pitch, mapped.slice_pitch);
 
-    uint8_t rgb[3] = { 0,0,0 };
+    uint8_t rgb[3] = { 0,0,0 }; 
+    uint8_t rgb2[3] = { 0,0,0 };
     bool ok = extract_rgb_from_mapped(mapped, bb_desc.texture.format, rgb);
 
     device->unmap_texture_region(staging, 0);
 
+
+    if (iDebugMode)
+    {
+        // Pull in a pixel from the main image to check the color (useful for debugging with red blue alternative frame test video
+        uint32_t y = (bb_desc.texture.height > 0) ? (bb_desc.texture.height - 1) : 0;
+        reshade::api::subresource_box src_box2 = { 10, 10, 0, 11, 11, 1 };
+        cmd->copy_texture_region(backbuffer, 0, &src_box2, staging, 0, nullptr);
+        queue->flush_immediate_command_list();
+        queue->wait_idle();
+
+        reshade::api::subresource_data mapped2 = {};
+        if (device->map_texture_region(staging, 0, nullptr, reshade::api::map_access::read_only, &mapped2))
+        {
+            // dump_mapped_hex(reinterpret_cast<const uint8_t*>(mapped2.data), std::min<size_t>(dump_len, (mapped2.row_pitch == 0 ? dump_len : mapped2.row_pitch)), mapped2.row_pitch, mapped2.slice_pitch);
+            
+            bool ok2 = extract_rgb_from_mapped(mapped2, bb_desc.texture.format, rgb2);
+
+            device->unmap_texture_region(staging, 0);
+        }
+        else
+        {
+            log_info(L"Unable to map readback texture region (debug region).");
+        }
+    }
+
     if (ok)
     {
-        uint32_t trigger_brightness = (uint32_t)rgb[0] + (uint32_t)rgb[1] + (uint32_t)rgb[2];
+        uint32_t left_eye = 0;
+        uint32_t trigger_brightness = (uint32_t)rgb[1]; // We use the green channel only for now 
+        
+        // log_info(L"Trigger R: " + std::to_wstring((uint32_t)rgb[0]) + L" G: " + std::to_wstring((uint32_t)rgb[1]) + L" B: " + std::to_wstring((uint32_t)rgb[2]) + L".");
+        
         if (iTriggerMin <= trigger_brightness && trigger_brightness <= iTriggerMax)
         {
-            // log_info(L"Trigger RG R: " + std::to_wstring((uint32_t)rgb[0]) + L" G: " + std::to_wstring((uint32_t)rgb[1]) + L" B: " + std::to_wstring((uint32_t)rgb[2]) + L".");
             char msg[64];
             if (trigger_brightness > (uint32_t)iTriggerThreshold)
             {
                 sprintf_s(msg, "9, 0\n");
-                left_eye_count++;
+                left_eye = 0;
+                right_eye_count++;
             }
             else
             {
                 sprintf_s(msg, "9, 1\n");
-                right_eye_count++;
+                left_eye = 1;
+                left_eye_count++;
             }
             DWORD written;
             WriteFile(hSerial, msg, (DWORD)strlen(msg), &written, nullptr);
@@ -282,9 +319,16 @@ static void on_present(reshade::api::command_queue* queue, reshade::api::swapcha
         else
         {
             iTriggerWarningCounter++;
-            if (iTriggerWarningCounter > 120 * 30) {
+            if (iTriggerWarningCounter > 120 * 5) {
                 log_info(L"Detected Trigger Outside of Expected Range Brightness: " + std::to_wstring((uint32_t)trigger_brightness) + L" R: " + std::to_wstring((uint32_t)rgb[0]) + L" G : " + std::to_wstring((uint32_t)rgb[1]) + L" B : " + std::to_wstring((uint32_t)rgb[2]) + L".");
                 iTriggerWarningCounter = 0;
+            }
+        }
+
+        if (iDebugMode == 1) {
+            // log_info(L"Debug Trigger LeftEye: " + std::to_wstring((uint32_t)left_eye) + L"      R: " + std::to_wstring((uint32_t)rgb[0]) + L" G: " + std::to_wstring((uint32_t)rgb[1]) + L" B: " + std::to_wstring((uint32_t)rgb[2]) + L"       R2: " + std::to_wstring((uint32_t)rgb2[0]) + L" G2: " + std::to_wstring((uint32_t)rgb2[1]) + L" B2: " + std::to_wstring((uint32_t)rgb2[2]) + L".");
+            if (left_eye && rgb2[0] < 50 && rgb2[2] > 200) {
+                log_info(L"Error Wrong Eye Debug Trigger LeftEye: " + std::to_wstring((uint32_t)left_eye) + L"      R: " + std::to_wstring((uint32_t)rgb[0]) + L" G: " + std::to_wstring((uint32_t)rgb[1]) + L" B: " + std::to_wstring((uint32_t)rgb[2]) + L"       R2: " + std::to_wstring((uint32_t)rgb2[0]) + L" G2: " + std::to_wstring((uint32_t)rgb2[1]) + L" B2: " + std::to_wstring((uint32_t)rgb2[2]) + L".");
             }
         }
     }
