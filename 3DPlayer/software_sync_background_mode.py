@@ -18,7 +18,7 @@ SYNC_SIGNAL_RIGHT = 2
 
 SW_MINIMIZE = 6
 SW_MAXIMIZE = 3
-RESIZE_WINDOW = SW_MAXIMIZE  # None - do nothing, SW_MINIMIZE, SW_MAXIMIZE
+RESIZE_WINDOW = None  # None - do nothing, SW_MINIMIZE, SW_MAXIMIZE
 PIXEL_GRABBER_THRESHOLD = 30  # 0 - left, 20*3 - right
 USE_PIXEL_GRABBER_WINDOWS_GET_DC = False
 USE_PIXEL_GRABBER_DXCAM = False
@@ -29,7 +29,8 @@ if os.name == "nt":
         user32 = ctypes.windll.user32
         gdi32 = ctypes.windll.gdi32
     if USE_PIXEL_GRABBER_DXCAM:
-        import dxcam
+        pass
+        # import dxcam # hard comment to prevent import for pyinstaller
 
 WINDOWS_OS_NAME = "nt"
 # WINDOWS_OS_NAME = "posix"
@@ -79,7 +80,7 @@ class SoftwareSyncBackgroundModeGLWindow(threading.Thread):
         glfw.init()
 
         if USE_PIXEL_GRABBER_DXCAM and os.name == WINDOWS_OS_NAME:
-            self.__dxcam_camera = dxcam.create(output_idx=0)
+            # self.__dxcam_camera = dxcam.create(output_idx=0) # hard comment to prevent import for pyinstaller
             self.__dxcam_camera.region = (0, 0, 1, 1)
 
     def __start(self):
