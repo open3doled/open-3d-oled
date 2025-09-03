@@ -1,6 +1,7 @@
 __pycache__/*
 buildtools/*
 build/*
+debug/*
 dist/*
 disabled/debug/*
 installation/*
