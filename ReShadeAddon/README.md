@@ -91,6 +91,9 @@ Destroyed staging resource.
   * I've made a test firwmare with an updated PID controller that smooths out the jitter more and settles more deterministically. Any firmware after from [22b_20250903](../3DPlayer/firmwares/firmware_v22b_20250903.hex) onwards should have this algorithm.
 
 
+## FAQ
+* It seems that sRGB encoded videos will flip on the red channel where is MKV MVC videos appear to flip on the green channel. I'm going to need to look into this to see why this is happening. I think it may be related to the encoding format and how it's copied out of the back buffer.
+
 ## Questions
 * This is very much alpha so if you run into any issues just let me know and I'll be happy to get back to you as soon as possible.
 
