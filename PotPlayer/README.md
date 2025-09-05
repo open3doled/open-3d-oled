@@ -21,7 +21,7 @@ The setup of such a system is provided in the steps below.
   * https://github.com/AviSynth/AviSynthPlus/releases/
 
 ### Install PotPlayer
-* Download and install PotPlayer 32 or 64 bit from https://potplayer.daum.net/
+* Download and install PotPlayer 64 bit from https://potplayer.daum.net/ (32 bit will also work but I haven't made a ReShade plugin for 32-bit so if you want to use that install 64-bit)
 * Be sure to select "Install additional codec (OpenCodec)" on the "Complete install PotPlayer" screen at the end.
 * When installing OpenCodec be sure to select "Intel H.264 MVC Decoder"
 * When it completes PotPlayer will auto-launch by default (unless you disabled it)
@@ -40,7 +40,8 @@ The setup of such a system is provided in the steps below.
   * Check "Auto detect 3D input format (based on filename suffixes ...)"
 * Navigate to "Video"
   * If you are using "Fullscreen Exclusive" and there is some chance your TV may still trigger ALLM mode it is wise to change this option to "Disable". This will ensure you still have access to BFI and also that the glasses don't lose sync due to ALLM kicking in.
-  * Some users have reported that setting "Video Renderer" to "Built-in Direct3D 11 Video Renderer" gives more stable and lower CPU usage as well as page flipping works when the video is paused better. Based on my testing changing this does seem to help.
+  * If you plan to use the "ReShade" Serial Sync Addon then you need to change you're "Video Renderer" to "Built-in Direct3D 11 Video Renderer", some users report this aslo gives more stable and lower CPU usage as well as page flipping works when the video is paused better. Based on my testing changing this does seem to help..
+  * Some other users have reported that setting "Video Renderer" to "EVR Custom" gives less flickering, but the ReShade Serial Sync Addon does not currently work with that. As such I would suggest starting with "Built-in Direct3D 11 Video Renderer" and then try changing to "EVR Custom" if you get flickering and you aren't using the ReShade Serial Sync Addon.
 * Navigate to "Video -> AVI Synth"
   * Check "Enable AviSynth processing"
   * Click on "Load script -> Load script from a file"
@@ -63,10 +64,16 @@ blackbox_border = 7
 assume_for_half = "half_sbs" # "half_sbs" ? "half_tab"
 ```
   * The "assume_for_half" parameter is used to define the default oreintation side-by-side top-and-bottom when half width or half height content will be played as there is no way to make this determination from the resolution alone.
+* Restart PotPlayer for changes to the "Video Renderer" to take effect.
+
+## Check Out ReShade Serial Sync Addon For Serial Drive Mode Support *Alpha*
+* [ReShade Serial Sync Addon](/ReShadeAddon/README.md)
+
+## Performance
+* Some users have reported that flickering could be resolved on systems with integrated and descrete graphics by configuring the graphics drivers to use the descrete GPU in high performance mode.
+  * For NVidia: NVIDIA control panel -> Manage 3D settings -> Power management mode -> "Prefer maximum performance"
 
 ## FAQ
-* The trigger boxes aren't showing an any videos
-  * Make sure you installed the 32 bit version of both PotPlayer and AVISynth+ the 64bit version has been reported to not work.
 * The trigger boxes aren't showing on some videos
   * Make sure "Use Built-in DXVA Video Decoder" is "Off", when it is "On" the AVISynth script will not run. Look for the botton with the text "H/W" next to teh video duration and click it. It should update to show "S/W" and the trigger boxes should show.
 * Clicking "Swap left/right images" is not flipping the eyes.
@@ -93,7 +100,7 @@ assume_for_half = "half_sbs" # "half_sbs" ? "half_tab"
 * Open -> Open Blu-ray
 
 ## Subtitles
-Currently it isn't possible to get stereo subtitles to work as far as I can tell but it may be possible in the future.
+* Currently it isn't possible to get stereo subtitles to work as far as I can tell but it may be possible in the future.
 
 ## Thanks
 A big thankyou to following two sites have useful information about setting up PotPlayer for 3D playback.
