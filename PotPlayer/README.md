@@ -39,8 +39,9 @@ The setup of such a system is provided in the steps below.
   * Change "Output (Screen)" to "Shutter Glasses (Page Flipping)"
   * Check "Auto detect 3D input format (based on filename suffixes ...)"
 * Navigate to "Video"
+  * It's generally good to set "Fullscreen Exclusive" to "Disabled" as it can cause ALLM to kick in and also can change the renderer pipeline when entering fullscreen so that the "ReShade Serial Sync Addon" stops working.
   * If you are using "Fullscreen Exclusive" and there is some chance your TV may still trigger ALLM mode it is wise to change this option to "Disable". This will ensure you still have access to BFI and also that the glasses don't lose sync due to ALLM kicking in.
-  * If you plan to use the "ReShade" Serial Sync Addon then you need to change you're "Video Renderer" to "Built-in Direct3D 11 Video Renderer", some users report this aslo gives more stable and lower CPU usage as well as page flipping works when the video is paused better. Based on my testing changing this does seem to help..
+  * If you plan to use the "ReShade Serial Sync Addon" then you need to change you're "Video Renderer" to "Built-in Direct3D 11 Video Renderer", some users report this aslo gives more stable and lower CPU usage as well as page flipping works when the video is paused better. Based on my testing changing this does seem to help..
   * Some other users have reported that setting "Video Renderer" to "EVR Custom" gives less flickering, but the ReShade Serial Sync Addon does not currently work with that. As such I would suggest starting with "Built-in Direct3D 11 Video Renderer" and then try changing to "EVR Custom" if you get flickering and you aren't using the ReShade Serial Sync Addon.
 * Navigate to "Video -> AVI Synth"
   * Check "Enable AviSynth processing"

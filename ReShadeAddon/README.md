@@ -8,7 +8,9 @@ The Reshade Addon extracts the intensity signal and based on configurable levels
 
 ## Installation
 * Before attempting to use this ensure your PotPlayer is configured according to the instructions on the [PotPlayer](../PotPlayer/README.md) page. 
-* Currently the ReShade Addon is only tested to work when "Video Renderer" is set to "Built-in Direct3D 11 Video Renderer". See the PotPlayer instructions for how to set this.
+* PotPlayer settings required for ReShade Addon
+  * Only tested to work when "Video Renderer" is set to "Built-in Direct3D 11 Video Renderer". See the PotPlayer instructions for how to set this if you are unsure.
+  * Need to set "Fullscreen Exclusive" to "Disabled" or it will lose sync when you enter fullscreen. See the PotPlayer instructions for how to set this if you are unsure.
 * The only difference being you will need to use the AVI Synth Script located in this folder instead for the special trigger pixels.
 * Next you will need to change the permissions on your "C:\Program Files\DAUM\PotPlayer" folder so that the "Users" group has full access otherwise Reshade will throw errors.
 * Now copy the contents of the "install" folder into "C:\Program Files\DAUM\PotPlayer".
