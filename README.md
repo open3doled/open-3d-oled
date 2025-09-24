@@ -327,6 +327,8 @@ XIAOMI
 * To disable ALLM for Intel [CRU tool](https://www.reddit.com/r/OLED_Gaming/comments/r3poj4/fullscreen_windows_10_games_enable_allm_which/) can also be used, [see this video](https://youtu.be/ntp00tMUKzE) showing how it can be done.
 * If you are not able to find any "CTA-861" entry under "Extension Blocks" under CRU tool, and you were not able to disable ALLM using any other technique. Then you may be able to disable ALLM by disabling Fullscreen Exclusive mode directly in PotPlayer. This is accessible from Settings -> Video. Setting it to "Disabled" may prevent ALLM from starting and thus mean BFI can be used and also you won't get the tiering and other issues that causes the glasses to lose sync.
   
+* If on AMD systems when 3d player attempts to enter exclusive fullscreen mode and hide the toolbar your computer forces the display from 120hz to 60hz. Try running "reset-all.exe" in ToastyX CRU utility, and then try removing the "Standard Resolution" entry for 1920x1080 @60hz as well as removing 1920x1080 50hz and 60hz from the "CTA-861 Extension Block" -> "TV Resolutions" list. Close and run "reset64.exe".  This fixed the issue for me.
+
 * Emitter not working
 ```
    Sometimes when changing the glasses IR Protocol the emitter will enter an unresponsive state. If this happens save your settings to EEPROM and disconnect and reconnect it's power.
