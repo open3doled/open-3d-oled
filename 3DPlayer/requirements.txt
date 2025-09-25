@@ -1,3 +1,4 @@
+glfw
 pillow
 cairosvg
 pyusb
