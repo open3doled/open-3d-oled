@@ -1,5 +1,22 @@
 Quick Frame Transport Guide:
 
+Important Note Regarding Burn-in:
+When using this I noticed a kind of temporary burn in that would occur. 
+When you stop displaying 3d content, and you show a static image, it would continue to show a ghosted 3d image at 120hz in the background for 5-10 minutes.
+Unplugging the TV or changing resolution would have no effect.
+I couldn't for the life of me figure out the cause until a beta tester sent me hte following link *big thanks*.
+https://forums.blurbusters.com/viewtopic.php?p=57467
+Basically just like shutter glasses alternate the polarity of the two LCD panels at least every second to continued DC bias of the LCD element.
+Monitors do hte same thing. Some monitors do this at 120hz or whatever refresh rate you are displaying at though instead of once a second like shutter glasses.
+It seems that if your refresh rate is an even multiple of hte inversion rate, and your 3d frames are half of that. 
+Then each alternative left right image causes a static build up on either side of the biasing.
+This is why you will get a continued 3d flicker ghosted image if your 3d frame rate matches the rate at which the monitor flips the DC biasing.
+The only way to prevent this seems to be to use a refresh rate that doesn't match the DC bias flipping done by the monitor.
+Or on purpose every few minutes dropping a frame and resyncing the glasses to cause an inversion of the DC bias for each left/right image.
+I am not sure if this makes sense to do or not as it seems to be a temporary ghosting effect htat resolves itself.
+I'm just mentioning it here as it perplexed me for a long time how this was even possible.
+And I want other people to understand as it's possible it may effect other LCD monitors.
+
 Description:
 What we are trying to do with these custom monitor timings / modelines is create a duty cycle where the "front/back porch" and "blanking period" is the longest possible relative to the time the active signal is being sent.
 This extended "blanking period" will provide the period of time where the LCD should have a consistent image across the whole screen and will be the time we will open the shutter glasses to get an image with no ghosting.
