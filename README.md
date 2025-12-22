@@ -456,7 +456,7 @@ support at open3doled dot com
 ## Discord
 
 At the request of some people who wanted to share their experience getting the unit to work.
-I've made a discord server you are free to join https://discord.gg/T32aM2ru I'll be adding the invite link to the github page as well.
+I've made a discord server you are free to join https://discord.gg/ySXevyBEx3 I'll be adding the invite link to the github page as well.
 There's no need to join as the most timely and reliable way to get in touch with me will be email still, but I am including it here for your reference.
 There may be some tips and tricks on there if you are trying to get the most out of the unit.
  
