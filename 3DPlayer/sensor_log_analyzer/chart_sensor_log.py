@@ -3,7 +3,9 @@ import plotly.graph_objects as go
 import pandas as pd
 
 # Load data
-df = pd.read_csv("./2024-08-19_180919_debug_opt_stream_readings.csv")
+# df = pd.read_csv(
+#         "./2024-08-19_180919_debug_opt_stream_readings.csv"
+# )
 # df = df.iloc[100000:200000]  # or use the condition method above
 
 # Create figure
@@ -54,8 +56,8 @@ fig.update_layout(
         rangeslider=dict(visible=True),
         type="linear",
     ),
-    # yaxis_range=[0, 64],
-    yaxis_range=[0, 255],
+#    yaxis_range=[0, 255],
+    yaxis_range=[0, 20],
     yaxis=dict(title="Sensor Intensity"),
     yaxis2=dict(
         title="State Data",
