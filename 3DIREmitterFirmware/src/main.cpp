@@ -44,7 +44,7 @@ void setup()
     switch_4_blocked = false;
 #endif
 
-    Serial.begin(118200);
+    Serial.begin(115200);
     // Serial.begin(460800);
     Serial.println("+startup");
     bitSet(DDR_LED_IR_D3, LED_IR_D3);

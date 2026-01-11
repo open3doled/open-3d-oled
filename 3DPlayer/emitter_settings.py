@@ -1323,7 +1323,7 @@ class EmitterSettingsDialog:
         if self.main_app.emitter_serial:
             self.main_app.emitter_serial.close()
         self.main_app.emitter_serial = EmitterSerial(
-            self.serial_port_identifier_variable.get(), 118200  # 118200 or 460800
+            self.serial_port_identifier_variable.get(), 115200  # 115200 or 460800
         )
         self.update_settings_from_serial()
         self.setting_glasses_mode_button.config(state="normal")
