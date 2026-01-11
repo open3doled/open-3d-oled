@@ -92,18 +92,6 @@ void opt_sensor_init(void)
 #ifdef OPT_SENSOR_ENABLE_STATS
     opt_sensor_stats_count = 0;
 #endif
-#ifdef OPT_SENSOR_ENABLE_STREAM_READINGS_TO_SERIAL
-    opt_sensor_enable_stream_readings_to_serial = 0;
-#endif
-    opt_sensor_enable_frequency_analysis_based_duplicate_frame_detection = 0;
-    opt_sensor_enable_duplicate_realtime_reporting = 0;
-    opt_sensor_output_stats = 0;
-    opt_sensor_detection_threshold_high = 128;
-    opt_sensor_detection_threshold_low = 32;
-    opt_sensor_block_signal_detection_delay = OPT_SENSOR_BLOCK_SIGNAL_DETECTION_DELAY;
-    opt_sensor_ignore_all_duplicates = 0;
-    opt_sensor_filter_mode = 0;
-    opt_sensor_min_threshold_value_to_activate = OPT_SENSOR_MIN_THRESHOLD_VALUE_TO_ACTIVATE;
     opt_sensor_block_signal_detection_until = 0;
     opt_sensor_disable_debug_detection_flag_after = 0;
     opt_sensor_detected_signal_start_eye = 0;
