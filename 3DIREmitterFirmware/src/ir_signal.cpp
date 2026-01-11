@@ -55,6 +55,13 @@ volatile bool ir_average_timing_mode_last_open_timer1_tcnt_set[2] = {false};
 
 #define FRAME_HISTORY_SIZE 64
 #define FRAME_HISTORY_SHIFT 6 // Log2(FRAME_HISTORY_SIZE) for efficient division
+#define IR_AVG_MAX_GAP_US 200000UL
+#define IR_AVG_WARMUP_SAMPLES 8
+#define IR_AVG_STEADY_TOL_MIN_US 100
+#define IR_AVG_STEADY_TOL_DIV 200
+#define IR_AVG_WARMUP_TOL_MIN_US 300
+#define IR_AVG_WARMUP_TOL_DIV 100
+#define IR_AVG_RATE_DETECT_SAMPLES 3
 
 // For timer 1 isrs and ir_signal_process_trigger
 uint32_t ir_signal_trigger_current_time = 0;
@@ -68,6 +75,9 @@ volatile uint16_t ir_signal_trigger_frametime_average = 0;
 volatile uint16_t ir_signal_trigger_frametime_average_effective = 0;
 volatile uint16_t ir_signal_trigger_frametime_average_effective_counter = 0;
 volatile int16_t ir_signal_trigger_frame_delay_adjustment[2] = {0};
+volatile uint8_t ir_signal_trigger_frametime_sample_count = 0;
+volatile uint8_t ir_signal_trigger_half_rate_counter = 0;
+volatile uint8_t ir_signal_trigger_double_rate_counter = 0;
 #ifdef DEBUG_AVERAGE_TIMING_MODE
 volatile uint16_t ir_signal_trigger_logger_counter = 0;
 #endif
@@ -89,6 +99,62 @@ static int32_t ir_pi_integral_q[2] = {0, 0}; // per-eye integrator (Q scaled)
 static int16_t ir_pi_prev_err[2] = {0, 0};   // last error (not really used but kept for potential D)
 
 // ------------------ end PI controller state -----------------------
+
+static inline bool is_average_timing_enabled()
+{
+  return ir_average_timing_mode == 1 && target_frametime > 0;
+}
+
+static inline uint16_t clamp_tolerance(uint16_t target, uint16_t min_us, uint16_t divisor)
+{
+  if (target == 0 || divisor == 0) {
+    return min_us;
+  }
+  const uint16_t pct = (uint16_t)(target / divisor);
+  return (pct > min_us) ? pct : min_us;
+}
+
+static inline uint32_t abs_diff_u32(uint32_t a, uint32_t b)
+{
+  return (a > b) ? (a - b) : (b - a);
+}
+
+void ir_signal_reset_average_timing(void)
+{
+  cli();
+  ir_average_timing_mode_no_trigger_counter = 0;
+  memset((void *)ir_average_timing_mode_running, 0, sizeof(ir_average_timing_mode_running));
+  memset((void *)ir_average_timing_mode_stop, 0, sizeof(ir_average_timing_mode_stop));
+  memset((void *)ir_average_timing_mode_last_open_timer1_tcnt, 0, sizeof(ir_average_timing_mode_last_open_timer1_tcnt));
+  memset((void *)ir_average_timing_mode_last_open_timer1_tcnt_set, 0, sizeof(ir_average_timing_mode_last_open_timer1_tcnt_set));
+
+  ir_signal_trigger_current_time = 0;
+  ir_signal_trigger_last_time = 0;
+  ir_signal_trigger_current_timer1_tcnt = 0;
+  ir_signal_trigger_last_timer1_tcnt = 0;
+  ir_signal_trigger_last_time_set = false;
+  ir_signal_trigger_frametime_average_set = false;
+  ir_signal_trigger_frametime_average_shifted = 0;
+  ir_signal_trigger_frametime_average = 0;
+  ir_signal_trigger_frametime_average_effective = 0;
+  ir_signal_trigger_frametime_average_effective_counter = 0;
+  memset((void *)ir_signal_trigger_frame_delay_adjustment, 0, sizeof(ir_signal_trigger_frame_delay_adjustment));
+  ir_signal_trigger_frametime_sample_count = 0;
+  ir_signal_trigger_half_rate_counter = 0;
+  ir_signal_trigger_double_rate_counter = 0;
+  ir_signal_trigger_frametime_sample_count = 0;
+  ir_signal_trigger_half_rate_counter = 0;
+  ir_signal_trigger_double_rate_counter = 0;
+
+  ir_pi_integral_q[0] = 0;
+  ir_pi_integral_q[1] = 0;
+  ir_pi_prev_err[0] = 0;
+  ir_pi_prev_err[1] = 0;
+#ifdef DEBUG_AVERAGE_TIMING_MODE
+  ir_signal_trigger_logger_counter = 0;
+#endif
+  sei();
+}
 
 // This should initialize timer1 for sending ir signals and timer4 for scheduling
 // ir signals on both left and right eyes using two different comparators.
@@ -508,7 +574,7 @@ ISR(TIMER1_COMPB_vect)
 
   if (scheduled_signal == SIGNAL_OPEN_LEFT)
   {
-    if (ir_average_timing_mode == 1 && ir_average_timing_mode_stop[1] == true) // If average timing mode has been stopped we are not going to execute the signal so we don't need to schedule a correspond close
+    if (is_average_timing_enabled() && ir_average_timing_mode_stop[1] == true) // If average timing mode has been stopped we are not going to execute the signal so we don't need to schedule a correspond close
     {
       ir_signal_next_timer1_compb_scheduled_signal = SIGNAL_NONE;
       ir_average_timing_mode_stop[1] = false;
@@ -527,7 +593,7 @@ ISR(TIMER1_COMPB_vect)
   }
   else
   {
-    if (ir_average_timing_mode == 1 && ir_average_timing_mode_stop[1] == false && ir_average_timing_mode_no_trigger_counter < MAX_SIGNALS_TO_GENERATE_WITHOUT_TRIGGER)
+    if (is_average_timing_enabled() && ir_average_timing_mode_stop[1] == false && ir_average_timing_mode_no_trigger_counter < MAX_SIGNALS_TO_GENERATE_WITHOUT_TRIGGER)
     {
       if (ir_signal_trigger_frametime_average_effective_counter % 2 == 0)
       {
@@ -568,7 +634,7 @@ ISR(TIMER1_COMPC_vect)
   }
   if (scheduled_signal == SIGNAL_OPEN_RIGHT)
   {
-    if (ir_average_timing_mode == 1 && ir_average_timing_mode_stop[0] == true) // If average timing mode has been stopped we are not going to execute the signal so we don't need to schedule a correspond close
+    if (is_average_timing_enabled() && ir_average_timing_mode_stop[0] == true) // If average timing mode has been stopped we are not going to execute the signal so we don't need to schedule a correspond close
     {
       ir_signal_next_timer1_compc_scheduled_signal = SIGNAL_NONE;
       ir_average_timing_mode_stop[0] = false;
@@ -587,7 +653,7 @@ ISR(TIMER1_COMPC_vect)
   }
   else
   {
-    if (ir_average_timing_mode == 1 && ir_average_timing_mode_stop[0] == false && ir_average_timing_mode_no_trigger_counter < MAX_SIGNALS_TO_GENERATE_WITHOUT_TRIGGER)
+    if (is_average_timing_enabled() && ir_average_timing_mode_stop[0] == false && ir_average_timing_mode_no_trigger_counter < MAX_SIGNALS_TO_GENERATE_WITHOUT_TRIGGER)
     {
       if (ir_signal_trigger_frametime_average_effective_counter % 2 == 0)
       {
@@ -636,7 +702,8 @@ void ir_signal_process_trigger(uint8_t left_eye_in)
   ir_signal_trigger_current_timer1_tcnt = TCNT1;
   sei();
 
-  if (ir_average_timing_mode == 1)
+  const bool use_avg = is_average_timing_enabled();
+  if (use_avg)
   {
     cli();
     ir_average_timing_mode_no_trigger_counter = 0;
@@ -646,41 +713,89 @@ void ir_signal_process_trigger(uint8_t left_eye_in)
 
     if (ir_signal_trigger_last_time_set == true)
     {
-      uint16_t new_frametime = ir_signal_trigger_current_time - ir_signal_trigger_last_time;
+      uint32_t new_frametime = ir_signal_trigger_current_time - ir_signal_trigger_last_time;
+      const uint16_t steady_tol = clamp_tolerance(target_frametime, IR_AVG_STEADY_TOL_MIN_US, IR_AVG_STEADY_TOL_DIV);
+      const uint16_t warmup_tol = clamp_tolerance(target_frametime, IR_AVG_WARMUP_TOL_MIN_US, IR_AVG_WARMUP_TOL_DIV);
+      bool ignore_sample = false;
+      bool seeded_sample = false;
 
-      if (target_frametime > 0 && new_frametime > (target_frametime << 1))
+      if (new_frametime > IR_AVG_MAX_GAP_US || (target_frametime > 0 && new_frametime > ((uint32_t)target_frametime << 1)))
       {
-        // no updates for more than 1 frame reset all averaging counters.
-        ir_signal_trigger_frametime_average_set = false;
-        ir_signal_trigger_frametime_average_shifted = 0;
-        cli();
-        ir_average_timing_mode_last_open_timer1_tcnt[0] = 0;
-        ir_average_timing_mode_last_open_timer1_tcnt[1] = 0;
-        ir_average_timing_mode_last_open_timer1_tcnt_set[0] = false;
-        ir_average_timing_mode_last_open_timer1_tcnt_set[1] = false;
-        ir_signal_trigger_frametime_average = 0;
-        ir_signal_trigger_frametime_average_effective = 0;
-        ir_signal_trigger_frametime_average_effective_counter = 0;
-        ir_signal_trigger_frame_delay_adjustment[0] = 0;
-        ir_signal_trigger_frame_delay_adjustment[1] = 0;
-        ir_average_timing_mode_running[0] = false;
-        ir_average_timing_mode_running[1] = false;
-        sei();
+        // No updates for more than one frame or a large gap; reset all averaging counters.
+        uint32_t current_time_snapshot = ir_signal_trigger_current_time;
+        uint16_t current_tcnt_snapshot = ir_signal_trigger_current_timer1_tcnt;
+        ir_signal_reset_average_timing();
+        ir_signal_trigger_current_time = current_time_snapshot;
+        ir_signal_trigger_current_timer1_tcnt = current_tcnt_snapshot;
+        ignore_sample = true;
       }
 
-      if (ir_signal_trigger_frametime_average_set)
+      if (!ignore_sample && target_frametime > 0)
+      {
+        const uint16_t rate_tol = warmup_tol;
+        uint32_t half_target = (uint32_t)target_frametime >> 1;
+        uint32_t double_target = (uint32_t)target_frametime << 1;
+
+        if (half_target > 0 && abs_diff_u32(new_frametime, half_target) <= rate_tol)
+        {
+          if (ir_signal_trigger_half_rate_counter < 0xFF)
+            ir_signal_trigger_half_rate_counter++;
+          ir_signal_trigger_double_rate_counter = 0;
+        }
+        else if (abs_diff_u32(new_frametime, double_target) <= rate_tol)
+        {
+          if (ir_signal_trigger_double_rate_counter < 0xFF)
+            ir_signal_trigger_double_rate_counter++;
+          ir_signal_trigger_half_rate_counter = 0;
+        }
+        else
+        {
+          ir_signal_trigger_half_rate_counter = 0;
+          ir_signal_trigger_double_rate_counter = 0;
+        }
+
+        if (ir_signal_trigger_half_rate_counter >= IR_AVG_RATE_DETECT_SAMPLES ||
+            ir_signal_trigger_double_rate_counter >= IR_AVG_RATE_DETECT_SAMPLES)
+        {
+          uint32_t current_time_snapshot = ir_signal_trigger_current_time;
+          uint16_t current_tcnt_snapshot = ir_signal_trigger_current_timer1_tcnt;
+          ir_signal_reset_average_timing();
+          ir_signal_trigger_current_time = current_time_snapshot;
+          ir_signal_trigger_current_timer1_tcnt = current_tcnt_snapshot;
+          ir_signal_trigger_frametime_average_shifted = ((uint32_t)new_frametime) << FRAME_HISTORY_SHIFT;
+          ir_signal_trigger_frametime_average_set = true;
+          cli();
+          ir_signal_trigger_frametime_average = (uint16_t)new_frametime;
+          ir_signal_trigger_frametime_average_effective = 0;
+          ir_signal_trigger_frametime_average_effective_counter = 0;
+          ir_signal_trigger_frame_delay_adjustment[0] = 0;
+          ir_signal_trigger_frame_delay_adjustment[1] = 0;
+          sei();
+          ir_signal_trigger_frametime_sample_count = 1;
+          ir_signal_trigger_half_rate_counter = 0;
+          ir_signal_trigger_double_rate_counter = 0;
+          seeded_sample = true;
+        }
+      }
+
+      if (!ignore_sample && !seeded_sample && ir_signal_trigger_frametime_average_set)
       {
         // Rolling average update using bit shifting (normalized)
         uint32_t new_ir_signal_trigger_frametime_average_shifted = ir_signal_trigger_frametime_average_shifted - (ir_signal_trigger_frametime_average_shifted >> FRAME_HISTORY_SHIFT);
         new_ir_signal_trigger_frametime_average_shifted += new_frametime;
 
-        // Ensure new_frametime is within 30 microseconds of the target before updating (unless we have no target frame time or we are still initializing)
-        if (target_frametime == 0 || (new_frametime >= target_frametime - 50 && new_frametime <= target_frametime + 50))
+        // Ensure new_frametime is within tolerance of the target before updating (unless no target frame time).
+        uint16_t tol = (ir_signal_trigger_frametime_sample_count < IR_AVG_WARMUP_SAMPLES) ? warmup_tol : steady_tol;
+        if (target_frametime == 0 || abs_diff_u32(new_frametime, (uint32_t)target_frametime) <= tol)
         {
           ir_signal_trigger_frametime_average_shifted = new_ir_signal_trigger_frametime_average_shifted;
           cli();
           ir_signal_trigger_frametime_average = new_ir_signal_trigger_frametime_average_shifted >> FRAME_HISTORY_SHIFT;
           sei();
+          if (ir_signal_trigger_frametime_sample_count < 0xFF)
+            ir_signal_trigger_frametime_sample_count++;
+          ir_signal_trigger_half_rate_counter = 0;
+          ir_signal_trigger_double_rate_counter = 0;
         }
 
         if (ir_average_timing_mode_last_open_timer1_tcnt_set[left_eye])
@@ -831,17 +946,20 @@ void ir_signal_process_trigger(uint8_t left_eye_in)
 #endif
         }
       }
-      else
+      else if (!ignore_sample && !seeded_sample)
       {
-        if (target_frametime == 0 || (new_frametime >= target_frametime - 100 && new_frametime <= target_frametime + 100))
+        if (target_frametime == 0 || abs_diff_u32(new_frametime, (uint32_t)target_frametime) <= warmup_tol)
         {
           ir_signal_trigger_frametime_average_shifted = ((uint32_t)new_frametime) << FRAME_HISTORY_SHIFT; // Store unnormalized value
           ir_signal_trigger_frametime_average_set = true;
           cli();
-          ir_signal_trigger_frametime_average = new_frametime;
+          ir_signal_trigger_frametime_average = (uint16_t)new_frametime;
           ir_signal_trigger_frame_delay_adjustment[0] = 0;
           ir_signal_trigger_frame_delay_adjustment[1] = 0;
           sei();
+          ir_signal_trigger_frametime_sample_count = 1;
+          ir_signal_trigger_half_rate_counter = 0;
+          ir_signal_trigger_double_rate_counter = 0;
         }
       }
     }
@@ -851,9 +969,9 @@ void ir_signal_process_trigger(uint8_t left_eye_in)
     ir_signal_trigger_last_time_set = true;
   }
 
-  if (ir_average_timing_mode == 0 || ir_average_timing_mode_running[left_eye] == false)
+  if (!use_avg || ir_average_timing_mode_running[left_eye] == false)
   {
-    if (ir_average_timing_mode == 1 && ir_signal_trigger_frametime_average_set == true)
+    if (use_avg && ir_signal_trigger_frametime_average_set == true)
     {
       ir_average_timing_mode_running[left_eye] = true;
 

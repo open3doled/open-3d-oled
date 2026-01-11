@@ -367,11 +367,19 @@ void loop()
                         }
                         else if (p == 15)
                         {
-                            ir_average_timing_mode = temp;
+                            if (ir_average_timing_mode != temp)
+                            {
+                                ir_average_timing_mode = temp;
+                                ir_signal_reset_average_timing();
+                            }
                         }
                         else if (p == 16)
                         {
-                            target_frametime = temp;
+                            if (target_frametime != temp)
+                            {
+                                target_frametime = temp;
+                                ir_signal_reset_average_timing();
+                            }
                         }
                         else if (p == 17)
                         {
@@ -408,6 +416,7 @@ void loop()
                                 else if (temp == IR_DRIVE_MODE_PC_SERIAL)
                                 {
                                     usb_trigger_init();
+                                    ir_signal_reset_average_timing();
                                 }
                                 else if (temp == IR_DRIVE_MODE_MINIDIN3)
                                 {
