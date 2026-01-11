@@ -54,8 +54,8 @@ fig.update_layout(
         rangeslider=dict(visible=True),
         type="linear",
     ),
-    # yaxis_range=[0, 64],
-    yaxis_range=[0, 255],
+    # yaxis_range=[0, 255],
+    yaxis_range=[0, 20],
     yaxis=dict(title="Sensor Intensity"),
     yaxis2=dict(
         title="State Data",
