@@ -176,6 +176,11 @@ void setup()
     {
         dlplink_trigger_init();
     }
+    else if (ir_drive_mode == IR_DRIVE_MODE_FREE_RUNNING)
+    {
+        ir_signal_reset_average_timing();
+        ir_signal_free_run_reset();
+    }
     Serial.println("init complete");
 }
 
@@ -379,6 +384,10 @@ void loop()
                             {
                                 target_frametime = temp;
                                 ir_signal_reset_average_timing();
+                                if (ir_drive_mode == IR_DRIVE_MODE_FREE_RUNNING)
+                                {
+                                    ir_signal_free_run_reset();
+                                }
                             }
                         }
                         else if (p == 17)
@@ -409,6 +418,10 @@ void loop()
                                 {
                                     dlplink_trigger_stop();
                                 }
+                                else if (ir_drive_mode == IR_DRIVE_MODE_FREE_RUNNING)
+                                {
+                                    ir_signal_free_run_reset();
+                                }
                                 if (temp == IR_DRIVE_MODE_OPTICAL)
                                 {
                                     opt_sensor_init();
@@ -433,6 +446,11 @@ void loop()
                                 else if (temp == IR_DRIVE_MODE_DLP_LINK_TRIGGER)
                                 {
                                     dlplink_trigger_init();
+                                }
+                                else if (temp == IR_DRIVE_MODE_FREE_RUNNING)
+                                {
+                                    ir_signal_reset_average_timing();
+                                    ir_signal_free_run_reset();
                                 }
                                 ir_drive_mode = temp;
                             }
@@ -594,6 +612,10 @@ void loop()
     else if (ir_drive_mode == IR_DRIVE_MODE_DLP_LINK_TRIGGER)
     {
         dlplink_trigger_check_cycle_power();
+    }
+    else if (ir_drive_mode == IR_DRIVE_MODE_FREE_RUNNING)
+    {
+        ir_signal_free_run_update();
     }
 }
 

@@ -7,6 +7,7 @@ import sys  # @UnusedImport
 import tkinter  # @UnusedImport
 import tkinter.ttk
 import time
+import threading
 import traceback  # @UnusedImport
 import functools
 import idlelib.tooltip
@@ -41,6 +42,18 @@ class TopWindow:
         self.pageflipglsink = None
         self.subtitle3dsink = None
         self.__software_sync_background_mode = None
+        self.serial_sync_enabled = True
+        self.serial_sync_active = False
+        self.serial_sync_period_s = None
+        self.serial_sync_next_time = None
+        self.serial_sync_next_eye = emitter_settings.SYNC_SIGNAL_LEFT
+        self.serial_sync_last_flip_time = None
+        self.serial_sync_lock = threading.Lock()
+        self.serial_sync_running = True
+        self.serial_sync_thread = threading.Thread(target=self._serial_sync_worker)
+        self.serial_sync_thread.daemon = True
+        self.serial_sync_thread.name = "serial-sync"
+        self.serial_sync_thread.start()
 
         # set base path
         self.internal_base_path = os.path.dirname(os.path.abspath(__file__))
@@ -497,6 +510,7 @@ class TopWindow:
             self.emitter_serial.pageflipglsink = None
         if self.pageflipglsink is not None:
             self.pageflipglsink.set_property("close", True)
+        self._serial_sync_reset()
         self.set_menu_on_top(True, False, False, False)
         # Gst.deinit()
         return "break"
@@ -520,6 +534,8 @@ class TopWindow:
         if self.__software_sync_background_mode is not None:
             self.__software_sync_background_mode.stop()
             print("Stopped Software Sync Background Mode")
+        self.serial_sync_running = False
+        self._serial_sync_reset()
         self.close = True
         self.set_menu_on_top(True, False, False, False)
         if self.emitter_serial:
@@ -663,18 +679,97 @@ class TopWindow:
             and self.emitter_serial.ir_drive_mode
             == emitter_settings.IR_DRIVE_MODE_SERIAL
         ):
-            if synced_signal_left_or_right == emitter_settings.SYNC_SIGNAL_LEFT:
-                self.emitter_serial.line_reader.async_command(
-                    emitter_settings.SERIAL_DRIVE_MODE_LEFT_COMMAND
-                )
-            elif synced_signal_left_or_right == emitter_settings.SYNC_SIGNAL_RIGHT:
-                self.emitter_serial.line_reader.async_command(
-                    emitter_settings.SERIAL_DRIVE_MODE_RIGHT_COMMAND
-                )
+            now = time.monotonic()
+            with self.serial_sync_lock:
+                self.serial_sync_active = True
+                if self.serial_sync_period_s is None:
+                    self.serial_sync_period_s = self._serial_sync_target_period()
+                if self.serial_sync_last_flip_time is not None:
+                    measured = now - self.serial_sync_last_flip_time
+                    if measured > 0:
+                        if measured >= (self.serial_sync_period_s * 0.5) and measured <= (self.serial_sync_period_s * 1.5):
+                            self.serial_sync_period_s = (self.serial_sync_period_s * 9.0 + measured) / 10.0
+                self.serial_sync_last_flip_time = now
+
+                if self.serial_sync_next_time is None:
+                    self.serial_sync_next_time = now
+                    self.serial_sync_next_eye = synced_signal_left_or_right
+                else:
+                    err = now - self.serial_sync_next_time
+                    if abs(err) > (self.serial_sync_period_s * 0.5):
+                        self.serial_sync_next_time = now
+                        self.serial_sync_next_eye = synced_signal_left_or_right
+                    else:
+                        self.serial_sync_next_time += err * 0.25
+                        if self.serial_sync_next_eye != synced_signal_left_or_right:
+                            self.serial_sync_next_eye = synced_signal_left_or_right
 
     def on_gstreamer_synced_flip(self, plugin, synced_signal_left_or_right):
         if self.player is not None and self.video_open:
             self.on_synced_flip(synced_signal_left_or_right)
+
+    def _serial_sync_target_period(self):
+        try:
+            target = float(self.display_settings_dialog.target_framerate_variable.get())
+            if target > 0:
+                return 1.0 / target
+        except Exception:
+            pass
+        return 1.0 / 120.0
+
+    def _serial_sync_reset(self):
+        with self.serial_sync_lock:
+            self.serial_sync_active = False
+            self.serial_sync_period_s = None
+            self.serial_sync_next_time = None
+            self.serial_sync_last_flip_time = None
+            self.serial_sync_next_eye = emitter_settings.SYNC_SIGNAL_LEFT
+
+    def _serial_sync_worker(self):
+        while self.serial_sync_running:
+            if not self.serial_sync_enabled:
+                time.sleep(0.01)
+                continue
+            if (
+                self.emitter_serial is None
+                or self.emitter_serial.ir_drive_mode != emitter_settings.IR_DRIVE_MODE_SERIAL
+            ):
+                time.sleep(0.01)
+                continue
+
+            with self.serial_sync_lock:
+                active = self.serial_sync_active
+                next_time = self.serial_sync_next_time
+                next_eye = self.serial_sync_next_eye
+                period = self.serial_sync_period_s or self._serial_sync_target_period()
+                self.serial_sync_period_s = period
+
+            if not active or next_time is None:
+                time.sleep(0.005)
+                continue
+
+            now = time.monotonic()
+            if now < next_time:
+                time.sleep(min(0.001, next_time - now))
+                continue
+
+            if next_eye == emitter_settings.SYNC_SIGNAL_LEFT:
+                command = emitter_settings.SERIAL_DRIVE_MODE_LEFT_COMMAND
+            else:
+                command = emitter_settings.SERIAL_DRIVE_MODE_RIGHT_COMMAND
+            self.emitter_serial.line_reader.async_command(command)
+
+            with self.serial_sync_lock:
+                self.serial_sync_next_eye = (
+                    emitter_settings.SYNC_SIGNAL_RIGHT
+                    if next_eye == emitter_settings.SYNC_SIGNAL_LEFT
+                    else emitter_settings.SYNC_SIGNAL_LEFT
+                )
+                self.serial_sync_next_time = next_time + period
+                now = time.monotonic()
+                if now - self.serial_sync_next_time > period:
+                    steps = int((now - self.serial_sync_next_time) // period) + 1
+                    self.serial_sync_next_time += steps * period
 
     def start_video(self, playback_parameters):
 
