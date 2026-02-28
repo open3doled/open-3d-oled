@@ -1,5 +1,9 @@
 # Open3DOLED - ReShade Serial Sync Addon
 
+## Status
+This path is deprecated in favor of the newer [MPC Video Renderer integration](../MPCVideoRenderer/Readme.md), which has native pageflipping and emitter support.
+Use this ReShade path only if you specifically need to keep an older setup.
+
 ## Introduction
 The following Reshade Addon and AVS script are intended to be used with PotPlayer.
 The AVS Script adds a 4x4 pixel block at the top corner of the screen that based on it's color and intensity determines which eye is currently displayed.

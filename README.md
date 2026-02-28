@@ -137,9 +137,15 @@ Windows (in command prompt):
 For those who want the best and most versatile playback performnce on Windows it is recommended to use [PotPlayer](PotPlayer/README.md). 
 Click [here](PotPlayer/README.md) for instructions on how to setup and PotPlayer.
 
+## MPC Video Renderer (Experimental)
+There is also an experimental Open3DOLED fork of MPC Video Renderer with integrated software pageflipping and emitter integration.
+* [MPCVideoRenderer/Readme.md](MPCVideoRenderer/Readme.md)
+* Even though this path is still experimental, it is currently the preferred method on Windows due to better performance, built-in calibration, and integration of the most important features from the Python-based 3DPlayer.
+* Keep your existing player/renderer setup available as a fallback while testing.
+
 ## Gaming
 * If you have a fast PC that can maintain 120hz and you want to play traditional 2D games that are DX 11 or DX 12 you can try out a modified version of [Geo3D](https://github.com/open3doled/Geo3D/releases) to support the Open3DOLED trigger boxes. Game support is somewhat limited but it does work well for certain games.
-* If you are planning to play a traditional games and use reshades SuperDepth3D or any SteamVR games then check out [WibbleWobble](https://github.com/PHARTGAMES/WibbleWobbleCore) the author kindly added  support for the Open3DOLED trigger boxes.
+* If you are planning to play traditional games and use reshades SuperDepth3D or any SteamVR games then check out [WibbleWobble](https://github.com/PHARTGAMES/WibbleWobbleCore) the author kindly added  support for the Open3DOLED trigger boxes.
   * WibbleWobble launches a separate process that performs 120hz page flipping reliably even when your CPU is under heavy load so that you will get minimal dropped frames.
   * Additionally WibbleWobble has a custom module to communicate over usb information about which eye is showing. If anyone wants it I can build a custom version of the firmware that accepts these messages to trigger the shutter glasses directly, eliminating the need to put the unit on your TV or monitor when using WibbleWobble for gaming. Just let me know if you want this.
     
@@ -310,7 +316,7 @@ XIAOMI
 * HDMI bitstream audio passthrough may have issues on some computers, if you are having difficulty it is recommended to disable HDMI audio passthrough and confirm the audio works on your local PC.
 * For test videos beyond the calibration videos below are some recommendations (note the mvc mkv files will only work under PotPlayer currently).
 ```
-   http://bbb3d.renderfarming.net/download.html
+   https://web.archive.org/web/20250128062429/http://bbb3d.renderfarming.net/download.html
    https://kodi.wiki/view/Samples#3D_Test_Clips
 ```
 * If gstreamer cannot initiate playback on a playback pipeline it will timeout after 15 seconds.
@@ -464,4 +470,3 @@ There may be some tips and tricks on there if you are trying to get the most out
 # Licenses
 Please refer to LICENSE files and license folders for references to open source licenses. If you find any missing licenses please open a support ticket.
 <p xmlns:cc="http://creativecommons.org/ns#" xmlns:dct="http://purl.org/dc/terms/"><a property="dct:title" rel="cc:attributionURL" href="https://github.com/open3doled/Open3DOLED">Open3DOLED</a> is licensed under <a href="http://creativecommons.org/licenses/by-nc-sa/4.0/?ref=chooser-v1" target="_blank" rel="license noopener noreferrer" style="display:inline-block;">CC BY-NC-SA 4.0<img style="height:22px!important;margin-left:3px;vertical-align:text-bottom;" src="https://mirrors.creativecommons.org/presskit/icons/cc.svg?ref=chooser-v1"><img style="height:22px!important;margin-left:3px;vertical-align:text-bottom;" src="https://mirrors.creativecommons.org/presskit/icons/by.svg?ref=chooser-v1"><img style="height:22px!important;margin-left:3px;vertical-align:text-bottom;" src="https://mirrors.creativecommons.org/presskit/icons/nc.svg?ref=chooser-v1"><img style="height:22px!important;margin-left:3px;vertical-align:text-bottom;" src="https://mirrors.creativecommons.org/presskit/icons/sa.svg?ref=chooser-v1"></a></p> 
-
