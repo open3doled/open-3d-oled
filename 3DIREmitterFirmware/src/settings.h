@@ -35,6 +35,7 @@
 #define IR_DRIVE_MODE_RF_TRIGGER 3 // D10, D16, D14, D15, D21
 #define IR_DRIVE_MODE_DLP_LINK 4
 #define IR_DRIVE_MODE_DLP_LINK_TRIGGER 5 // D14, D15, D21
+#define IR_DRIVE_MODE_FREE_RUNNING 6 // Use target_frametime to free-run IR timing
 
 // defaults LCD 2560x1080 60hz
 /*

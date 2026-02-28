@@ -45,5 +45,7 @@ void ir_signal_send_finished(void);
 void ir_signal_schedule_send_request(ir_signal_type signal, uint16_t delay);
 void ir_signal_process_trigger(uint8_t left_eye);
 void ir_signal_reset_average_timing(void);
+void ir_signal_free_run_reset(void);
+void ir_signal_free_run_update(void);
 
 #endif /* _IR_SIGNAL_H_ */

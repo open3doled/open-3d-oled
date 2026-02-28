@@ -24,6 +24,10 @@ volatile bool ir_led_pulse_active_flag = false;
 #endif
 uint16_t target_frametime = 0;
 
+static volatile uint32_t ir_free_run_next_time = 0;
+static volatile uint8_t ir_free_run_next_eye = EYE_LEFT;
+static volatile bool ir_free_run_active = false;
+
 const ir_glasses_signal_library_t *volatile ir_glasses_selected_library;
 const ir_glasses_signal_library_t *volatile ir_glasses_selected_library_sub_ir_signal_schedule_send_request;
 const ir_glasses_signal_library_t *volatile ir_glasses_selected_library_sub_ir_signal_send;
@@ -62,6 +66,13 @@ volatile bool ir_average_timing_mode_last_open_timer1_tcnt_set[2] = {false};
 #define IR_AVG_WARMUP_TOL_MIN_US 300
 #define IR_AVG_WARMUP_TOL_DIV 100
 #define IR_AVG_RATE_DETECT_SAMPLES 3
+#define IR_AVG_PC_SERIAL_STEADY_TOL_MIN_US 500
+#define IR_AVG_PC_SERIAL_STEADY_TOL_DIV 80
+#define IR_AVG_PC_SERIAL_WARMUP_TOL_MIN_US 1200
+#define IR_AVG_PC_SERIAL_WARMUP_TOL_DIV 40
+#define IR_AVG_RATE_DETECT_SAMPLES_PCSERIAL 5
+#define IR_PC_SERIAL_PI_MAX_ERR_US 600
+#define IR_PC_SERIAL_PI_SCALE_DIV 2
 
 // For timer 1 isrs and ir_signal_process_trigger
 uint32_t ir_signal_trigger_current_time = 0;
@@ -105,6 +116,11 @@ static inline bool is_average_timing_enabled()
   return ir_average_timing_mode == 1 && target_frametime > 0;
 }
 
+static inline bool is_pc_serial_mode()
+{
+  return ir_drive_mode == IR_DRIVE_MODE_PC_SERIAL;
+}
+
 static inline uint16_t clamp_tolerance(uint16_t target, uint16_t min_us, uint16_t divisor)
 {
   if (target == 0 || divisor == 0) {
@@ -117,6 +133,22 @@ static inline uint16_t clamp_tolerance(uint16_t target, uint16_t min_us, uint16_
 static inline uint32_t abs_diff_u32(uint32_t a, uint32_t b)
 {
   return (a > b) ? (a - b) : (b - a);
+}
+
+static inline uint8_t avg_rate_detect_samples(bool pc_serial)
+{
+  return pc_serial ? IR_AVG_RATE_DETECT_SAMPLES_PCSERIAL : IR_AVG_RATE_DETECT_SAMPLES;
+}
+
+static inline void get_avg_tolerances(uint16_t target, bool pc_serial, uint16_t *steady_tol, uint16_t *warmup_tol)
+{
+  if (pc_serial) {
+    *steady_tol = clamp_tolerance(target, IR_AVG_PC_SERIAL_STEADY_TOL_MIN_US, IR_AVG_PC_SERIAL_STEADY_TOL_DIV);
+    *warmup_tol = clamp_tolerance(target, IR_AVG_PC_SERIAL_WARMUP_TOL_MIN_US, IR_AVG_PC_SERIAL_WARMUP_TOL_DIV);
+  } else {
+    *steady_tol = clamp_tolerance(target, IR_AVG_STEADY_TOL_MIN_US, IR_AVG_STEADY_TOL_DIV);
+    *warmup_tol = clamp_tolerance(target, IR_AVG_WARMUP_TOL_MIN_US, IR_AVG_WARMUP_TOL_DIV);
+  }
 }
 
 void ir_signal_reset_average_timing(void)
@@ -154,6 +186,46 @@ void ir_signal_reset_average_timing(void)
   ir_signal_trigger_logger_counter = 0;
 #endif
   sei();
+}
+
+void ir_signal_free_run_reset(void)
+{
+  cli();
+  ir_free_run_next_time = 0;
+  ir_free_run_next_eye = EYE_LEFT;
+  ir_free_run_active = false;
+  sei();
+}
+
+void ir_signal_free_run_update(void)
+{
+  if (target_frametime == 0)
+  {
+    return;
+  }
+
+  uint32_t interval = (uint32_t)target_frametime;
+  uint32_t now = micros();
+
+  if (!ir_free_run_active)
+  {
+    ir_free_run_next_time = now;
+    ir_free_run_next_eye = EYE_LEFT;
+    ir_free_run_active = true;
+  }
+
+  if ((int32_t)(now - ir_free_run_next_time) >= 0)
+  {
+    ir_signal_process_trigger(ir_free_run_next_eye);
+    ir_free_run_next_eye ^= 1;
+    ir_free_run_next_time += interval;
+
+    if ((int32_t)(now - ir_free_run_next_time) >= (int32_t)interval)
+    {
+      uint32_t steps = (now - ir_free_run_next_time) / interval + 1;
+      ir_free_run_next_time += steps * interval;
+    }
+  }
 }
 
 // This should initialize timer1 for sending ir signals and timer4 for scheduling
@@ -217,6 +289,8 @@ void ir_signal_init()
   ir_signal_trigger_logger_counter = 0;
 #endif
   sei();
+
+  ir_signal_free_run_reset();
 
   // Initialize timer1 for scheduling IR signal sends
   TCCR1C = 0; // Timer stopped, normal mode
@@ -705,6 +779,8 @@ void ir_signal_process_trigger(uint8_t left_eye_in)
   const bool use_avg = is_average_timing_enabled();
   if (use_avg)
   {
+    const bool pc_serial = is_pc_serial_mode();
+    const uint8_t rate_detect_samples = avg_rate_detect_samples(pc_serial);
     cli();
     ir_average_timing_mode_no_trigger_counter = 0;
     sei();
@@ -714,8 +790,9 @@ void ir_signal_process_trigger(uint8_t left_eye_in)
     if (ir_signal_trigger_last_time_set == true)
     {
       uint32_t new_frametime = ir_signal_trigger_current_time - ir_signal_trigger_last_time;
-      const uint16_t steady_tol = clamp_tolerance(target_frametime, IR_AVG_STEADY_TOL_MIN_US, IR_AVG_STEADY_TOL_DIV);
-      const uint16_t warmup_tol = clamp_tolerance(target_frametime, IR_AVG_WARMUP_TOL_MIN_US, IR_AVG_WARMUP_TOL_DIV);
+      uint16_t steady_tol = 0;
+      uint16_t warmup_tol = 0;
+      get_avg_tolerances(target_frametime, pc_serial, &steady_tol, &warmup_tol);
       bool ignore_sample = false;
       bool seeded_sample = false;
 
@@ -754,8 +831,8 @@ void ir_signal_process_trigger(uint8_t left_eye_in)
           ir_signal_trigger_double_rate_counter = 0;
         }
 
-        if (ir_signal_trigger_half_rate_counter >= IR_AVG_RATE_DETECT_SAMPLES ||
-            ir_signal_trigger_double_rate_counter >= IR_AVG_RATE_DETECT_SAMPLES)
+        if (ir_signal_trigger_half_rate_counter >= rate_detect_samples ||
+            ir_signal_trigger_double_rate_counter >= rate_detect_samples)
         {
           uint32_t current_time_snapshot = ir_signal_trigger_current_time;
           uint16_t current_tcnt_snapshot = ir_signal_trigger_current_timer1_tcnt;
@@ -832,34 +909,46 @@ void ir_signal_process_trigger(uint8_t left_eye_in)
             // ----- Begin PI controller based adjustment (replaces time_error >> 4) -----
             // Use fixed-point integer math with Q = IR_PI_Q. This gives tunable Kp and Ki while avoiding floats.
             int16_t err = time_error; // signed 16-bit
+            bool allow_pi = true;
 
-            // Proportional term in Q-scale (int32 intermediate)
-            int32_t P_q = (int32_t)IR_KP_Q * (int32_t)err; // scaled by IR_PI_Q
+            if (pc_serial) {
+              int16_t abs_err = (err < 0) ? (int16_t)(-err) : err;
+              if (abs_err > IR_PC_SERIAL_PI_MAX_ERR_US) {
+                allow_pi = false;
+              } else if (IR_PC_SERIAL_PI_SCALE_DIV > 1) {
+                err = (int16_t)(err / IR_PC_SERIAL_PI_SCALE_DIV);
+              }
+            }
 
-            // Integrator update (Q-scale accumulator)
-            // integral_q += Ki_q * err
-            ir_pi_integral_q[left_eye] += (int32_t)IR_KI_Q * (int32_t)err;
+            if (allow_pi) {
+              // Proportional term in Q-scale (int32 intermediate)
+              int32_t P_q = (int32_t)IR_KP_Q * (int32_t)err; // scaled by IR_PI_Q
 
-            // Anti-windup: clamp integral accumulator to reasonable limits in Q-scale
-            int32_t integral_max_q = ((int32_t)IR_ADJ_MAX) << IR_PI_Q;
-            int32_t integral_min_q = ((int32_t)IR_ADJ_MIN) << IR_PI_Q;
-            if (ir_pi_integral_q[left_eye] > integral_max_q)
-              ir_pi_integral_q[left_eye] = integral_max_q;
-            if (ir_pi_integral_q[left_eye] < integral_min_q)
-              ir_pi_integral_q[left_eye] = integral_min_q;
+              // Integrator update (Q-scale accumulator)
+              // integral_q += Ki_q * err
+              ir_pi_integral_q[left_eye] += (int32_t)IR_KI_Q * (int32_t)err;
 
-            // Combine P and I (Q-scale). No derivative to keep noise low.
-            int32_t out_q = P_q + ir_pi_integral_q[left_eye];
+              // Anti-windup: clamp integral accumulator to reasonable limits in Q-scale
+              int32_t integral_max_q = ((int32_t)IR_ADJ_MAX) << IR_PI_Q;
+              int32_t integral_min_q = ((int32_t)IR_ADJ_MIN) << IR_PI_Q;
+              if (ir_pi_integral_q[left_eye] > integral_max_q)
+                ir_pi_integral_q[left_eye] = integral_max_q;
+              if (ir_pi_integral_q[left_eye] < integral_min_q)
+                ir_pi_integral_q[left_eye] = integral_min_q;
 
-            // Convert back to timer units and clamp
-            int32_t adjustment = out_q >> IR_PI_Q;
-            if (adjustment > IR_ADJ_MAX)
-              adjustment = IR_ADJ_MAX;
-            if (adjustment < IR_ADJ_MIN)
-              adjustment = IR_ADJ_MIN;
+              // Combine P and I (Q-scale). No derivative to keep noise low.
+              int32_t out_q = P_q + ir_pi_integral_q[left_eye];
 
-            temp_ir_signal_trigger_frame_delay_adjustment[0] = (int16_t)adjustment;
-            temp_ir_signal_trigger_frame_delay_adjustment[1] = (int16_t)adjustment;
+              // Convert back to timer units and clamp
+              int32_t adjustment = out_q >> IR_PI_Q;
+              if (adjustment > IR_ADJ_MAX)
+                adjustment = IR_ADJ_MAX;
+              if (adjustment < IR_ADJ_MIN)
+                adjustment = IR_ADJ_MIN;
+
+              temp_ir_signal_trigger_frame_delay_adjustment[0] = (int16_t)adjustment;
+              temp_ir_signal_trigger_frame_delay_adjustment[1] = (int16_t)adjustment;
+            }
             // ----- End PI controller based adjustment -----
           }
 

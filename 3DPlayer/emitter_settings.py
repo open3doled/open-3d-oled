@@ -68,17 +68,34 @@ class EmitterSerialLineReader(serial.threaded.LineReader):
         self._event_thread.name = "emitter-event"
         self._event_thread.start()
         self.lock = threading.Lock()
+        self._send_queue = queue.Queue()
+        self._send_thread = threading.Thread(target=self._run_send)
+        self._send_thread.daemon = True
+        self._send_thread.name = "emitter-send"
+        self._send_thread.start()
         self.__pageflipglsink = None
 
     def stop(self):
         self.alive = False
         self.events.put(None)
         self.responses.put("<exit>")
+        self._send_queue.put(None)
 
     def _run_event(self):
         while self.alive:
             try:
                 self.handle_event(self.events.get())
+            except:
+                traceback.print_exc()
+
+    def _run_send(self):
+        while self.alive:
+            command = self._send_queue.get()
+            if command is None:
+                return
+            try:
+                with self.lock:
+                    self.write_line(command)
             except:
                 traceback.print_exc()
 
@@ -184,21 +201,20 @@ class EmitterSerialLineReader(serial.threaded.LineReader):
     def command(self, command, response="OK", timeout=5):
         with self.lock:  # ensure that just one thread is sending commands at once
             self.write_line(command)
-            lines = []
-            while True:
-                try:
-                    line = self.responses.get(timeout=timeout)
-                    # ~ print("%s -> %r" % (command, line))
-                    if line == response:
-                        return lines
-                    else:
-                        lines.append(line)
-                except queue.Empty:
-                    raise Exception("command timeout ({!r})".format(command))
+        lines = []
+        while True:
+            try:
+                line = self.responses.get(timeout=timeout)
+                # ~ print("%s -> %r" % (command, line))
+                if line == response:
+                    return lines
+                else:
+                    lines.append(line)
+            except queue.Empty:
+                raise Exception("command timeout ({!r})".format(command))
 
     def async_command(self, command, response="OK", timeout=5):
-        with self.lock:  # ensure that just one thread is sending commands at once
-            self.write_line(command)
+        self._send_queue.put(command)
 
     @property
     def pageflipglsink(self):
