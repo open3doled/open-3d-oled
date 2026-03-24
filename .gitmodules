@@ -1,3 +1,7 @@
 [submodule "MPCVideoRenderer"]
 	path = MPCVideoRenderer
 	url = https://github.com/open3doled/MPCVideoRenderer
+[submodule "VLCModule"]
+	path = VLCModule
+	url = https://github.com/open3doled/VLCModule.git
+	branch = main
