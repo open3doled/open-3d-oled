@@ -47,5 +47,11 @@ void ir_signal_process_trigger(uint8_t left_eye);
 void ir_signal_reset_average_timing(void);
 void ir_signal_free_run_reset(void);
 void ir_signal_free_run_update(void);
+#ifdef BLUR_REDUCTION_FIRMWARE
+extern volatile uint8_t ir_blur_active_eye;
+void ir_signal_blur_reset(void);
+void ir_signal_blur_update(void);
+void ir_signal_process_blur_refresh(uint32_t trigger_time_us, uint16_t trigger_timer1_tcnt);
+#endif
 
 #endif /* _IR_SIGNAL_H_ */

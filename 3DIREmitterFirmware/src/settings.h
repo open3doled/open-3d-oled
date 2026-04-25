@@ -3,7 +3,87 @@
  */
 
 #ifndef _SETTINGS_H_
+
 #define _SETTINGS_H_
+
+// Experimental blur-reduction firmware build: detect short OLED refresh dips
+// optically, then emit active/dummy IR events at 2x the measured refresh rate.
+#ifndef BLUR_REDUCTION_FIRMWARE
+#define BLUR_REDUCTION_FIRMWARE 1
+#endif
+#ifndef BLUR_REDUCTION_ACTIVE_EYE
+#define BLUR_REDUCTION_ACTIVE_EYE 1  // 1 = left, 0 = right; ir_flip_eyes still swaps this at runtime.
+#endif
+#ifndef BLUR_OPT_SENSOR_DIP_DELTA_DEFAULT
+#define BLUR_OPT_SENSOR_DIP_DELTA_DEFAULT 2
+#endif
+#ifndef BLUR_OPT_SENSOR_DIP_STEP_DEFAULT
+#define BLUR_OPT_SENSOR_DIP_STEP_DEFAULT 1
+#endif
+#ifndef BLUR_OPT_SENSOR_REQUIRED_FALLING_SAMPLES_DEFAULT
+#define BLUR_OPT_SENSOR_REQUIRED_FALLING_SAMPLES_DEFAULT 1
+#endif
+#ifndef BLUR_OPT_SENSOR_BASELINE_SHIFT_DEFAULT
+#define BLUR_OPT_SENSOR_BASELINE_SHIFT_DEFAULT 4
+#endif
+#ifndef BLUR_OPT_SENSOR_MIN_BASELINE_DEFAULT
+#define BLUR_OPT_SENSOR_MIN_BASELINE_DEFAULT 0
+#endif
+#ifndef BLUR_OPT_SENSOR_MIN_LOCKOUT_US
+#define BLUR_OPT_SENSOR_MIN_LOCKOUT_US 2500
+#endif
+#ifndef BLUR_FRAME_HISTORY_SHIFT
+#define BLUR_FRAME_HISTORY_SHIFT 4
+#endif
+#ifndef BLUR_WARMUP_SAMPLES
+#define BLUR_WARMUP_SAMPLES 4
+#endif
+#ifndef BLUR_MIN_VALID_PERIOD_US
+#define BLUR_MIN_VALID_PERIOD_US 3000UL
+#endif
+#ifndef BLUR_MAX_VALID_PERIOD_US
+#define BLUR_MAX_VALID_PERIOD_US 25000UL
+#endif
+#ifndef BLUR_STEADY_TOL_MIN_US
+#define BLUR_STEADY_TOL_MIN_US 120UL
+#endif
+#ifndef BLUR_STEADY_TOL_DIV
+#define BLUR_STEADY_TOL_DIV 100UL
+#endif
+#ifndef BLUR_WARMUP_TOL_MIN_US
+#define BLUR_WARMUP_TOL_MIN_US 500UL
+#endif
+#ifndef BLUR_WARMUP_TOL_DIV
+#define BLUR_WARMUP_TOL_DIV 30UL
+#endif
+#ifndef BLUR_FREE_RUN_MISS_TOL_DIV
+#define BLUR_FREE_RUN_MISS_TOL_DIV 4UL
+#endif
+#ifndef BLUR_FREE_RUN_MAX_GENERATED_FRAMES
+#define BLUR_FREE_RUN_MAX_GENERATED_FRAMES 8
+#endif
+#ifndef BLUR_PHASE_MODE_ALL
+#define BLUR_PHASE_MODE_ALL 0
+#endif
+#ifndef BLUR_PHASE_MODE_AUTO
+#define BLUR_PHASE_MODE_AUTO 1
+#endif
+#ifndef BLUR_PHASE_MODE_MANUAL_0
+#define BLUR_PHASE_MODE_MANUAL_0 2
+#endif
+#ifndef BLUR_PHASE_MODE_MANUAL_1
+#define BLUR_PHASE_MODE_MANUAL_1 3
+#endif
+#ifndef BLUR_PHASE_BRIGHTNESS_CHANGE_THRESHOLD_DEFAULT
+#define BLUR_PHASE_BRIGHTNESS_CHANGE_THRESHOLD_DEFAULT 8
+#endif
+#ifndef BLUR_PHASE_SCORE_MARGIN_DEFAULT
+#define BLUR_PHASE_SCORE_MARGIN_DEFAULT 16
+#endif
+#ifndef BLUR_PHASE_SCORE_DECAY_SHIFT
+#define BLUR_PHASE_SCORE_DECAY_SHIFT 4
+#endif
+
 
 // #define ENABLE_DEBUG_PIN_OUTPUTS
 #define ENABLE_LOOP_TOGGLE_DEBUG_PIN_D9             // will toggle on/off every time the loop goes round
@@ -193,10 +273,11 @@
 
 #define EEPROM_SETTING_ADDRESS 0
 #define EEPROM_SETTING_CHECKVALUE 0x3D3D3D3D
-#define EMITTER_VERSION 22
+#define EMITTER_VERSION 23
 
 /*
 Version History
+23 - Experimental blur-reduction optical dip detector and phase-gated IR scheduler
 22c - fixed bugs with averaging detection overflowing on wakeup
 22b - improvements to averaging
 22 - Added support for dlplink input

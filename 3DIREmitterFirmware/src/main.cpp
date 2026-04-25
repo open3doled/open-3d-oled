@@ -152,6 +152,18 @@ void setup()
 
         Serial.println("eeprom read_settings");
     }
+#ifdef BLUR_REDUCTION_FIRMWARE
+    if (eeprom_settings.check_value != EEPROM_SETTING_CHECKVALUE || eeprom_settings.version < EMITTER_VERSION)
+    {
+        opt_sensor_detection_threshold_high = BLUR_OPT_SENSOR_DIP_DELTA_DEFAULT;
+        opt_sensor_detection_threshold_low = BLUR_OPT_SENSOR_DIP_STEP_DEFAULT;
+        opt_sensor_min_threshold_value_to_activate = BLUR_OPT_SENSOR_MIN_BASELINE_DEFAULT;
+        opt_sensor_ignore_all_duplicates = BLUR_PHASE_MODE_ALL;
+        opt_sensor_filter_mode = 0;
+    }
+    ir_drive_mode = IR_DRIVE_MODE_OPTICAL;
+    ir_average_timing_mode = 0;
+#endif
     if (ir_drive_mode == IR_DRIVE_MODE_OPTICAL)
     {
         opt_sensor_init();
@@ -210,7 +222,11 @@ void loop()
         else if (!switch_4_blocked)
         {
             switch_4_blocked = true;
+#ifdef BLUR_REDUCTION_FIRMWARE
+            opt_sensor_blur_toggle_phase_override();
+#else
             ir_flip_eyes = (ir_flip_eyes == 1 ? 0 : 1);
+#endif
         }
     }
     else
@@ -392,6 +408,9 @@ void loop()
                         }
                         else if (p == 17)
                         {
+#ifdef BLUR_REDUCTION_FIRMWARE
+                            temp = IR_DRIVE_MODE_OPTICAL;
+#endif
                             if (ir_drive_mode != temp)
                             {
                                 if (ir_drive_mode == IR_DRIVE_MODE_OPTICAL)
@@ -569,6 +588,9 @@ void loop()
     if (ir_drive_mode == IR_DRIVE_MODE_OPTICAL)
     {
         opt_sensor_check_readings();
+#ifdef BLUR_REDUCTION_FIRMWARE
+        ir_signal_blur_update();
+#endif
         current_time = micros();
         if (current_time >= next_print && current_time - next_print < 60000000)
         {
