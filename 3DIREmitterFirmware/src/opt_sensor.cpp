@@ -156,11 +156,19 @@ static inline uint8_t opt_sensor_blur_phase_mode(void)
 
 static inline bool opt_sensor_blur_phase_gate_enabled(void)
 {
+    if (ir_blur_cadence_mode == BLUR_CADENCE_MODE_SYNTHETIC) {
+        return false;
+    }
     return opt_sensor_blur_phase_mode() != BLUR_PHASE_MODE_ALL;
 }
 
 static inline uint32_t opt_sensor_blur_expected_panel_period_us(void)
 {
+    if (ir_blur_panel_period_us >= BLUR_PANEL_PERIOD_MIN_US &&
+        ir_blur_panel_period_us <= BLUR_PANEL_PERIOD_MAX_US) {
+        return ir_blur_panel_period_us;
+    }
+
     if (target_frametime == 0) {
         return 0;
     }
@@ -516,6 +524,12 @@ void opt_sensor_print_stats(void)
         Serial.print(opt_sensor_ss_channel_frequency_detection_counter[0]);
         Serial.print(" phase_gated:");
         Serial.print(opt_sensor_ss_channel_frequency_detection_counter[1]);
+        Serial.print(" panel_period:");
+        Serial.print(ir_blur_panel_period_us);
+        Serial.print(" cadence_mode:");
+        Serial.print(ir_blur_cadence_mode);
+        Serial.print(" correction_shift:");
+        Serial.print(ir_blur_sync_correction_shift);
         Serial.print(" phase_mode:");
         Serial.print(opt_sensor_blur_phase_mode());
         Serial.print(" selected_phase:");
@@ -621,6 +635,7 @@ void opt_sensor_update_thresholds(void)
 void opt_sensor_settings_changed(void)
 {
 #ifdef BLUR_REDUCTION_FIRMWARE
+    ir_signal_blur_settings_changed();
     if (opt_sensor_blur_required_falling_samples < 1) {
         opt_sensor_blur_required_falling_samples = 1;
     }

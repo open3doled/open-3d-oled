@@ -148,6 +148,12 @@ void setup()
             {
                 ir_drive_mode = eeprom_settings.ir_drive_mode;
             }
+            if (eeprom_settings.version >= 24)
+            {
+                ir_blur_panel_period_us = eeprom_settings.ir_blur_panel_period_us;
+                ir_blur_cadence_mode = eeprom_settings.ir_blur_cadence_mode;
+                ir_blur_sync_correction_shift = eeprom_settings.ir_blur_sync_correction_shift;
+            }
         }
 
         Serial.println("eeprom read_settings");
@@ -160,9 +166,13 @@ void setup()
         opt_sensor_min_threshold_value_to_activate = BLUR_OPT_SENSOR_MIN_BASELINE_DEFAULT;
         opt_sensor_ignore_all_duplicates = BLUR_PHASE_MODE_ALL;
         opt_sensor_filter_mode = 0;
+        ir_blur_panel_period_us = BLUR_PANEL_PERIOD_US_DEFAULT;
+        ir_blur_cadence_mode = BLUR_CADENCE_MODE_SYNTHETIC;
+        ir_blur_sync_correction_shift = BLUR_SYNC_CORRECTION_SHIFT_DEFAULT;
     }
     ir_drive_mode = IR_DRIVE_MODE_OPTICAL;
     ir_average_timing_mode = 0;
+    opt_sensor_settings_changed();
 #endif
     if (ir_drive_mode == IR_DRIVE_MODE_OPTICAL)
     {
@@ -273,6 +283,7 @@ void loop()
              * 16) target_frametime -
              *   (the expected time to elapse between frames in microseconds this is 1000000/(monitor refresh rate))
              *   This is used to filter out invalid average frametimes computed when running with 'IR Average Timing Mode'.
+             *   In blur-reduction synthetic cadence mode this is the source-rate IR period.
              *   With PWM displays and 'Ignore All Duplicates' enabled when you have a duplicate frame sent from your PC the sensor will detect a duplicate for each PWM backlight pulse,
              *   in these situations the computed average frametime will be invalid so we just ignore it. (120 hz corresponds to 8333) (default 0 - don't filter average frametimes at all).
              * 11) opt_sensor_ignore_all_duplicates -
@@ -308,6 +319,12 @@ void loop()
              *   detect duplicate frames and pretend they aren't dupes (send no ir) then report the dupe to the host pc so it can skip a second frame immediately. duplicaes are reported to pc in the format "+d 0\n" (right duplicate) "+d 1\n" (left duplicate)
              * 10) opt_sensor_output_stats -
              *   output statistics (if built with OPT_SENSOR_ENABLE_STATS) relating to how the opt_sensor module is processing all lines start with "+stats " followed by specific statistics.
+             * 18) ir_blur_panel_period_us -
+             *   panel scanout period in microseconds for blur-reduction synthetic cadence mode. 165 Hz is 6061, 120 Hz is 8333.
+             * 19) ir_blur_cadence_mode -
+             *   0=direct optical event scheduling, 1=stable synthetic source-rate clock disciplined by optical panel dips.
+             * 20) ir_blur_sync_correction_shift -
+             *   right shift applied to source-boundary phase correction. Larger values correct more slowly.
              */
             for (uint8_t p = 0; p < 21; p++)
             {
@@ -398,8 +415,13 @@ void loop()
                         {
                             if (target_frametime != temp)
                             {
+                                cli();
                                 target_frametime = temp;
+                                sei();
                                 ir_signal_reset_average_timing();
+#ifdef BLUR_REDUCTION_FIRMWARE
+                                ir_signal_blur_reset();
+#endif
                                 if (ir_drive_mode == IR_DRIVE_MODE_FREE_RUNNING)
                                 {
                                     ir_signal_free_run_reset();
@@ -474,6 +496,34 @@ void loop()
                                 ir_drive_mode = temp;
                             }
                         }
+#ifdef BLUR_REDUCTION_FIRMWARE
+                        else if (p == 18)
+                        {
+                            if (ir_blur_panel_period_us != temp)
+                            {
+                                cli();
+                                ir_blur_panel_period_us = temp;
+                                sei();
+                                ir_signal_blur_reset();
+                            }
+                        }
+                        else if (p == 19)
+                        {
+                            if (ir_blur_cadence_mode != temp)
+                            {
+                                ir_blur_cadence_mode = temp;
+                                ir_signal_blur_reset();
+                            }
+                        }
+                        else if (p == 20)
+                        {
+                            if (ir_blur_sync_correction_shift != temp)
+                            {
+                                ir_blur_sync_correction_shift = temp;
+                                ir_signal_blur_reset();
+                            }
+                        }
+#endif
                         opt_sensor_settings_changed();
                     }
                     else if (command == 7 && p == 1 && temp >= 0 && temp < 3) // update glasses mode
@@ -514,7 +564,10 @@ void loop()
                             ir_flip_eyes,
                             opt_sensor_detection_threshold_low,
                             ir_average_timing_mode,
-                            target_frametime};
+                            target_frametime,
+                            ir_blur_panel_period_us,
+                            ir_blur_cadence_mode,
+                            ir_blur_sync_correction_shift};
                         EEPROM.put(EEPROM_SETTING_ADDRESS, eeprom_settings);
                         Serial.println("OK");
                         break;
@@ -579,7 +632,13 @@ void loop()
                 Serial.print(",");
                 Serial.print(target_frametime);
                 Serial.print(",");
-                Serial.println(ir_drive_mode);
+                Serial.print(ir_drive_mode);
+                Serial.print(",");
+                Serial.print(ir_blur_panel_period_us);
+                Serial.print(",");
+                Serial.print(ir_blur_cadence_mode);
+                Serial.print(",");
+                Serial.println(ir_blur_sync_correction_shift);
                 Serial.println("OK");
             }
             input = String();

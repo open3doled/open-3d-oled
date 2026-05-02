@@ -30,6 +30,9 @@ static volatile bool ir_free_run_active = false;
 
 #ifdef BLUR_REDUCTION_FIRMWARE
 volatile uint8_t ir_blur_active_eye = BLUR_REDUCTION_ACTIVE_EYE;
+volatile uint16_t ir_blur_panel_period_us = BLUR_PANEL_PERIOD_US_DEFAULT;
+volatile uint8_t ir_blur_cadence_mode = BLUR_CADENCE_MODE_SYNTHETIC;
+volatile uint8_t ir_blur_sync_correction_shift = BLUR_SYNC_CORRECTION_SHIFT_DEFAULT;
 static volatile bool ir_blur_period_set = false;
 static volatile uint16_t ir_blur_period_average = 0;
 static uint32_t ir_blur_period_average_shifted = 0;
@@ -38,6 +41,9 @@ static bool ir_blur_last_real_trigger_time_set = false;
 static uint32_t ir_blur_next_expected_time = 0;
 static uint8_t ir_blur_period_sample_count = 0;
 static uint8_t ir_blur_generated_without_trigger = 0;
+static bool ir_blur_synth_running = false;
+static bool ir_blur_synth_pair_armed = false;
+static uint16_t ir_blur_synth_phase_accum_us = 0;
 #endif
 
 const ir_glasses_signal_library_t *volatile ir_glasses_selected_library;
@@ -257,6 +263,11 @@ void ir_signal_init()
   ir_led_pulse_active_flag = false;
 #endif
   target_frametime = 0;
+#ifdef BLUR_REDUCTION_FIRMWARE
+  ir_blur_panel_period_us = BLUR_PANEL_PERIOD_US_DEFAULT;
+  ir_blur_cadence_mode = BLUR_CADENCE_MODE_SYNTHETIC;
+  ir_blur_sync_correction_shift = BLUR_SYNC_CORRECTION_SHIFT_DEFAULT;
+#endif
 
   for (uint8_t i = 0; i < SIGNAL_SEND_QUEUE_SIZE; i++)
   {
@@ -650,6 +661,11 @@ static inline uint32_t ir_blur_abs_diff_u32(uint32_t a, uint32_t b)
     return (a > b) ? (a - b) : (b - a);
 }
 
+static inline int32_t ir_blur_abs_i32(int32_t value)
+{
+    return (value < 0) ? -value : value;
+}
+
 static inline uint16_t ir_blur_clamp_tolerance(uint16_t target, uint16_t min_us, uint16_t divisor)
 {
     if (target == 0 || divisor == 0) {
@@ -718,6 +734,23 @@ void ir_signal_blur_reset(void)
     ir_blur_period_average_shifted = 0;
     ir_blur_last_real_trigger_time_set = false;
     ir_blur_period_sample_count = 0;
+    ir_blur_synth_running = false;
+    ir_blur_synth_pair_armed = false;
+    ir_blur_synth_phase_accum_us = 0;
+}
+
+void ir_signal_blur_settings_changed(void)
+{
+    if (ir_blur_panel_period_us < BLUR_PANEL_PERIOD_MIN_US ||
+        ir_blur_panel_period_us > BLUR_PANEL_PERIOD_MAX_US) {
+        ir_blur_panel_period_us = BLUR_PANEL_PERIOD_US_DEFAULT;
+    }
+    if (ir_blur_cadence_mode > BLUR_CADENCE_MODE_SYNTHETIC) {
+        ir_blur_cadence_mode = BLUR_CADENCE_MODE_SYNTHETIC;
+    }
+    if (ir_blur_sync_correction_shift > BLUR_SYNC_CORRECTION_SHIFT_MAX) {
+        ir_blur_sync_correction_shift = BLUR_SYNC_CORRECTION_SHIFT_DEFAULT;
+    }
 }
 
 static void ir_blur_prepare_library(void)
@@ -765,28 +798,42 @@ static bool ir_blur_schedule_eye_at_tcnt(uint8_t eye, uint16_t base_tcnt, uint16
     return scheduled;
 }
 
-static void ir_blur_schedule_pair_at_tcnt(uint16_t base_tcnt, uint16_t period_us)
+static uint16_t ir_blur_delay_sum(uint16_t a, uint16_t b)
+{
+    uint32_t sum = (uint32_t)a + b;
+    return (sum > 30000UL) ? 30000 : (uint16_t)sum;
+}
+
+static bool ir_blur_schedule_pair_at_tcnt(uint16_t base_tcnt, uint16_t period_us, uint16_t source_delay_us);
+
+static bool ir_blur_schedule_pair_at_tcnt(uint16_t base_tcnt, uint16_t period_us)
+{
+    return ir_blur_schedule_pair_at_tcnt(base_tcnt, period_us, 0);
+}
+
+static bool ir_blur_schedule_pair_at_tcnt(uint16_t base_tcnt, uint16_t period_us, uint16_t source_delay_us)
 {
     uint8_t active_eye = ir_blur_active_eye ? 1 : 0;
     uint8_t dummy_eye = active_eye ^ 1;
     uint16_t half_period = period_us >> 1;
 
-    ir_blur_schedule_eye_at_tcnt(active_eye, base_tcnt, ir_frame_delay);
-    if (half_period > 0) {
-        ir_blur_schedule_eye_at_tcnt(dummy_eye, base_tcnt, ir_frame_delay + half_period);
+    bool active_scheduled = ir_blur_schedule_eye_at_tcnt(active_eye, base_tcnt, ir_blur_delay_sum(source_delay_us, ir_frame_delay));
+    if (active_scheduled && half_period > 0) {
+        ir_blur_schedule_eye_at_tcnt(dummy_eye, base_tcnt, ir_blur_delay_sum(ir_blur_delay_sum(source_delay_us, ir_frame_delay), half_period));
     }
+    return active_scheduled;
 }
 
-static bool ir_blur_period_valid(uint32_t period)
+static bool ir_blur_period_valid(uint32_t period, uint16_t expected_period)
 {
     if (period < BLUR_MIN_VALID_PERIOD_US || period > BLUR_MAX_VALID_PERIOD_US) {
         return false;
     }
-    if (target_frametime > 0) {
+    if (expected_period > 0) {
         uint16_t tol = (ir_blur_period_sample_count < BLUR_WARMUP_SAMPLES)
-            ? ir_blur_clamp_tolerance(target_frametime, BLUR_WARMUP_TOL_MIN_US, BLUR_WARMUP_TOL_DIV)
-            : ir_blur_clamp_tolerance(target_frametime, BLUR_STEADY_TOL_MIN_US, BLUR_STEADY_TOL_DIV);
-        return ir_blur_abs_diff_u32(period, target_frametime) <= tol;
+            ? ir_blur_clamp_tolerance(expected_period, BLUR_WARMUP_TOL_MIN_US, BLUR_WARMUP_TOL_DIV)
+            : ir_blur_clamp_tolerance(expected_period, BLUR_STEADY_TOL_MIN_US, BLUR_STEADY_TOL_DIV);
+        return ir_blur_abs_diff_u32(period, expected_period) <= tol;
     }
     return true;
 }
@@ -814,20 +861,13 @@ static void ir_blur_update_period(uint16_t new_period)
     }
 }
 
-void ir_signal_process_blur_refresh(uint32_t trigger_time_us, uint16_t trigger_timer1_tcnt)
+static void ir_signal_process_blur_direct_refresh(uint32_t trigger_time_us, uint16_t trigger_timer1_tcnt)
 {
-    if (trigger_time_us == 0) {
-        trigger_time_us = micros();
-        cli();
-        trigger_timer1_tcnt = TCNT1;
-        sei();
-    }
-
     uint16_t period_for_schedule = 0;
 
     if (ir_blur_last_real_trigger_time_set) {
         uint32_t new_period = trigger_time_us - ir_blur_last_real_trigger_time;
-        if (ir_blur_period_valid(new_period)) {
+        if (ir_blur_period_valid(new_period, target_frametime)) {
             ir_blur_update_period((uint16_t)new_period);
         } else if (new_period > BLUR_MAX_VALID_PERIOD_US ||
                    (target_frametime > 0 && new_period > ((uint32_t)target_frametime << 1))) {
@@ -858,7 +898,118 @@ void ir_signal_process_blur_refresh(uint32_t trigger_time_us, uint16_t trigger_t
     ir_blur_schedule_pair_at_tcnt(trigger_timer1_tcnt, period_for_schedule);
 }
 
-void ir_signal_blur_update(void)
+static bool ir_blur_synthetic_add_panel_scan(uint16_t panel_period, uint16_t source_period)
+{
+    uint32_t phase = (uint32_t)ir_blur_synth_phase_accum_us + panel_period;
+    bool source_boundary = false;
+
+    if (phase >= source_period) {
+        phase -= source_period;
+        source_boundary = true;
+        while (phase >= source_period) {
+            phase -= source_period;
+        }
+    }
+
+    ir_blur_synth_phase_accum_us = (uint16_t)phase;
+    return source_boundary;
+}
+
+static void ir_blur_apply_synthetic_sync(uint32_t boundary_time, uint16_t source_period)
+{
+    if (!ir_blur_synth_running || ir_blur_synth_pair_armed || ir_blur_sync_correction_shift > BLUR_SYNC_CORRECTION_SHIFT_MAX) {
+        return;
+    }
+
+    int32_t err_next = (int32_t)(boundary_time - ir_blur_next_expected_time);
+    uint32_t previous_expected = ir_blur_next_expected_time - source_period;
+    int32_t err_previous = (int32_t)(boundary_time - previous_expected);
+    int32_t err = (ir_blur_abs_i32(err_previous) < ir_blur_abs_i32(err_next)) ? err_previous : err_next;
+
+    if (ir_blur_abs_i32(err) > (int16_t)(source_period >> 1)) {
+        return;
+    }
+
+    int32_t correction = (ir_blur_sync_correction_shift == 0) ? err : (err >> ir_blur_sync_correction_shift);
+    ir_blur_next_expected_time += correction;
+}
+
+static void ir_signal_process_blur_synthetic_refresh(uint32_t trigger_time_us)
+{
+    uint16_t source_period = target_frametime;
+    uint16_t panel_period = ir_blur_panel_period_us;
+
+    ir_blur_generated_without_trigger = 0;
+
+    if (source_period == 0 || panel_period == 0) {
+        ir_blur_last_real_trigger_time = trigger_time_us;
+        ir_blur_last_real_trigger_time_set = true;
+        return;
+    }
+
+    uint8_t elapsed_panel_scans = 1;
+    bool source_boundary = false;
+
+    if (ir_blur_last_real_trigger_time_set) {
+        uint32_t elapsed_us = trigger_time_us - ir_blur_last_real_trigger_time;
+        elapsed_panel_scans = (uint8_t)((elapsed_us + (panel_period >> 1)) / panel_period);
+        if (elapsed_panel_scans < 1) {
+            elapsed_panel_scans = 1;
+        }
+
+        if (elapsed_panel_scans > BLUR_MAX_ELAPSED_PANEL_SCANS) {
+            ir_signal_blur_reset();
+            ir_blur_last_real_trigger_time = trigger_time_us;
+            ir_blur_last_real_trigger_time_set = true;
+            ir_blur_synth_running = true;
+            ir_blur_next_expected_time = trigger_time_us;
+            return;
+        }
+
+        uint32_t single_panel = (elapsed_us + (elapsed_panel_scans >> 1)) / elapsed_panel_scans;
+        if (ir_blur_period_valid(single_panel, panel_period)) {
+            ir_blur_update_period((uint16_t)single_panel);
+        }
+    }
+
+    if (!ir_blur_synth_running) {
+        ir_blur_synth_running = true;
+        ir_blur_synth_pair_armed = false;
+        ir_blur_synth_phase_accum_us = 0;
+        ir_blur_next_expected_time = trigger_time_us;
+    } else {
+        for (uint8_t i = 0; i < elapsed_panel_scans; i++) {
+            if (ir_blur_synthetic_add_panel_scan(panel_period, source_period)) {
+                source_boundary = true;
+            }
+        }
+    }
+
+    ir_blur_last_real_trigger_time = trigger_time_us;
+    ir_blur_last_real_trigger_time_set = true;
+
+    if (source_boundary) {
+        ir_blur_apply_synthetic_sync(trigger_time_us, source_period);
+    }
+}
+
+void ir_signal_process_blur_refresh(uint32_t trigger_time_us, uint16_t trigger_timer1_tcnt)
+{
+    if (trigger_time_us == 0) {
+        trigger_time_us = micros();
+        cli();
+        trigger_timer1_tcnt = TCNT1;
+        sei();
+    }
+
+    if (ir_blur_cadence_mode == BLUR_CADENCE_MODE_DIRECT) {
+        ir_signal_process_blur_direct_refresh(trigger_time_us, trigger_timer1_tcnt);
+    } else {
+        ir_signal_process_blur_synthetic_refresh(trigger_time_us);
+    }
+}
+
+static void ir_signal_blur_update_direct(void)
 {
     uint16_t period = 0;
     cli();
@@ -885,6 +1036,64 @@ void ir_signal_blur_update(void)
         ir_blur_schedule_pair_at_tcnt(tcnt, period);
         ir_blur_next_expected_time += period;
         ir_blur_generated_without_trigger++;
+    }
+}
+
+static void ir_signal_blur_update_synthetic(void)
+{
+    uint16_t period = target_frametime;
+    if (period == 0 || !ir_blur_synth_running || !ir_blur_last_real_trigger_time_set) {
+        return;
+    }
+
+    uint32_t now = micros();
+    uint32_t stop_time = ir_blur_last_real_trigger_time + ((uint32_t)period * (BLUR_FREE_RUN_MAX_GENERATED_FRAMES + 1UL));
+    if (ir_blur_time_reached(now, stop_time)) {
+        ir_blur_synth_running = false;
+        ir_blur_synth_pair_armed = false;
+        return;
+    }
+
+    if (ir_blur_synth_pair_armed && ir_blur_time_reached(now, ir_blur_next_expected_time)) {
+        ir_blur_next_expected_time += period;
+        ir_blur_synth_pair_armed = false;
+    }
+
+    int32_t until_next = (int32_t)(ir_blur_next_expected_time - now);
+    if (until_next > (int32_t)BLUR_SYNTH_SCHEDULE_AHEAD_US) {
+        return;
+    }
+
+    while (until_next < -(int32_t)period) {
+        ir_blur_next_expected_time += period;
+        until_next = (int32_t)(ir_blur_next_expected_time - now);
+        ir_blur_synth_pair_armed = false;
+    }
+
+    if (ir_blur_synth_pair_armed) {
+        return;
+    }
+
+    uint16_t lead_us = (until_next > 0) ? (uint16_t)until_next : 0;
+    uint16_t tcnt;
+    cli();
+    tcnt = TCNT1;
+    sei();
+
+    if (ir_blur_schedule_pair_at_tcnt(tcnt, period, lead_us)) {
+        ir_blur_synth_pair_armed = true;
+        if (ir_blur_time_reached(ir_blur_next_expected_time, ir_blur_last_real_trigger_time + period)) {
+            ir_blur_generated_without_trigger++;
+        }
+    }
+}
+
+void ir_signal_blur_update(void)
+{
+    if (ir_blur_cadence_mode == BLUR_CADENCE_MODE_DIRECT) {
+        ir_signal_blur_update_direct();
+    } else {
+        ir_signal_blur_update_synthetic();
     }
 }
 

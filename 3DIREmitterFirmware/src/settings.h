@@ -7,7 +7,7 @@
 #define _SETTINGS_H_
 
 // Experimental blur-reduction firmware build: detect short OLED refresh dips
-// optically, then emit active/dummy IR events at 2x the measured refresh rate.
+// optically, then emit active/dummy IR events from a stable source-rate clock.
 #ifndef BLUR_REDUCTION_FIRMWARE
 #define BLUR_REDUCTION_FIRMWARE 1
 #endif
@@ -61,6 +61,33 @@
 #endif
 #ifndef BLUR_FREE_RUN_MAX_GENERATED_FRAMES
 #define BLUR_FREE_RUN_MAX_GENERATED_FRAMES 8
+#endif
+#ifndef BLUR_PANEL_PERIOD_US_DEFAULT
+#define BLUR_PANEL_PERIOD_US_DEFAULT 6061 // 165 Hz panel scanout
+#endif
+#ifndef BLUR_PANEL_PERIOD_MIN_US
+#define BLUR_PANEL_PERIOD_MIN_US 3000
+#endif
+#ifndef BLUR_PANEL_PERIOD_MAX_US
+#define BLUR_PANEL_PERIOD_MAX_US 25000
+#endif
+#ifndef BLUR_CADENCE_MODE_DIRECT
+#define BLUR_CADENCE_MODE_DIRECT 0
+#endif
+#ifndef BLUR_CADENCE_MODE_SYNTHETIC
+#define BLUR_CADENCE_MODE_SYNTHETIC 1
+#endif
+#ifndef BLUR_SYNC_CORRECTION_SHIFT_DEFAULT
+#define BLUR_SYNC_CORRECTION_SHIFT_DEFAULT 3
+#endif
+#ifndef BLUR_SYNC_CORRECTION_SHIFT_MAX
+#define BLUR_SYNC_CORRECTION_SHIFT_MAX 8
+#endif
+#ifndef BLUR_SYNTH_SCHEDULE_AHEAD_US
+#define BLUR_SYNTH_SCHEDULE_AHEAD_US 1200
+#endif
+#ifndef BLUR_MAX_ELAPSED_PANEL_SCANS
+#define BLUR_MAX_ELAPSED_PANEL_SCANS 8
 #endif
 #ifndef BLUR_PHASE_MODE_ALL
 #define BLUR_PHASE_MODE_ALL 0
@@ -273,10 +300,11 @@
 
 #define EEPROM_SETTING_ADDRESS 0
 #define EEPROM_SETTING_CHECKVALUE 0x3D3D3D3D
-#define EMITTER_VERSION 23
+#define EMITTER_VERSION 24
 
 /*
 Version History
+24 - Added configurable blur panel period and synthetic source-rate IR scheduler
 23 - Experimental blur-reduction optical dip detector and phase-gated IR scheduler
 22c - fixed bugs with averaging detection overflowing on wakeup
 22b - improvements to averaging
@@ -316,6 +344,9 @@ struct EEPROMSettings
   uint8_t opt_sensor_detection_threshold_low; // was opt_sensor_ignore_all_duplicates;
   uint8_t ir_average_timing_mode;             // was opt_sensor_filter_mode;
   uint16_t target_frametime;
+  uint16_t ir_blur_panel_period_us;
+  uint8_t ir_blur_cadence_mode;
+  uint8_t ir_blur_sync_correction_shift;
 };
 
 #endif /* _SETTINGS_H_ */
