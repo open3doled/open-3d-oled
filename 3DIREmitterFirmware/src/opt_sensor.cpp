@@ -23,6 +23,7 @@ uint32_t opt_sensor_stats_count = 0;
 uint32_t opt_sensor_current_time;
 #ifdef OPT_SENSOR_ENABLE_STREAM_READINGS_TO_SERIAL
 uint8_t opt_sensor_enable_stream_readings_to_serial = 0;
+static uint32_t opt_sensor_stream_next_reading_time = 0;
 #endif
 uint8_t opt_sensor_enable_frequency_analysis_based_duplicate_frame_detection = 0;
 uint8_t opt_sensor_enable_ignore_during_ir = 0;
@@ -92,6 +93,9 @@ void opt_sensor_init(void)
 #ifdef OPT_SENSOR_ENABLE_STATS
     opt_sensor_stats_count = 0;
 #endif
+#ifdef OPT_SENSOR_ENABLE_STREAM_READINGS_TO_SERIAL
+    opt_sensor_stream_next_reading_time = 0;
+#endif
     opt_sensor_block_signal_detection_until = 0;
     opt_sensor_disable_debug_detection_flag_after = 0;
     opt_sensor_detected_signal_start_eye = 0;
@@ -146,6 +150,14 @@ void opt_sensor_stop(void)
 {
     ADCSRA &= ~(_BV(ADEN) | _BV(ADIE));
 }
+
+#ifdef OPT_SENSOR_ENABLE_STREAM_READINGS_TO_SERIAL
+void opt_sensor_set_stream_readings_to_serial(uint8_t enable)
+{
+    opt_sensor_enable_stream_readings_to_serial = enable ? 1 : 0;
+    opt_sensor_stream_next_reading_time = 0;
+}
+#endif
 
 #ifdef OPT_SENSOR_ENABLE_STATS
 void opt_sensor_print_stats(void)
@@ -312,7 +324,7 @@ void opt_sensor_check_readings(void)
                         opt_sensor_reading_triggered_count[c] = 0;
                     }
                 }
-                if ((opt_sensor_reading_triggered_count[c] > OPT_TRIGGER_COUNT_THRESHOLD || (opt_sensor_enable_stream_readings_to_serial && opt_sensor_reading_triggered_count[c] > 1))) // when we are running in sensor log mode we skip the check as it already takes 140 us per cycle, there is still the risk of miss triggering, but operating on a pwm backlight display sensor log mode already breaks the algorithm entirely (this at least helps it kind of continue working)
+                if (opt_sensor_reading_triggered_count[c] > OPT_TRIGGER_COUNT_THRESHOLD)
                 {
                     if (opt_sensor_reading_triggered[c] == false) // we only count it the first time we hit it....)
                     {
@@ -389,11 +401,22 @@ void opt_sensor_check_readings(void)
 #ifdef OPT_SENSOR_ENABLE_STREAM_READINGS_TO_SERIAL
         if (opt_sensor_enable_stream_readings_to_serial)
         {
-            uint8_t buffer[3 + 10 + 2] = {'+', 'o', ' ', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, '\r', '\n'};
             if (opt_sensor_current_time == 0)
             {
                 opt_sensor_current_time = micros();
             }
+            const bool stream_due =
+                opt_sensor_stream_next_reading_time == 0 ||
+                (int32_t)(opt_sensor_current_time - opt_sensor_stream_next_reading_time) >= 0;
+            const bool stream_event =
+                opt_sensor_initiated_sending_ir_signal ||
+                opt_sensor_duplicate_frame[0] || opt_sensor_duplicate_frame[1] ||
+                opt_sensor_ignore_duplicate[0] || opt_sensor_ignore_duplicate[1];
+            if (stream_due || stream_event)
+            {
+                uint8_t buffer[3 + 10 + 2] = {'+', 'o', ' ', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, '\r', '\n'};
+                opt_sensor_stream_next_reading_time =
+                    opt_sensor_current_time + OPT_SENSOR_STREAM_READINGS_TO_SERIAL_MIN_PERIOD_US;
             /*
             Serial.print("+o ");
             Serial.print(opt_sensor_current_time);
@@ -403,33 +426,43 @@ void opt_sensor_check_readings(void)
             Serial.println(checked_readings[1]);
             */
 
-            buffer[3] = (0x80 |
-                         (opt_sensor_duplicate_frame[1] == true ? 0x20 : 0x00) |
-                         (opt_sensor_ignore_duplicate[1] == true ? 0x10 : 0x00) |
-                         (opt_sensor_reading_triggered[1] == true ? 0x08 : 0x00) |
-                         (opt_sensor_duplicate_frame[0] == true ? 0x04 : 0x00) |
-                         (opt_sensor_ignore_duplicate[0] == true ? 0x02 : 0x00) |
-                         (opt_sensor_reading_triggered[0] == true ? 0x01 : 0x00));
-            buffer[4] = (0x80 |
-                         (opt_sensor_readings_active == true ? 0x08 : 0x00) |
-                         (opt_sensor_detected_signal_start_eye == 1 ? 0x04 : 0x00) |
-                         (opt_sensor_initiated_sending_ir_signal ? 0x02 : 0x00) |
-                         (opt_sensor_block_signal_detection_until > 0 ? 0x01 : 0x00));
-            buffer[5] = 0x80 | ((opt_sensor_duplicate_frames_in_a_row_counter) & 0x7f);
-            buffer[6] = 0x80 | ((checked_readings[0] >> 2) & 0x3f);
-            buffer[7] = 0x80 | ((checked_readings[1] >> 3) & 0x1f) | ((checked_readings[0] << 5) & 0x60);
-            buffer[8] = 0x80 | ((opt_sensor_current_time >> 28) & 0x0f) | ((checked_readings[1] << 4) & 0x70);
-            buffer[9] = 0x80 | ((opt_sensor_current_time >> 21) & 0x7f);
-            buffer[10] = 0x80 | ((opt_sensor_current_time >> 14) & 0x7f);
-            buffer[11] = 0x80 | ((opt_sensor_current_time >> 7) & 0x7f);
-            buffer[12] = 0x80 | ((opt_sensor_current_time >> 0) & 0x7f);
-            Serial.write(buffer, 15);
-            // We only really need to clear these here, as their values aren't used in between loops except for sensor logging.
-            opt_sensor_initiated_sending_ir_signal = false;
-            opt_sensor_duplicate_frame[1] = false;
-            opt_sensor_ignore_duplicate[1] = false;
-            opt_sensor_duplicate_frame[0] = false;
-            opt_sensor_ignore_duplicate[0] = false;
+                buffer[3] = (0x80 |
+                             (opt_sensor_duplicate_frame[1] == true ? 0x20 : 0x00) |
+                             (opt_sensor_ignore_duplicate[1] == true ? 0x10 : 0x00) |
+                             (opt_sensor_reading_triggered[1] == true ? 0x08 : 0x00) |
+                             (opt_sensor_duplicate_frame[0] == true ? 0x04 : 0x00) |
+                             (opt_sensor_ignore_duplicate[0] == true ? 0x02 : 0x00) |
+                             (opt_sensor_reading_triggered[0] == true ? 0x01 : 0x00));
+                buffer[4] = (0x80 |
+                             (opt_sensor_readings_active == true ? 0x08 : 0x00) |
+                             (opt_sensor_detected_signal_start_eye == 1 ? 0x04 : 0x00) |
+                             (opt_sensor_initiated_sending_ir_signal ? 0x02 : 0x00) |
+                             (opt_sensor_block_signal_detection_until > 0 ? 0x01 : 0x00));
+                buffer[5] = 0x80 | ((opt_sensor_duplicate_frames_in_a_row_counter) & 0x7f);
+                buffer[6] = 0x80 | ((checked_readings[0] >> 2) & 0x3f);
+                buffer[7] = 0x80 | ((checked_readings[1] >> 3) & 0x1f) | ((checked_readings[0] << 5) & 0x60);
+                buffer[8] = 0x80 | ((opt_sensor_current_time >> 28) & 0x0f) | ((checked_readings[1] << 4) & 0x70);
+                buffer[9] = 0x80 | ((opt_sensor_current_time >> 21) & 0x7f);
+                buffer[10] = 0x80 | ((opt_sensor_current_time >> 14) & 0x7f);
+                buffer[11] = 0x80 | ((opt_sensor_current_time >> 7) & 0x7f);
+                buffer[12] = 0x80 | ((opt_sensor_current_time >> 0) & 0x7f);
+#if defined(ARDUINO) && ARDUINO >= 10600
+                if (Serial.availableForWrite() >= (int)sizeof(buffer))
+#endif
+                {
+                    Serial.write(buffer, sizeof(buffer));
+                    // We only really need to clear these here, as their values aren't used in between loops except for sensor logging.
+                    opt_sensor_initiated_sending_ir_signal = false;
+                    opt_sensor_duplicate_frame[1] = false;
+                    opt_sensor_ignore_duplicate[1] = false;
+                    opt_sensor_duplicate_frame[0] = false;
+                    opt_sensor_ignore_duplicate[0] = false;
+                }
+            }
+        }
+        else
+        {
+            opt_sensor_stream_next_reading_time = 0;
         }
 #endif
         for (uint8_t c = 0; c < OPT_SENSOR_CHANNELS; c++)

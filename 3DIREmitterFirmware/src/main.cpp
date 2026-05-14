@@ -515,7 +515,7 @@ void loop()
 #ifdef OPT_SENSOR_ENABLE_STREAM_READINGS_TO_SERIAL
                     else if (command == 10 && p == 1 && temp >= 0 && temp < 2) // toggle opt_sensor stream readings to serial
                     {
-                        opt_sensor_enable_stream_readings_to_serial = temp;
+                        opt_sensor_set_stream_readings_to_serial(temp);
                         Serial.println("OK");
                         break;
                     }
