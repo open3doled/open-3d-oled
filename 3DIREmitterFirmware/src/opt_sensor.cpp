@@ -11,6 +11,7 @@
 #define bitclr(reg, bit) (reg &= ~(1 << bit)) // Clear register bit.
 #define bittst(reg, bit) (reg & (1 << bit))   // Test register bit.
 #define mult_by_threshold(high, low, threshold) (((uint16_t)threshold * (uint16_t)high + (uint16_t)(255 - threshold) * (uint16_t)low) >> 8)
+#define OPT_SENSOR_MIN_BLOCK_SIGNAL_DETECTION_DELAY_US 3000
 
 #ifdef OPT_SENSOR_ENABLE_IGNORE_DURING_IR
 volatile uint8_t ir_led_token_active_countdown = 0;
@@ -84,6 +85,20 @@ uint8_t opt_sensor_ss_readings_threshold_low[OPT_SENSOR_CHANNELS];
 */
 // const uint8_t admux[OPT_SENSOR_CHANNELS] = {ADC7D, ADC6D, ADC5D, ADC4D}; // ADC MUX channels.
 const uint8_t admux[OPT_SENSOR_CHANNELS] = {ADC7D, ADC6D}; // ADC MUX channels. (right eye, left eye)
+
+static uint32_t opt_sensor_min_safe_block_delay(void)
+{
+    if (target_frametime > 0)
+    {
+        uint32_t scaled = ((uint32_t)target_frametime * 4U) / 5U;
+        if (scaled < OPT_SENSOR_MIN_BLOCK_SIGNAL_DETECTION_DELAY_US)
+        {
+            return OPT_SENSOR_MIN_BLOCK_SIGNAL_DETECTION_DELAY_US;
+        }
+        return scaled;
+    }
+    return OPT_SENSOR_BLOCK_SIGNAL_DETECTION_DELAY;
+}
 
 void opt_sensor_init(void)
 {
@@ -283,6 +298,15 @@ void opt_sensor_update_thresholds(void)
 
 void opt_sensor_settings_changed(void)
 {
+    if (ir_drive_mode == IR_DRIVE_MODE_OPTICAL)
+    {
+        uint32_t min_delay = opt_sensor_min_safe_block_delay();
+        if (opt_sensor_block_signal_detection_delay < min_delay)
+        {
+            opt_sensor_block_signal_detection_delay = min_delay;
+        }
+    }
+
     if (opt_sensor_ignore_all_duplicates)
     {
         opt_sensor_detected_signal_start_eye_set = false;

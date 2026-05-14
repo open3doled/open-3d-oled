@@ -12,7 +12,9 @@
 #define OPT_TRIGGER_COUNT_THRESHOLD 2    // We need this many triggers in a row before sending the shutter glass signal based on the trigger boxes
 #define OPT_FRAMETIME_COUNT_PERIOD_2PN 7 // This is how often we update the frametime in cycles as 2^(OPT_FRAMETIME_COUNT_PERIOD_2PN) (eg 2^7 = 128)
 #define OPT_FRAMETIME_COUNT_PERIOD (1 << OPT_FRAMETIME_COUNT_PERIOD_2PN)
-#define OPT_SENSOR_STREAM_READINGS_TO_SERIAL_MIN_PERIOD_US 500
+// Keep optical debug below the rate where USB CDC traffic can starve IR timing
+// work on ATmega32U4 during active optical triggering.
+#define OPT_SENSOR_STREAM_READINGS_TO_SERIAL_MIN_PERIOD_US 100
 
 extern uint32_t opt_sensor_block_signal_detection_delay;
 extern uint8_t opt_sensor_ignore_all_duplicates;

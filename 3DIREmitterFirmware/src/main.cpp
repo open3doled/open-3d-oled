@@ -152,6 +152,7 @@ void setup()
 
         Serial.println("eeprom read_settings");
     }
+    opt_sensor_settings_changed();
     if (ir_drive_mode == IR_DRIVE_MODE_OPTICAL)
     {
         opt_sensor_init();
@@ -476,6 +477,7 @@ void loop()
                     }
                     else if (command == 8) // store current config to eeprom as default
                     {
+                        opt_sensor_settings_changed();
                         EEPROMSettings eeprom_settings = {
                             EEPROM_SETTING_CHECKVALUE,
                             EMITTER_VERSION,
