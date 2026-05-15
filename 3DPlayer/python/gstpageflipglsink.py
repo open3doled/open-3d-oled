@@ -43,6 +43,7 @@ import threading
 import os
 import psutil
 import ctypes
+import subprocess
 
 # """
 import gi
@@ -1342,8 +1343,8 @@ class PageflipGLWindow(threading.Thread):
                                 self.__viewsonic_xg2431_strobe_mode = 5
                             else:
                                 self.__viewsonic_xg2431_strobe_mode = 0
-                            os.system(
-                                f"sudo ddcutil --verbose --model XG2431 setvcp 0xE8 {self.__viewsonic_xg2431_strobe_mode}"
+                            self.__set_viewsonic_xg2431_vcp(
+                                "0xE8", self.__viewsonic_xg2431_strobe_mode
                             )
                             subtitle_text = (
                                 f"strobe mode {self.__viewsonic_xg2431_strobe_mode}"
@@ -1357,8 +1358,8 @@ class PageflipGLWindow(threading.Thread):
                                 ),
                                 1,
                             )
-                            os.system(
-                                f"sudo ddcutil --verbose --model XG2431 setvcp 0xEF {self.__viewsonic_xg2431_strobe_length}"
+                            self.__set_viewsonic_xg2431_vcp(
+                                "0xEF", self.__viewsonic_xg2431_strobe_length
                             )
                             subtitle_text = (
                                 f"strobe length {self.__viewsonic_xg2431_strobe_length}"
@@ -1373,8 +1374,8 @@ class PageflipGLWindow(threading.Thread):
                                 ),
                                 0,
                             )
-                            os.system(
-                                f"sudo ddcutil --verbose --model XG2431 setvcp 0xEA {self.__viewsonic_xg2431_strobe_phase}"
+                            self.__set_viewsonic_xg2431_vcp(
+                                "0xEA", self.__viewsonic_xg2431_strobe_phase
                             )
                             subtitle_text = (
                                 f"strobe phase {self.__viewsonic_xg2431_strobe_phase}"
@@ -1389,8 +1390,8 @@ class PageflipGLWindow(threading.Thread):
                                 ),
                                 0,
                             )
-                            os.system(
-                                f"sudo ddcutil --verbose --model XG2431 setvcp 0xE3 {self.__viewsonic_xg2431_overdrive_gain}"
+                            self.__set_viewsonic_xg2431_vcp(
+                                "0xE3", self.__viewsonic_xg2431_overdrive_gain
                             )
                             subtitle_text = f"overdrive_gain {self.__viewsonic_xg2431_overdrive_gain}"
                             key_details[1] = time.time() + 0.1
@@ -1810,6 +1811,25 @@ class PageflipGLWindow(threading.Thread):
         )
         local_image_rgba = np.concatenate((local_image_rgb, local_image_alpha), 2)
         return np.flip(local_image_rgba.transpose((1, 0, 2)), 0)
+
+    def __set_viewsonic_xg2431_vcp(self, vcp_code, value):
+        try:
+            subprocess.run(
+                [
+                    "ddcutil",
+                    "--model",
+                    "XG2431",
+                    "setvcp",
+                    vcp_code,
+                    str(value),
+                ],
+                check=False,
+                timeout=3,
+            )
+        except FileNotFoundError:
+            logging.exception("ddcutil is not installed or is not in PATH")
+        except subprocess.TimeoutExpired:
+            logging.exception("ddcutil timed out while setting %s=%s", vcp_code, value)
 
     def __add_new_osd_subtitle(self, subtitle_text):
         self.latest_subtitle_data = json.dumps(
