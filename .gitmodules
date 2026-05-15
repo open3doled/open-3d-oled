@@ -5,3 +5,14 @@
 	path = VLCModule
 	url = https://github.com/open3doled/VLCModule.git
 	branch = main
+[submodule "3DIREmitterHardware/v2.1b/footprints/SparkFun-KiCad-Libraries"]
+	path = 3DIREmitterHardware/v2.1b/footprints/SparkFun-KiCad-Libraries
+	url = https://github.com/sparkfun/SparkFun-KiCad-Libraries.git
+
+[submodule "3DIREmitterHardware/v2.2b/microcontroller_board/footprints/SparkFun-KiCad-Libraries"]
+	path = 3DIREmitterHardware/v2.2b/microcontroller_board/footprints/SparkFun-KiCad-Libraries
+	url = https://github.com/sparkfun/SparkFun-KiCad-Libraries.git
+
+[submodule "3DIREmitterHardware/v2.2b/sensor_emitter_board/footprints/SparkFun-KiCad-Libraries"]
+	path = 3DIREmitterHardware/v2.2b/sensor_emitter_board/footprints/SparkFun-KiCad-Libraries
+	url = https://github.com/sparkfun/SparkFun-KiCad-Libraries.git
