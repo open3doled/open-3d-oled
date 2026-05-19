@@ -118,7 +118,7 @@ If running windows 11 or 10 with DPI scaling be sure to disable it as follows.
 * Click the "Open disply settings" icon button on the main toolbar, and disable the checkbox that says "Calibration Mode", you should see that the "Whitebox Vertical Position" has changed from "0" to whatever value you aligned it with.
 * Click "Save Settings to Disk" to make a copy of your optimized display settings locally incase for whatever reason you decide to experiment with a different display.
 * Click "Close" on the display settings window.
-* Your now done and should be able to watch 3D videos on your OLED!
+* You're now done and should be able to watch 3D videos on your OLED!
 * Refer to this video for an example using a slightly dated version of the software if you need a demonstration of this proceedure https://youtu.be/tEjXUV8hVDs
     
 ### Command Line Interface
