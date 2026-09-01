@@ -37,7 +37,7 @@ Gaming is also supported through the use [Geo3D](https://github.com/open3doled/G
 
 ### Configuring TV or Monitor
 * Set your TV to 1080p 120hz (this system should work with 4K 120hz but hasn't been tested yet)
-* If you are using an AMD/Intel graphics card and your TV switches to ALLM (adaptive low latency mode) you will need to disable ALLM as detailed in the FAQ below.
+* If your TV switches into ALLM (Auto Low-Latency Mode), disable ALLM as detailed in the FAQ below.
 * On LG TV's you need to set OLED Motion Pro to the maximum value.
 * On Sony TV's you need to set Motion Flow Clearness setting to MAX
 * If you are using a high refresh rate monitor you will benefit from looking into QFT (HDMI quick frame transport) see [instructions](3DPlayer/settings/viewsonic_xg2431/how_to_setup_custom_resolution_with_quick_frame_transport.txt).
@@ -324,23 +324,14 @@ XIAOMI
 ```
    ffmpeg -i Movie.7xAudio.mkv -map 0:v:0 -map 0:a:0 -c copy Movie.7xAudio.EngOnly.mkv
 ```   
-* This software relies of strong BFI when run on OLED TV's. AMD and Intel graphics cards have a tendancy of turning on ALLM (Adaptive Low Latency Mode) in a way that cannot be turned off. ALLM forces BFI Off. 
-* To disable ALLM for AMD the easiest way to disable ALLM is to use a registry hack as below (it requires rebooting after you change the value).
-```
-   Goto GPU Registry Location: HKLM\System\CurrentControlSet\Control\Class{4d36e968-e325-11ce-bfc1-08002be10318}\0000 (or 0001/0002/..., check inside 0000 to verify that it is indeed your GPU)
-   Add or Update the DalHdmiEnableALLM Entry as follows (Dword: DalHdmiEnableALLM, Value:0 for Disabled, 1 for Enabled)
-```
-* To disable ALLM for Intel [CRU tool](https://www.reddit.com/r/OLED_Gaming/comments/r3poj4/fullscreen_windows_10_games_enable_allm_which/) can also be used, [see this video](https://youtu.be/ntp00tMUKzE) showing how it can be done.
-* If you are not able to find any "CTA-861" entry under "Extension Blocks" under CRU tool, and you were not able to disable ALLM using any other technique. Then you may be able to disable ALLM by disabling Fullscreen Exclusive mode directly in PotPlayer. This is accessible from Settings -> Video. Setting it to "Disabled" may prevent ALLM from starting and thus mean BFI can be used and also you won't get the tiering and other issues that causes the glasses to lose sync.
-  
-* If on AMD systems when 3d player attempts to enter exclusive fullscreen mode and hide the toolbar your computer forces the display from 120hz to 60hz. Try running "reset-all.exe" in ToastyX CRU utility, and then try removing the "Standard Resolution" entry for 1920x1080 @60hz as well as removing 1920x1080 50hz and 60hz from the "CTA-861 Extension Block" -> "TV Resolutions" list. Close and run "reset64.exe".  This fixed the issue for me.
+
+* **Display switches into ALLM / Game Mode:** Some TVs disable the BFI required by Open3DOLED when ALLM is active. The preferred, GPU-independent fix is to open [ToastyX CRU](https://www.monitortests.com/forum/Thread-Custom-Resolution-Utility-CRU), select the affected display, edit `CTA-861 Extension Block` -> `HDMI 2.1 support`, disable `Auto low-latency mode`, save, then run `restart64.exe` or reboot. This removes ALLM support from the display capabilities presented to the GPU. As an AMD-only fallback, verify the correct GPU entry under `HKLM\System\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000` (or `0001`, `0002`, etc.), set the `DalHdmiEnableALLM` DWORD to `0` (`1` enables it), and reboot. If CRU has no relevant CTA-861/HDMI 2.1 block, disabling exclusive fullscreen in PotPlayer may avoid triggering ALLM, but does not disable ALLM itself.
+* **AMD display switches from 120 Hz to 60 Hz in fullscreen:** This is a separate mode-selection problem, not an ALLM problem. In CRU, select the affected display and remove `1920x1080 @ 50 Hz`, `1920x1080 @ 60 Hz`, the `1920x1080 @ 60 Hz` Standard Resolution, and the 50/60 Hz entries under `CTA-861 Extension Block` -> `TV resolutions`; then run `restart64.exe` or reboot. This workaround removes those modes from Windows and should only be used on affected systems. `reset-all.exe` clears all CRU overrides and is not used to apply changes.
 
 * Emitter not working
 ```
    Sometimes when changing the glasses IR Protocol the emitter will enter an unresponsive state. If this happens save your settings to EEPROM and disconnect and reconnect it's power.
 ```
-* In addition to the ALM issue with AMD, pygame when run on my system with an AMD driver has a tendency with some driver versions to switch to 60hz 10bpp on my LG C1 when going to fullscreen mode. You will be able to see this is happening because instead of showing purple it will show either solid red or solid blue as soon as it switches to fullscreen. And after exciting fullscreen your monitor will now be running at 60hz. PotPlayer does not have this same issue. If this issue effects you and you need to use 3d_player to perform calibration the only solution I could find was to remove all 60hz 1920x1080 resolutions for my TV using ToastyX CRU. After doing this when 3d_player enters fullcreen mode it will no longer switch to 1920x1080 60hz 10bpp but stay in 1920x1080 120hz 8bpp.
-
 * If during development you get the error "Unable to find/initialize GStreamer plugin GSTPageflipGLSink." it can sometimes be solved by removing the gstreamer registry cache (and/or rebooting).
 ```
    rm  ~/.cache/gstreamer-1.0/registry.x86_64.bin
